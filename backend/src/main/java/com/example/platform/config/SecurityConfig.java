@@ -1,0 +1,30 @@
+package com.example.platform.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http)
+            throws Exception {
+
+        http.authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/csrf").permitAll()
+                .anyRequest().authenticated())
+                .formLogin(form -> form
+                        .loginProcessingUrl("/api/auth/login")
+                        .successHandler((request, response, authentication) -> response.setStatus(204))
+                        .failureHandler((request, response, exception) -> response.setStatus(401))
+                        .permitAll())
+                .exceptionHandling(errors -> errors
+                        .authenticationEntryPoint((request, response, exception) -> response.setStatus(401)))
+                .requestCache(cache -> cache.disable())
+                .httpBasic(basic -> basic.disable());
+
+        return http.build();
+    }
+}
