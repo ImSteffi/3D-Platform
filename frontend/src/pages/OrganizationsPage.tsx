@@ -93,7 +93,7 @@ export default function OrganizationsPage() {
       <div className="organizations-heading">
         <h1>Organizations</h1>
 
-        {!formOpen && (
+        {formOpen && (
           <Button type="button" onClick={() => setFormOpen(true)}>
             Add organization
           </Button>
@@ -151,7 +151,11 @@ export default function OrganizationsPage() {
         ) : (
           <ul>
             {organizations.map((organization) => (
-              <li key={organization.id}>{organization.name}</li>
+              <li key={organization.id}>
+                <Link to={`/organizations/${organization.id}`}>
+                  {organization.name}
+                </Link>
+              </li>
             ))}
           </ul>
         )}
