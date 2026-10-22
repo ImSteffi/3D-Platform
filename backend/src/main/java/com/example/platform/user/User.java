@@ -15,8 +15,11 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "username", nullable = false, unique = true, length = 100)
-    private String username;
+    @Column(name = "display_name", nullable = false, length = 200)
+    private String displayName;
+
+    @Column(name = "email", nullable = false, length = 254)
+    private String email;
 
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
@@ -27,12 +30,23 @@ public class User {
     protected User() {
     }
 
+    public User(String displayName, String email, String passwordHash) {
+        this.displayName = displayName;
+        this.email = email;
+        this.passwordHash = passwordHash;
+        this.platformAdmin = false;
+    }
+
     public Long getId() {
         return id;
     }
 
-    public String getUsername() {
-        return username;
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public String getEmail() {
+        return email;
     }
 
     public String getPasswordHash() {

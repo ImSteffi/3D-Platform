@@ -15,15 +15,15 @@ public class DatabaseUserDetailsService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String username) {
-        var user = userRepository.findByUsername(username)
+    public UserDetails loadUserByUsername(String email) {
+        var user = userRepository.findByEmailIgnoreCase(email.trim())
                 .orElseThrow(() ->
-                        new UsernameNotFoundException("Kasutajat ei leitud"));
+                        new UsernameNotFoundException("User not found"));
 
         var role = user.isPlatformAdmin() ? "PLATFORM_ADMIN" : "USER";
 
         return org.springframework.security.core.userdetails.User
-                .withUsername(user.getUsername())
+                .withUsername(user.getEmail())
                 .password(user.getPasswordHash())
                 .roles(role)
                 .build();

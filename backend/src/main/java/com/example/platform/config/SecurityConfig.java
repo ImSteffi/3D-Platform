@@ -21,6 +21,7 @@ public class SecurityConfig {
                                 .anyRequest().authenticated())
                                 .formLogin(form -> form
                                                 .loginProcessingUrl("/api/auth/login")
+                                                .usernameParameter("email")
                                                 .successHandler((request, response, authentication) -> response
                                                                 .setStatus(204))
                                                 .failureHandler((request, response, exception) -> response
