@@ -8,23 +8,31 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfig {
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http)
-            throws Exception {
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http)
+                        throws Exception {
 
-        http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/csrf").permitAll()
-                .anyRequest().authenticated())
-                .formLogin(form -> form
-                        .loginProcessingUrl("/api/auth/login")
-                        .successHandler((request, response, authentication) -> response.setStatus(204))
-                        .failureHandler((request, response, exception) -> response.setStatus(401))
-                        .permitAll())
-                .exceptionHandling(errors -> errors
-                        .authenticationEntryPoint((request, response, exception) -> response.setStatus(401)))
-                .requestCache(cache -> cache.disable())
-                .httpBasic(basic -> basic.disable());
+                http.authorizeHttpRequests(auth -> auth
+                                .requestMatchers("/api/auth/csrf").permitAll()
+                                .anyRequest().authenticated())
+                                .formLogin(form -> form
+                                                .loginProcessingUrl("/api/auth/login")
+                                                .successHandler((request, response, authentication) -> response
+                                                                .setStatus(204))
+                                                .failureHandler((request, response, exception) -> response
+                                                                .setStatus(401))
+                                                .permitAll())
+                                .exceptionHandling(errors -> errors
+                                                .authenticationEntryPoint((request, response, exception) -> response
+                                                                .setStatus(401)))
+                                .logout(logout -> logout
+                                                .logoutUrl("/api/auth/logout")
+                                                .deleteCookies("JSESSIONID")
+                                                .logoutSuccessHandler((request, response, authentication) -> response
+                                                                .setStatus(204)))
+                                .requestCache(cache -> cache.disable())
+                                .httpBasic(basic -> basic.disable());
 
-        return http.build();
-    }
+                return http.build();
+        }
 }

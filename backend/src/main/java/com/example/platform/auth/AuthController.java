@@ -14,8 +14,7 @@ public class AuthController {
     public CsrfResponse csrf(CsrfToken csrfToken) {
         return new CsrfResponse(
                 csrfToken.getHeaderName(),
-                csrfToken.getToken()
-        );
+                csrfToken.getToken());
     }
 
     @GetMapping("/me")
