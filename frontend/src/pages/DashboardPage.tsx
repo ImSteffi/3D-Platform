@@ -68,7 +68,15 @@ export default function DashboardPage() {
     <>
       <AppHeader onLogout={handleLogout} />
       <main className="dashboard">
-        <h1>Tere, {user.displayName}</h1>
+        <h1>
+          Tere, {user.displayName}
+          {!user.platformAdmin && user.organizationNames.length > 0 && (
+            <span className="dashboard-organization">
+              {" · "}
+              {user.organizationNames.join(", ")}
+            </span>
+          )}
+        </h1>
         {user.platformAdmin && (
           <Link to="/organizations">Organisatsioonid</Link>
         )}{" "}

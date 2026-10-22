@@ -254,3 +254,10 @@
   flex-direction: column;
   gap: 16px;
 }
+
+.dashboard-organization {
+  font-size: 0.55em;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--text);
+}

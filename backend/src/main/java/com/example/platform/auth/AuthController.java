@@ -1,5 +1,8 @@
 package com.example.platform.auth;
 
+import com.example.platform.organization.OrganizationMembershipRepository;
+import java.util.List;
+
 import com.example.platform.user.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -14,9 +17,13 @@ import org.springframework.web.server.ResponseStatusException;
 public class AuthController {
 
     private final UserRepository userRepository;
+    private final OrganizationMembershipRepository membershipRepository;
 
-    public AuthController(UserRepository userRepository) {
+    public AuthController(
+            UserRepository userRepository,
+            OrganizationMembershipRepository membershipRepository) {
         this.userRepository = userRepository;
+        this.membershipRepository = membershipRepository;
     }
 
     @GetMapping("/csrf")
@@ -35,7 +42,8 @@ public class AuthController {
         return new CurrentUserResponse(
                 user.getDisplayName(),
                 user.getEmail(),
-                user.isPlatformAdmin());
+                user.isPlatformAdmin(),
+                membershipRepository.findOrganizationNamesByUserId(user.getId()));
     }
 
     public record CsrfResponse(String headerName, String token) {
@@ -44,6 +52,7 @@ public class AuthController {
     public record CurrentUserResponse(
             String displayName,
             String email,
-            boolean platformAdmin) {
+            boolean platformAdmin,
+            List<String> organizationNames) {
     }
 }

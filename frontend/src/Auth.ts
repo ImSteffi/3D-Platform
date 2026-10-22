@@ -2,6 +2,7 @@ export type CurrentUser = {
   displayName: string;
   email: string;
   platformAdmin: boolean;
+  organizationNames: string[];
 };
 
 type CsrfResponse = {
