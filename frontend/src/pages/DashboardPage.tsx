@@ -1,8 +1,8 @@
 import AppHeader from "../components/AppHeader.tsx";
 import Card from "../components/Card.tsx";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { getCurrentUser, type CurrentUser } from "../Auth";
+import { Link, useNavigate } from "react-router";
+import { getCurrentUser, logout, type CurrentUser } from "../Auth";
 
 const summaries = [
   { title: "Mudelid", value: "0", detail: "Üles laetud 3D failid" },
@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [error, setError] = useState("");
+  const [logoutError, setLogoutError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -44,6 +45,17 @@ export default function DashboardPage() {
     };
   }, [navigate]);
 
+  async function handleLogout() {
+    setLogoutError("");
+
+    try {
+      await logout();
+      navigate("/login", { replace: true });
+    } catch {
+      setLogoutError("Väljalogimine ebaõnnestus. Proovi uuesti.");
+    }
+  }
+
   if (error) {
     return <p role="alert">{error}</p>;
   }
@@ -54,9 +66,15 @@ export default function DashboardPage() {
 
   return (
     <>
-      <AppHeader />
+      <AppHeader onLogout={handleLogout} />
       <main className="dashboard">
         <h1>Tere, {user.username}</h1>
+        <Link to="/organizations">Organisatsioonid</Link>
+        {logoutError && (
+          <p className="field-error" role="alert">
+            {logoutError}
+          </p>
+        )}
         <div className="card-grid">
           {summaries.map((item) => (
             <Card

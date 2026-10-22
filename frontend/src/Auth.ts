@@ -52,3 +52,27 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   return response.json();
 }
+
+export async function logout(): Promise<void> {
+  const csrfResponse = await fetch("/api/auth/csrf", {
+    credentials: "same-origin",
+  });
+
+  if (!csrfResponse.ok) {
+    throw new Error("Failed to prepare logout.");
+  }
+
+  const csrf: CsrfResponse = await csrfResponse.json();
+
+  const response = await fetch("/api/auth/logout", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      [csrf.headerName]: csrf.token,
+    },
+  });
+
+  if (response.status !== 204) {
+    throw new Error("Logout failed.");
+  }
+}

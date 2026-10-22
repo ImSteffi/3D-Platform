@@ -14,6 +14,10 @@ public class SecurityConfig {
 
                 http.authorizeHttpRequests(auth -> auth
                                 .requestMatchers("/api/auth/csrf").permitAll()
+                                .requestMatchers(
+                                                "/api/organizations",
+                                                "/api/organizations/**")
+                                .hasRole("PLATFORM_ADMIN")
                                 .anyRequest().authenticated())
                                 .formLogin(form -> form
                                                 .loginProcessingUrl("/api/auth/login")

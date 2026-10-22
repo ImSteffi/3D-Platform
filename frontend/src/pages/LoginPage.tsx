@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
-import { login } from '../Auth'
+import { login } from "../Auth.ts";
 import Button from "../components/Button.tsx";
 import TextField from "../components/TextField.tsx";
 
@@ -60,9 +60,7 @@ export default function LoginPage() {
           </p>
         )}
 
-        <Button type="submit">
-          {submitting ? "Logging in…" : "Login"}
-        </Button>
+        <Button type="submit">{submitting ? "Logging in…" : "Login"}</Button>
       </form>
     </main>
   );
