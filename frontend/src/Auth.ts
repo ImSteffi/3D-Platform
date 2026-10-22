@@ -1,5 +1,7 @@
 export type CurrentUser = {
-  username: string;
+  displayName: string;
+  email: string;
+  platformAdmin: boolean;
 };
 
 type CsrfResponse = {
@@ -7,7 +9,7 @@ type CsrfResponse = {
   token: string;
 };
 
-export async function login(username: string, password: string): Promise<void> {
+export async function login(email: string, password: string): Promise<void> {
   const csrfResponse = await fetch("/api/auth/csrf", {
     credentials: "same-origin",
   });
@@ -25,11 +27,14 @@ export async function login(username: string, password: string): Promise<void> {
       "Content-Type": "application/x-www-form-urlencoded",
       [csrf.headerName]: csrf.token,
     },
-    body: new URLSearchParams({ username, password }),
+    body: new URLSearchParams({
+      email: email.trim(),
+      password,
+    }),
   });
 
   if (response.status === 401) {
-    throw new Error("Wrong username or password.");
+    throw new Error("Wrong email or password.");
   }
 
   if (response.status !== 204) {

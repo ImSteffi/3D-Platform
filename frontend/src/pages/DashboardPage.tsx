@@ -68,8 +68,10 @@ export default function DashboardPage() {
     <>
       <AppHeader onLogout={handleLogout} />
       <main className="dashboard">
-        <h1>Tere, {user.username}</h1>
-        <Link to="/organizations">Organisatsioonid</Link>
+        <h1>Tere, {user.displayName}</h1>
+        {user.platformAdmin && (
+          <Link to="/organizations">Organisatsioonid</Link>
+        )}{" "}
         {logoutError && (
           <p className="field-error" role="alert">
             {logoutError}

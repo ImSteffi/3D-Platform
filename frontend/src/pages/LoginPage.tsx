@@ -5,7 +5,7 @@ import Button from "../components/Button.tsx";
 import TextField from "../components/TextField.tsx";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      await login(username, password);
+      await login(email, password);
       navigate("/dashboard", { replace: true });
     } catch (error) {
       setError(
@@ -36,14 +36,15 @@ export default function LoginPage() {
     <main className="login-page">
       <form className="login-card" onSubmit={handleSubmit}>
         <h1>Login</h1>
-        <p className="lede">Enter username and password.</p>
+        <p className="lede">Enter email and password.</p>
         <TextField
-          id="username"
-          name="username"
-          label="Username"
-          value={username}
+          id="email"
+          name="email"
+          label="Email"
+          type="email"
+          value={email}
           autoComplete="username"
-          onChange={setUsername}
+          onChange={setEmail}
         />
         <TextField
           id="password"

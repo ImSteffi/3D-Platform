@@ -1,25 +1,25 @@
 type TextFieldProps = {
-  id: string
-  label: string
-  name: string
-  type?: 'text' | 'password'
-  value: string
-  autoComplete?: string
-  error?: string
-  onChange: (value: string) => void
-}
+  id: string;
+  label: string;
+  name: string;
+  type?: "text" | "password" | "email";
+  value: string;
+  autoComplete?: string;
+  error?: string;
+  onChange: (value: string) => void;
+};
 
 export default function TextField({
   id,
   label,
   name,
-  type = 'text',
+  type = "text",
   value,
   autoComplete,
   error,
   onChange,
 }: TextFieldProps) {
-  const errorId = `${id}-error`
+  const errorId = `${id}-error`;
 
   return (
     <div className="field">
@@ -40,5 +40,5 @@ export default function TextField({
         </p>
       ) : null}
     </div>
-  )
+  );
 }
