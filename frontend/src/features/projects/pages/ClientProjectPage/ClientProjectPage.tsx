@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { getClientProject, type ClientProjectDetail } from '../../api/clientProjects'
-import { formatFileSize } from '../../../scans/utils/sceneFiles'
-import SceneArtwork from '../../../../shared/ui/SceneArtwork/SceneArtwork'
+import ScanCard from '../../../scans/components/ScanCard/ScanCard'
 import Icon from '../../../../shared/ui/Icon/Icon'
 import './ClientProjectPage.css'
 export default function ClientProjectPage() {
@@ -22,11 +21,11 @@ export default function ClientProjectPage() {
   {!Number.isSafeInteger(id) || id <= 0 ? <p className="page-message">Project not found.</p>
    : error?.projectId === id ? <p role="alert" className="field-error page-message">{error.message}</p>
    : !project || project.id !== id ? <p className="page-message" role="status">Loading project…</p> : <>
-    <div className="project-detail-heading"><div><span className="eyebrow">{project.organizationName}</span><h1>{project.name}</h1><p>Your captured spaces, brought together.</p></div><span className="status-pill status-pill--ready">{project.scans.length} published {project.scans.length === 1 ? 'scan' : 'scans'}</span></div>
-    <section aria-label="Published scans"><div className="section-heading"><div><h2>Published scans</h2><p>Verified captures available in this project.</p></div><span className="scan-total"><Icon name="scan" size={15} />{project.scans.length}</span></div>
-     {project.scans.length === 0 ? <div className="empty-state"><Icon name="scan" size={32} /><h3>A new perspective is on its way.</h3><p>Published scans will appear here when they’re ready.</p></div> : <div className="published-scan-grid">
-      {project.scans.map((scan,i) => <article className="published-scan-card" key={scan.id}><SceneArtwork variant={i} /><div className="published-scan-info"><span className="status-pill status-pill--ready">Published</span><h3>{scan.name}</h3><p><Icon name="folder" size={13} />{scan.fileCount} files<span>·</span>{formatFileSize(scan.sizeBytes)}</p></div></article>)}
-     </div>}
+    <div className="project-detail-heading"><div><span className="eyebrow">{project.organizationName}</span><h1>{project.name}</h1></div><span className="status-pill status-pill--ready">{project.scans.length} published {project.scans.length === 1 ? 'scan' : 'scans'}</span></div>
+    <section aria-label="Published scans"><div className="section-heading"><div><h2>Published scans</h2></div><span className="scan-total"><Icon name="scan" size={15} />{project.scans.length}</span></div>
+     {project.scans.length === 0 ? <div className="empty-state"><Icon name="scan" size={32} /><h3>A new perspective is on its way.</h3><p>Published scans will appear here when they’re ready.</p></div> : <ul className="client-scan-list">
+      {project.scans.map(scan => <li key={scan.id}><ScanCard scan={{ ...scan, status: 'READY', files: scan.files ?? [] }} /></li>)}
+     </ul>}
     </section>
    </>}
  </main>

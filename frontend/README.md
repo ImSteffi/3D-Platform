@@ -60,7 +60,8 @@ Each styled component or page has its own folder and adjacent CSS file. Componen
 - `/projects`: client project gallery; `?q=` filters project and organization names.
 - `/projects/:projectId`: published scans in an authorized client project.
 - `/organizations`: admin organization list; `?q=` filters organization names.
-- `/organizations/:organizationId`: admin member, project, and scan management.
+- `/organizations/:organizationId`: admin member management and project cards.
+- `/organizations/:organizationId/projects/:projectId`: admin project detail, scans, and publishing.
 
 `WorkspaceLayout` retrieves the current session and provides user data to its pages. Backend authorization remains authoritative; frontend navigation visibility does not grant access.
 

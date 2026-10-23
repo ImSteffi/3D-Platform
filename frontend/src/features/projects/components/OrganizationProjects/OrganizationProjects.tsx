@@ -4,7 +4,7 @@ import FormPanel from '../../../../shared/ui/FormPanel/FormPanel'
 import { useEffect, useId, useState, type FormEvent } from 'react'
 import Button from '../../../../shared/ui/Button/Button.tsx'
 import TextField from '../../../../shared/ui/TextField/TextField.tsx'
-import ProjectScanList from '../../../scans/components/ProjectScanList/ProjectScanList.tsx'
+import { Link } from 'react-router'
 import { createProject, getProjects, type Project } from '../../api/projects.ts'
 
 type OrganizationProjectsProps = { organizationId: number }
@@ -73,12 +73,9 @@ export default function OrganizationProjects({ organizationId }: OrganizationPro
   return (
     <section className="organization-projects">
       <div className="organizations-heading">
-        <div><h2>Projects</h2><p className="section-description">Create projects and publish their captured spaces.</p></div>
+        <div><h2>Projects</h2></div>
         {!formOpen && !loading && !loadError && <Button type="button" onClick={() => setFormOpen(true)}><Icon name="plus" size={14} />Add project</Button>}
       </div>
-      <p className="lede">
-        Add a scan to a project, then publish it when you’re ready. Unpublished drafts are cleared on refresh.
-      </p>
       {formOpen && (
         <FormPanel>
           <h3>New project</h3>
@@ -86,7 +83,6 @@ export default function OrganizationProjects({ organizationId }: OrganizationPro
             <fieldset disabled={saving} className="organization-form-fields">
             <TextField id={`${inputId}-project-name`} name="projectName" label="Project name"
               value={name} onChange={setName} error={error} />
-            <p>Create the project, then add its scans below.</p>
             <div className="organization-form-actions">
               <Button type="submit">{saving ? 'Creating…' : 'Create project'}</Button>
               <Button type="button" variant="ghost" onClick={closeForm}>Cancel</Button>
@@ -105,10 +101,9 @@ export default function OrganizationProjects({ organizationId }: OrganizationPro
         <ul className="project-draft-list" aria-label="Projects">
           {projects.map((project) => (
             <li key={project.id}>
-              <article className="project-draft-card">
-                <div className="admin-project-title"><span><Icon name="folder" size={20} /></span><h3>{project.name}</h3></div>
-                <ProjectScanList organizationId={organizationId} projectId={project.id} />
-              </article>
+              <Link className="project-draft-card admin-project-link" to={`/organizations/${organizationId}/projects/${project.id}`}>
+                <div className="admin-project-title"><span><Icon name="folder" size={20} /></span><h3>{project.name}</h3><Icon name="arrow" size={18} /></div>
+              </Link>
             </li>
           ))}
         </ul>

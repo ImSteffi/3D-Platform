@@ -1,0 +1,1 @@
+.upload-progress { margin-top: 20px; }.upload-progress-track { height: 4px; background: #34302d; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }.upload-progress-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#d86b2e,#ffad74); transition: width 300ms var(--ease); }.upload-progress p { color: #d0a284; }

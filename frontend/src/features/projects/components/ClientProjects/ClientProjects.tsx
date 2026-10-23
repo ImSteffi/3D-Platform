@@ -3,7 +3,6 @@ import { Link, useSearchParams } from 'react-router'
 import { getClientProjects, type ClientProject } from '../../api/clientProjects'
 import Card from '../../../../shared/ui/Card/Card'
 import Icon from '../../../../shared/ui/Icon/Icon'
-import SceneArtwork from '../../../../shared/ui/SceneArtwork/SceneArtwork'
 import './ClientProjects.css'
 export default function ClientProjects({ featured = false }: { featured?: boolean }) {
  const [projects, setProjects] = useState<ClientProject[]>([])
@@ -24,11 +23,8 @@ export default function ClientProjects({ featured = false }: { featured?: boolea
  const visible = featured ? filtered.slice(0,3) : filtered
  return <div className="client-projects">
   <div className="client-project-stats"><Card title="Your projects" value={String(projects.length)} detail="Spaces within your organization" /><Card title="Published scans" value={String(projects.reduce((sum,p) => sum+p.publishedScanCount,0))} detail="Ready for you to explore" /></div>
-  <section aria-label="Your projects"><div className="section-heading"><div><h2>{featured ? 'Your projects' : 'Project library'}</h2><p>{query ? `Results for “${params.get('q')}”` : 'A closer look at the spaces you’re working on.'}</p></div>{featured && <Link className="text-link" to="/projects">View all <Icon name="arrow" size={14} /></Link>}</div>
-   {visible.length === 0 ? <div className="empty-state"><Icon name="folder" size={30} /><h3>{query ? 'No matching projects.' : 'Your projects will appear here.'}</h3><p>{query ? 'Try another project or organization name.' : 'Your administrator will add projects to this workspace.'}</p></div> : <div className="project-gallery">{visible.map((project,i) => <Link className="project-gallery-card" key={project.id} to={`/projects/${project.id}`}>
-    <div className="project-gallery-visual"><SceneArtwork variant={i} /><span className="project-visual-label"><Icon name="cube" size={12} />3D SPACE</span></div>
-    <div className="project-gallery-body"><small>{project.organizationName}</small><h3>{project.name}</h3><div className="project-gallery-footer"><span><Icon name="scan" size={13} />{project.publishedScanCount} published {project.publishedScanCount === 1 ? 'scan' : 'scans'}</span><span className="project-open-arrow"><Icon name="arrow" size={16} /></span></div></div>
-   </Link>)}</div>}
+  <section aria-label="Your projects"><div className="section-heading"><div><h2>{featured ? 'Your projects' : 'Project library'}</h2>{query && <p>Results for “{params.get('q')}”</p>}</div>{featured && <Link className="text-link" to="/projects">View all <Icon name="arrow" size={14} /></Link>}</div>
+   {visible.length === 0 ? <div className="empty-state"><Icon name="folder" size={30} /><h3>{query ? 'No matching projects.' : 'Your projects will appear here.'}</h3><p>{query ? 'Try another project or organization name.' : 'Your administrator will add projects to this workspace.'}</p></div> : <ul className="client-project-list">{visible.map(project => <li key={project.id}><Link className="client-project-row" to={`/projects/${project.id}`}><span className="client-project-icon"><Icon name="folder" size={20} /></span><h3>{project.name}</h3><span className="client-project-count">{project.publishedScanCount} published {project.publishedScanCount === 1 ? 'scan' : 'scans'}</span><Icon name="arrow" size={17} /></Link></li>)}</ul>}
   </section>
  </div>
 }

@@ -1,3 +1,6 @@
+import type { SavedScan } from '../../api/scans'
+import { useScanPublish } from '../../hooks/useScanPublish'
+import UploadProgress from '../UploadProgress/UploadProgress'
 import type { ScanDraft } from '../../types'
 import Icon from '../../../../shared/ui/Icon/Icon'
 import SceneFileList from '../SceneFileList/SceneFileList'
@@ -9,12 +12,15 @@ import TextField from '../../../../shared/ui/TextField/TextField.tsx';
 import { formatFileSize, readEntry, type SelectedSceneFile } from '../../utils/sceneFiles.ts';
 
 type ScanDraftFormProps = {
-  onAdd: (scan: ScanDraft) => void;
+  organizationId: number;
+  projectId: number;
+  onPublished: (scan: SavedScan) => void;
   onCancel: () => void;
 };
 
-export default function ScanDraftForm({ onAdd, onCancel }: ScanDraftFormProps) {
+export default function ScanDraftForm({ organizationId, projectId, onPublished, onCancel }: ScanDraftFormProps) {
   const inputId = useId();
+  const { busy, progress, error: publishError, serverScan, publish } = useScanPublish(organizationId, projectId);
   const [name, setName] = useState("");
   const [files, setFiles] = useState<SelectedSceneFile[]>([]);
   const [error, setError] = useState("");
@@ -25,7 +31,7 @@ export default function ScanDraftForm({ onAdd, onCancel }: ScanDraftFormProps) {
   const totalSize = files.reduce((total, item) => total + item.file.size, 0);
 
   function selectFolder(fileList: FileList | null) {
-    if (!fileList || fileList.length === 0 || readingRef.current) return;
+    if (!fileList || fileList.length === 0 || readingRef.current || busy || serverScan) return;
 
     const selected = Array.from(fileList)
       .map((file) => ({
@@ -48,7 +54,7 @@ export default function ScanDraftForm({ onAdd, onCancel }: ScanDraftFormProps) {
     event.preventDefault();
     event.stopPropagation();
 
-    if (readingRef.current) return;
+    if (readingRef.current || busy || serverScan) return;
 
     // Capture dropped entries before awaiting directory reads.
     const entries = Array.from(event.dataTransfer.items)
@@ -103,25 +109,34 @@ export default function ScanDraftForm({ onAdd, onCancel }: ScanDraftFormProps) {
     }
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (readingRef.current) return;
-    if (!name.trim()) {
-      setError('Enter a scan name.');
-      return;
+  function createDraft(): ScanDraft | null {
+    if (readingRef.current || busy) return null;
+    if (!name.trim() || name.trim().length > 200) {
+      setError('Enter a scan name of 1–200 characters.');
+      return null;
     }
     if (files.length === 0) {
       setError('Choose a folder or drop files for this scan.');
-      return;
+      return null;
     }
-    onAdd({ id: crypto.randomUUID(), name: name.trim(), files });
+    setError('');
+    return { id: crypto.randomUUID(), name: name.trim(), files };
   }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const draft = createDraft();
+    if (!draft) return;
+    const saved = await publish(draft);
+    if (saved) onPublished(saved);
+  }
+
 
   return (
     <FormPanel className="scan-form-panel">
       <h4>New scan</h4>
       <form className="project-form" onSubmit={handleSubmit}>
-        <fieldset disabled={reading} className="organization-form-fields">
+        <fieldset disabled={reading || busy || !!serverScan} className="organization-form-fields">
           <TextField
             id={`${inputId}-name`}
             name="scanName"
@@ -189,18 +204,21 @@ export default function ScanDraftForm({ onAdd, onCancel }: ScanDraftFormProps) {
             </section>
           )}
 
-          {error && (
+          </fieldset>
+          {(error || publishError) && (
             <p className="field-error" role="alert">
-              {error}
+              {error || publishError}
             </p>
           )}
 
+          {busy && <UploadProgress message={progress} />}
+          <fieldset disabled={reading || busy} className="organization-form-fields">
           <div className="organization-form-actions">
-            <Button type="submit"><Icon name="plus" size={14} />Add scan draft</Button>
+            {files.length > 0 && <Button type="submit"><Icon name="upload" size={14} />{busy ? 'Publishing…' : publishError ? 'Retry publish' : 'Publish'}</Button>}
 
-            <Button type="button" variant="ghost" onClick={onCancel}>
+            {!serverScan && <Button type="button" variant="ghost" onClick={onCancel}>
               Cancel
-            </Button>
+            </Button>}
           </div>
         </fieldset>
       </form>

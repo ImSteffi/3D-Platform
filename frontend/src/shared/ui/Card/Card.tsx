@@ -2,7 +2,7 @@ import './Card.css'
 type CardProps = {
   title: string
   value: string
-  detail: string
+  detail?: string
 }
 
 export default function Card({ title, value, detail }: CardProps) {
@@ -10,7 +10,7 @@ export default function Card({ title, value, detail }: CardProps) {
     <article className="card">
       <h2>{title}</h2>
       <p className="card-value">{value}</p>
-      <p>{detail}</p>
+      {detail && <p className="card-detail">{detail}</p>}
     </article>
   )
 }

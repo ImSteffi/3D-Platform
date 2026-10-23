@@ -135,10 +135,10 @@ export default function OrganizationDetailsPage() {
         <p>Organization not found.</p>
       ) : (
         <>
-          <header className="organization-detail-heading"><div><span className="eyebrow">ORGANIZATION WORKSPACE</span><h1>{organization.name}</h1><p>Manage the people and spaces in this organization.</p></div><span className="status-pill"><Icon name="building" size={12} />Client workspace</span></header>
+          <header className="organization-detail-heading"><div><span className="eyebrow">ORGANIZATION WORKSPACE</span><h1>{organization.name}</h1></div></header>
 
           <div className="organizations-heading">
-            <div><h2>People</h2><p className="section-description">{organizationUsers.length} {organizationUsers.length === 1 ? 'member' : 'members'} with access to this workspace.</p></div>
+            <div><h2>People</h2><p className="section-description">{organizationUsers.length} {organizationUsers.length === 1 ? 'member' : 'members'}</p></div>
 
             {!formOpen && (
               <Button type="button" onClick={() => setFormOpen(true)}>
@@ -212,7 +212,7 @@ export default function OrganizationDetailsPage() {
               <ul>
                 {organizationUsers.map((user) => (
                   <li key={user.id}>
-                    <span className="member-avatar">{user.displayName.slice(0,2).toUpperCase()}</span><span className="member-info"><strong>{user.displayName}</strong><span>{user.email}</span></span><span className="status-pill">Member</span>
+                    <span className="member-avatar">{user.displayName.slice(0,2).toUpperCase()}</span><span className="member-info"><strong>{user.displayName}</strong><span>{user.email}</span></span>
                   </li>
                 ))}
               </ul>

@@ -1,4 +1,0 @@
-.scan-draft-card { border: 1px solid #6b49312e; border-radius: 13px; padding: 22px; background: linear-gradient(120deg,#29231e50,#202022); animation: arrive 300ms var(--ease); }
-.scan-draft-card .scan-draft-heading > div > .status-pill { font-size: 8px; padding: 4px 6px; margin-bottom: 10px; color: #dda47f; border-color: #dda47f30; }
-.scan-draft-card h4 { margin-bottom: 7px; }.scan-draft-card p { font-size: 11px; }.scan-publish-actions { margin-top: 2px; }
-.upload-progress { margin-top: 20px; }.upload-progress-track { height: 4px; background: #34302d; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }.upload-progress-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#d86b2e,#ffad74); transition: width 300ms var(--ease); }.upload-progress p { color: #d0a284; }

@@ -1,3 +1,4 @@
+import AdminProjectPage from '../features/projects/pages/AdminProjectPage/AdminProjectPage'
 import { Navigate, Route, Routes } from 'react-router'
 import LoginPage from '../features/auth/pages/LoginPage/LoginPage'
 import DashboardPage from '../features/dashboard/pages/DashboardPage/DashboardPage'
@@ -16,6 +17,7 @@ export default function App() {
    <Route path="/projects" element={<ProjectsPage />} />
    <Route path="/projects/:projectId" element={<ClientProjectPage />} />
    <Route path="/organizations" element={<OrganizationsPage />} />
+   <Route path="/organizations/:organizationId/projects/:projectId" element={<AdminProjectPage />} />
    <Route path="/organizations/:organizationId" element={<OrganizationDetailsPage />} />
    <Route path="*" element={<NotFoundPage />} />
   </Route>

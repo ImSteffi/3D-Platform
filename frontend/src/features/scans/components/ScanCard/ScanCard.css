@@ -1,0 +1,20 @@
+.saved-scan-card { display: grid; grid-template-columns: 160px minmax(0,1fr) auto; align-items: start; gap: 22px; padding: 22px; border-radius: 13px; border: 1px solid var(--border); background: #1f2022; animation: arrive 300ms var(--ease); }
+.saved-scan-preview { display: grid; place-items: center; width: 100%; aspect-ratio: 4 / 3; background: #17181a; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+.saved-scan-content { min-width: 0; display: grid; grid-template-columns: minmax(140px,1fr) minmax(240px,2fr); align-items: start; gap: 24px; }
+.saved-scan-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.saved-scan-heading h3 { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 15px; }
+.saved-scan-icon { color: #b7c6bd; }.saved-scan-card p { font-size: 11px; }
+.saved-scan-files { min-width: 0; }.saved-scan-files .scene-file-list { max-height: none; }
+.saved-scan-status { justify-self: end; }
+.saved-scan-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.saved-scan-actions .btn { min-height: 34px; padding: 8px 12px; font-size: 11px; }
+.scan-delete-action .btn { color: var(--danger); }.scan-delete-action .btn:hover { border-color: #ffa29d60; background: #ffa29d08; }
+.scan-action-notice { margin-top: 10px; }
+@media(max-width:1100px) { .saved-scan-content { grid-template-columns: minmax(0,1fr); gap: 16px; } }
+@media(max-width:800px) { .saved-scan-card { grid-template-columns: 100px minmax(0,1fr); }.saved-scan-status { grid-column: 2; } }
+@media(max-width:600px) { .saved-scan-card { grid-template-columns: 80px minmax(0,1fr); gap: 14px; padding: 18px; } }
+
+.scan-play-button { display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border-radius: 50%; border: 1px solid #ffffff30; background: #ffffff0b; color: var(--text-h); cursor: pointer; transition: transform 220ms var(--ease), background 180ms, border-color 180ms; }
+.scan-play-button svg { margin-left: 2px; }
+.scan-play-button:hover { transform: scale(1.08); background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+.scan-play-button:active { transform: scale(.96); }

@@ -47,7 +47,8 @@ public class ClientProjectService {
                 .stream().map(scan -> {
                     var entries = files.findByScan_IdOrderByIdAsc(scan.getId());
                     return new PublishedScan(scan.getId(), scan.getName(), entries.size(),
-                            entries.stream().mapToLong(f -> f.getSizeBytes()).sum());
+                            entries.stream().mapToLong(f -> f.getSizeBytes()).sum(),
+                            entries.stream().map(f -> new PublishedFile(f.getRelativePath(), f.getSizeBytes())).toList());
                 }).toList();
         return new ProjectDetail(project.getId(), project.getName(),
                 project.getOrganization().getName(), published);
@@ -55,7 +56,8 @@ public class ClientProjectService {
 
     public record ProjectSummary(Long id, String name, Long organizationId,
             String organizationName, long publishedScanCount) {}
-    public record PublishedScan(Long id, String name, int fileCount, long sizeBytes) {}
+    public record PublishedFile(String relativePath, long sizeBytes) {}
+    public record PublishedScan(Long id, String name, int fileCount, long sizeBytes, List<PublishedFile> files) {}
     public record ProjectDetail(Long id, String name, String organizationName,
             List<PublishedScan> scans) {}
 }
