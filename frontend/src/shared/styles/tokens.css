@@ -1,0 +1,11 @@
+:root {
+ color-scheme: dark;
+ --bg: #111213; --surface: #1a1b1d; --surface-raised: #212225; --surface-hover: #26272a;
+ --text: #95979c; --text-h: #f3f3f1; --border: #2d2e31;
+ --accent: #ff803c; --accent-bg: #ff803c12; --accent-border: #ff803c60;
+ --social-bg: #202124; --success: #91d9ad; --danger: #ffa29d;
+ --radius: 20px; --ease: cubic-bezier(.22, 1, .36, 1);
+ font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; font-size: 14px;
+ color: var(--text); background: var(--bg); font-synthesis: none;
+ text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
+}

@@ -1,0 +1,14 @@
+.client-project-stats { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; margin-bottom: 35px; }
+.project-gallery { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; }
+.project-gallery-card { display: block; border-radius: 17px; border: 1px solid var(--border); overflow: hidden; background: var(--surface); transition: transform 320ms var(--ease), border-color 240ms, box-shadow 240ms; animation: arrive 400ms var(--ease) both; }
+.project-gallery-card:nth-child(2) { animation-delay: 45ms; }.project-gallery-card:nth-child(3) { animation-delay: 90ms; }
+.project-gallery-card:hover { transform: translateY(-5px); border-color: #ff803c50; box-shadow: 0 15px 30px #0003; }
+.project-gallery-visual { position: relative; border-bottom: 1px solid var(--border); }
+.project-visual-label { position: absolute; top: 15px; left: 15px; display: flex; align-items: center; gap: 6px; background: #141517b0; border: 1px solid #ffffff0d; border-radius: 6px; padding: 6px 8px; font-size: 8px; color: #a9aaad; letter-spacing: 1px; }
+.project-gallery-body { padding: 22px; }.project-gallery-body > small { font-size: 9px; color: #84868b; }.project-gallery-body h3 { font-size: 16px; margin-top: 8px; overflow-wrap: anywhere; }
+.project-gallery-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--border); margin-top: 23px; padding-top: 15px; }
+.project-gallery-footer > span:first-child { display: flex; align-items: center; gap: 7px; font-size: 10px; color: #96989d; }
+.project-open-arrow { display: grid; place-items: center; border: 1px solid #3c3d40; width: 28px; height: 28px; border-radius: 50%; transition: background 200ms, color 200ms; }
+a:hover .project-open-arrow { color: var(--accent); background: #ff803c0b; }
+@media(max-width:1200px) { .project-gallery { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .project-gallery { grid-template-columns: 1fr; } .client-project-stats { gap: 10px; } .client-project-stats .card { padding: 18px; } }

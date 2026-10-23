@@ -1,0 +1,2 @@
+.scene-file-list { list-style: none; padding: 0; margin: 0; border: 1px solid var(--border); background: #17181a; border-radius: 10px; max-height: 260px; overflow-y: auto; }
+.scene-file-list li { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; padding: 12px 15px; font-size: 11px; }.scene-file-list li + li { border-top: 1px solid #ffffff07; }.scene-file-list li span:first-child { min-width: 0; overflow-wrap: anywhere; }.scene-file-list li span:last-child { white-space: nowrap; color: #72767c; font-size: 10px; }

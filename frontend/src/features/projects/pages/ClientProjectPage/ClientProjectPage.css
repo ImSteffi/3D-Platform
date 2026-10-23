@@ -1,0 +1,10 @@
+.project-detail-heading { display: flex; align-items: center; justify-content: space-between; gap: 22px; margin: 4px 0 42px; }
+.project-detail-heading h1 { overflow-wrap: anywhere; }.project-detail-heading p { font-size: 12px; margin-top: 14px; }
+.published-scan-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 22px; }
+.published-scan-card { border: 1px solid var(--border); border-radius: 18px; background: var(--surface); overflow: hidden; animation: arrive 400ms var(--ease) both; transition: border-color 240ms, transform 320ms var(--ease); }
+.published-scan-card:hover { transform: translateY(-3px); border-color: #48433d; }
+.published-scan-card .scene-art { height: 210px; border-bottom: 1px solid var(--border); }
+.published-scan-info { padding: 22px; }.published-scan-info h3 { margin: 15px 0; overflow-wrap: anywhere; }.published-scan-info p { display: flex; align-items: center; gap: 9px; font-size: 10px; }.published-scan-info p span { color: #5f6268; }
+.scan-total { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+@media(max-width:1200px) { .published-scan-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .published-scan-grid { grid-template-columns: 1fr; }.project-detail-heading { flex-direction: column; align-items: flex-start; } }

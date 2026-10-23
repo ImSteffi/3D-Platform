@@ -1,0 +1,7 @@
+.organization-form-panel { margin-top: 20px; padding: 28px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); animation: arrive 280ms var(--ease); }
+.organization-form-panel h2, .organization-form-panel h3, .organization-form-panel h4 { margin: 0 0 20px; }
+.organization-form, .project-form { display: flex; flex-direction: column; gap: 20px; }
+.organization-form { max-width: 520px; }
+.organization-form-fields { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.organization-form-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+@media (max-width: 600px) { .organization-form-panel { padding: 20px; } }

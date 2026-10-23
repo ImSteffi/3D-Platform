@@ -1,0 +1,34 @@
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
+import { getClientProjects, type ClientProject } from '../../api/clientProjects'
+import Card from '../../../../shared/ui/Card/Card'
+import Icon from '../../../../shared/ui/Icon/Icon'
+import SceneArtwork from '../../../../shared/ui/SceneArtwork/SceneArtwork'
+import './ClientProjects.css'
+export default function ClientProjects({ featured = false }: { featured?: boolean }) {
+ const [projects, setProjects] = useState<ClientProject[]>([])
+ const [loading, setLoading] = useState(true)
+ const [error, setError] = useState('')
+ const [params] = useSearchParams()
+ const query = (params.get('q') ?? '').trim().toLowerCase()
+ useEffect(() => {
+  let active = true
+  getClientProjects().then(data => { if (active) setProjects(data) })
+   .catch(error => { if (active) setError(error instanceof Error ? error.message : 'Could not load projects.') })
+   .finally(() => { if (active) setLoading(false) })
+  return () => { active = false }
+ }, [])
+ if (loading) return <p className="page-message" role="status">Loading projects…</p>
+ if (error) return <p role="alert" className="field-error page-message">{error}</p>
+ const filtered = projects.filter(p => `${p.name} ${p.organizationName}`.toLowerCase().includes(query))
+ const visible = featured ? filtered.slice(0,3) : filtered
+ return <div className="client-projects">
+  <div className="client-project-stats"><Card title="Your projects" value={String(projects.length)} detail="Spaces within your organization" /><Card title="Published scans" value={String(projects.reduce((sum,p) => sum+p.publishedScanCount,0))} detail="Ready for you to explore" /></div>
+  <section aria-label="Your projects"><div className="section-heading"><div><h2>{featured ? 'Your projects' : 'Project library'}</h2><p>{query ? `Results for “${params.get('q')}”` : 'A closer look at the spaces you’re working on.'}</p></div>{featured && <Link className="text-link" to="/projects">View all <Icon name="arrow" size={14} /></Link>}</div>
+   {visible.length === 0 ? <div className="empty-state"><Icon name="folder" size={30} /><h3>{query ? 'No matching projects.' : 'Your projects will appear here.'}</h3><p>{query ? 'Try another project or organization name.' : 'Your administrator will add projects to this workspace.'}</p></div> : <div className="project-gallery">{visible.map((project,i) => <Link className="project-gallery-card" key={project.id} to={`/projects/${project.id}`}>
+    <div className="project-gallery-visual"><SceneArtwork variant={i} /><span className="project-visual-label"><Icon name="cube" size={12} />3D SPACE</span></div>
+    <div className="project-gallery-body"><small>{project.organizationName}</small><h3>{project.name}</h3><div className="project-gallery-footer"><span><Icon name="scan" size={13} />{project.publishedScanCount} published {project.publishedScanCount === 1 ? 'scan' : 'scans'}</span><span className="project-open-arrow"><Icon name="arrow" size={16} /></span></div></div>
+   </Link>)}</div>}
+  </section>
+ </div>
+}
