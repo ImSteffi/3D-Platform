@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { getCurrentUser, logout, type CurrentUser } from '../../../features/auth/api/auth'
 import { WorkspaceContext } from './WorkspaceContext'
 import Icon from '../../ui/Icon/Icon'
+import ScanViewer from '../../../features/scans/components/ScanViewer/ScanViewer'
 import './WorkspaceLayout.css'
 
 export default function WorkspaceLayout() {
@@ -73,7 +74,7 @@ export default function WorkspaceLayout() {
      <form className="workspace-search" onSubmit={searchWorkspace}><Icon name="search" size={16} /><input key={pathname + search} aria-label={user.platformAdmin ? 'Search organizations' : 'Search projects'} name="q" defaultValue={new URLSearchParams(search).get('q') ?? ''} placeholder={user.platformAdmin ? 'Search organizations…' : 'Search your projects…'} /><kbd>↵</kbd></form>
      <div className="topbar-profile"><span className="workspace-avatar">{initials}</span><span><strong>{user.displayName}</strong><small>{user.platformAdmin ? 'Platform administrator' : 'Member'}</small></span></div>
     </header>
-    <div id="workspace-main" className="route-content" key={pathname}><Outlet /></div>
+    <div id="workspace-main" className="route-content" key={pathname}><ScanViewer><Outlet /></ScanViewer></div>
    </div>
   </div>
  </WorkspaceContext.Provider>

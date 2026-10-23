@@ -1,0 +1,5 @@
+.scan-viewer { position: fixed; border: 1px solid var(--border); border-radius: var(--radius); z-index: 25; background: #111213; transform-origin: top left; overflow: hidden; }
+.scan-viewer-close { z-index: 100; position: absolute; top: 22px; left: 22px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--text-h); background: #202123; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; }
+.scan-viewer-close:hover { color: var(--accent); border-color: var(--accent); }
+.scan-viewer-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.scan-viewer-placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0; color: var(--text); text-align: center; }

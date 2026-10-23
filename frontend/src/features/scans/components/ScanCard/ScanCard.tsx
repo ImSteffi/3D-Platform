@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import Button from '../../../../shared/ui/Button/Button'
 import Icon from '../../../../shared/ui/Icon/Icon'
 import SceneFileList from '../SceneFileList/SceneFileList'
 import { formatFileSize } from '../../utils/sceneFiles'
+import { ScanViewerContext } from '../ScanViewer/ScanViewerContext'
 import './ScanCard.css'
 
 type ScanCardProps = {
  scan: {
+  id: number
   name: string
   status: 'READY' | 'UPLOADING' | 'FAILED'
   files: { relativePath: string; sizeBytes: number }[]
@@ -16,11 +18,12 @@ type ScanCardProps = {
 }
 
 export default function ScanCard({ scan }: ScanCardProps) {
+ const openViewer = useContext(ScanViewerContext)
  const [notice, setNotice] = useState('')
  const totalSize = scan.sizeBytes ?? scan.files.reduce((sum, file) => sum + file.sizeBytes, 0)
  return <article className="saved-scan-card">
   <div className="saved-scan-preview">
-   <button type="button" className="scan-play-button" aria-label={`Open scan ${scan.name}`} onClick={() => setNotice('The viewer is not connected yet.')}>
+   <button type="button" className="scan-play-button" aria-label={`Open scan ${scan.name}`} disabled={scan.status !== 'READY'} onClick={event => openViewer?.(scan, event.currentTarget)}>
     <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
    </button>
   </div>

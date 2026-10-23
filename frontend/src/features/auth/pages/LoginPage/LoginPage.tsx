@@ -42,8 +42,8 @@ export default function LoginPage() {
         <div className="login-story-body"><span className="eyebrow">YOUR WORLD, IN A NEW DIMENSION</span><h1>Every space.<br />A new perspective.</h1><p>Step closer to your projects. Explore captured spaces in one connected workspace.</p><SceneArtwork /></div>
       </aside>
       <div className="login-form-side"><form className="login-card" onSubmit={handleSubmit}>
-        <h1>Welcome back.</h1>
-        <p className="lede">Sign in to explore your projects and spaces.</p>
+        
+        
         <TextField
           id="email"
           name="email"
@@ -68,8 +68,8 @@ export default function LoginPage() {
           </p>
         )}
 
-        <fieldset disabled={submitting} className="login-submit"><Button type="submit">{submitting ? "Signing in…" : "Sign in to workspace"}<Icon name="arrow" size={16} /></Button></fieldset>
-      <p className="login-support">Need access? Contact your platform administrator.</p></form><span className="login-copyright">3D Platform · Your private workspace</span></div>
+        <fieldset disabled={submitting} className="login-submit"><Button type="submit">{submitting ? "Signing in…" : "Sign in"}<Icon name="arrow" size={16} /></Button></fieldset>
+      <p className="login-support">Need access? Contact your platform administrator.</p></form></div>
     </main>
   );
 }

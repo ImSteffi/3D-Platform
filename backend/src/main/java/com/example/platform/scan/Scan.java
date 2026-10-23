@@ -40,6 +40,12 @@ public class Scan {
     @Column(name = "status", nullable = false, length = 20)
     private Status status;
 
+    @jakarta.persistence.Embedded
+    private ScanStartingView startingView;
+
+    public ScanStartingView getStartingView() { return startingView; }
+    public void setStartingView(ScanStartingView view) { this.startingView = view; }
+
     protected Scan() {
     }
 

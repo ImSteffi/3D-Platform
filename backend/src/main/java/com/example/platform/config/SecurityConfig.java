@@ -18,6 +18,9 @@ public class SecurityConfig {
                                                 "/api/organizations",
                                                 "/api/organizations/**")
                                 .hasRole("PLATFORM_ADMIN")
+                                .requestMatchers(org.springframework.http.HttpMethod.PUT,
+                                                "/api/scans/*/viewer/starting-view")
+                                .hasRole("PLATFORM_ADMIN")
                                 .anyRequest().authenticated())
                                 .formLogin(form -> form
                                                 .loginProcessingUrl("/api/auth/login")
