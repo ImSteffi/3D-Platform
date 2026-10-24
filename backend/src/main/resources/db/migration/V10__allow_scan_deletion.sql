@@ -1,0 +1,1 @@
+GRANT DELETE ON public.scan_files, public.scans TO backend_db_user;

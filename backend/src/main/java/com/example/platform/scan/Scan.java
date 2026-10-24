@@ -46,6 +46,19 @@ public class Scan {
     public ScanStartingView getStartingView() { return startingView; }
     public void setStartingView(ScanStartingView view) { this.startingView = view; }
 
+    @Column(name = "share_token", length = 64, unique = true)
+    private String shareToken;
+    @Column(name = "share_enabled", nullable = false)
+    private boolean shareEnabled;
+    @Column(name = "hosting_enabled", nullable = false)
+    private boolean hostingEnabled = true;
+
+    public String getShareToken() { return shareToken; }
+    public boolean isShareEnabled() { return shareEnabled; }
+    public boolean isHostingEnabled() { return hostingEnabled; }
+    public void enableSharing(String token) { if (shareToken == null) shareToken = token; shareEnabled = true; }
+    public void disableSharing() { shareEnabled = false; }
+
     protected Scan() {
     }
 

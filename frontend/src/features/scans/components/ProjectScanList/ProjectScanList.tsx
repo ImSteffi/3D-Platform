@@ -34,7 +34,7 @@ export default function ProjectScanList({ organizationId, projectId }: { organiz
     {error && <p role="alert" className="field-error">{error}</p>}
     {!loading && !error && saved.length === 0 && <p className="no-scans">No scans yet. Add the first capture to this project.</p>}
     <ul className="scan-draft-list" aria-label="Saved scans">
-      {saved.map(scan => <li key={scan.id}><ScanCard scan={scan} /></li>)}
+      {saved.map(scan => <li key={scan.id}><ScanCard scan={scan} onDeleted={id => setSaved(current => current.filter(item => item.id !== id))} /></li>)}
     </ul>
 
   </>

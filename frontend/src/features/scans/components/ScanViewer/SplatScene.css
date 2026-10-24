@@ -6,3 +6,4 @@
 .scan-starting-view-controls .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .scan-starting-view-message { margin: 0; padding: 8px 12px; border-radius: 8px; background: #17181aeb; color: var(--success); font-size: 13px; }
 .scan-starting-view-message--error { color: var(--danger); }
+.splat-scene .sse-viewer .sse-viewerBranding { display: none; }

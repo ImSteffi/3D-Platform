@@ -1,3 +1,7 @@
+export function isZoneIdentifier(path: string): boolean {
+  return /(?:^|[/\\:\uF03A\uFF1A])zone\.identifier(?::\$data)?$/i.test(path);
+}
+
 export type SelectedSceneFile = {
   file: File;
   relativePath: string;
@@ -24,6 +28,7 @@ export async function readEntry(
   relativePath: string,
 ): Promise<SelectedSceneFile[]> {
   if (entry.isFile) {
+    if (isZoneIdentifier(relativePath || entry.name)) return [];
     const fileEntry = entry as FileSystemFileEntry;
 
     const file = await new Promise<File>((resolve, reject) => {

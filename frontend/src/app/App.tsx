@@ -1,3 +1,4 @@
+import SharedViewerPage from '../features/scans/components/ScanViewer/SharedViewerPage'
 import AdminProjectPage from '../features/projects/pages/AdminProjectPage/AdminProjectPage'
 import { Navigate, Route, Routes } from 'react-router'
 import LoginPage from '../features/auth/pages/LoginPage/LoginPage'
@@ -10,6 +11,7 @@ import WorkspaceLayout from '../shared/layout/WorkspaceLayout/WorkspaceLayout'
 import NotFoundPage from '../shared/pages/NotFoundPage/NotFoundPage'
 export default function App() {
  return <Routes>
+  <Route path="/view/:token" element={<SharedViewerPage />} />
   <Route path="/login" element={<LoginPage />} />
   <Route element={<WorkspaceLayout />}>
    <Route path="/" element={<Navigate to="/dashboard" replace />} />

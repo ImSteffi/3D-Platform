@@ -9,7 +9,7 @@ import FormPanel from '../../../../shared/ui/FormPanel/FormPanel'
 import { useId, useRef, useState, type DragEvent, type FormEvent } from 'react';
 import Button from '../../../../shared/ui/Button/Button.tsx';
 import TextField from '../../../../shared/ui/TextField/TextField.tsx';
-import { formatFileSize, readEntry, type SelectedSceneFile } from '../../utils/sceneFiles.ts';
+import { formatFileSize, readEntry, isZoneIdentifier, type SelectedSceneFile } from '../../utils/sceneFiles.ts';
 
 type ScanDraftFormProps = {
   organizationId: number;
@@ -39,6 +39,7 @@ export default function ScanDraftForm({ organizationId, projectId, onPublished, 
         relativePath:
           file.webkitRelativePath.split("/").slice(1).join("/") || file.name,
       }))
+      .filter((item) => !isZoneIdentifier(item.relativePath))
       .sort((first, second) =>
         first.relativePath.localeCompare(second.relativePath),
       );

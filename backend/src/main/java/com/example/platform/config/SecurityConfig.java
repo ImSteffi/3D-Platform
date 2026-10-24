@@ -13,13 +13,17 @@ public class SecurityConfig {
                         throws Exception {
 
                 http.authorizeHttpRequests(auth -> auth
+                                .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
                                 .requestMatchers("/api/auth/csrf").permitAll()
+                                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/public/views/**").permitAll()
                                 .requestMatchers(
                                                 "/api/organizations",
                                                 "/api/organizations/**")
                                 .hasRole("PLATFORM_ADMIN")
                                 .requestMatchers(org.springframework.http.HttpMethod.PUT,
                                                 "/api/scans/*/viewer/starting-view")
+                                .hasRole("PLATFORM_ADMIN")
+                                .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/scans/*")
                                 .hasRole("PLATFORM_ADMIN")
                                 .anyRequest().authenticated())
                                 .formLogin(form -> form

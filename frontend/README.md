@@ -83,4 +83,64 @@ The SuperSplat Viewer and its PlayCanvas peer are pinned in package.json. Each s
 
 The backend exposes /api/scans/{scanId}/viewer and /api/scans/{scanId}/viewer/file?path=... . Both require a session and a READY scan, and verify organization membership or platform administrator status. File paths must match database records exactly. R2 files are streamed through the backend, keeping credentials and object URLs out of the browser and allowing the voxel loader to resolve its matching binary without changing R2 CORS. This adds backend bandwidth; no public bucket access is required. Starting views now live in R2 at viewer-settings/scans/{scanId}/settings.json. Saving replaces the first camera pose while preserving other settings. An uploaded settings.json is used as the initial template; the managed copy keeps original upload metadata intact and is the file to include as settings.json in a future viewer ZIP. Existing database-saved viewpoints remain a read-only fallback until a settings file is saved. V8 is retained as applied migration history; new saves do not update its camera columns.
 
-PUT /api/scans/{scanId}/viewer/starting-view is restricted to platform administrators and requires a CSRF token. Restart the backend after adding these endpoints. Share, Download and Delete buttons remain placeholders.
+PUT /api/scans/{scanId}/viewer/starting-view is restricted to platform administrators and requires a CSRF token. Restart the backend after adding these endpoints. Share and Delete buttons remain placeholders. Download creates a standalone viewer ZIP.
+
+## Downloadable viewer ZIP
+
+Download is available for READY scans to platform administrators and members of the scan's organization. The browser first checks access, then streams the authenticated ZIP download directly to disk. Large scene files are not converted to browser Blobs or buffered as a whole on the backend.
+
+Build the standalone viewer before starting or packaging the backend:
+
+    cd frontend
+    npm ci
+    npm run build:viewer
+    cd ..
+    ./backend/mvnw -f backend/pom.xml package
+
+The usual frontend build also runs build:viewer. Generated files live in frontend/viewer-dist (ignored by Git). Maven includes them in its classpath under viewer-export/bundle. Rebuild and restart the backend after upgrading the viewer or regenerating this bundle. Missing export assets produce an unavailable response rather than an incomplete download.
+
+Downloads are named 3D-viewer.zip. ZIPs include one bilingual README.html at the root with copyable iframe code and no live preview; the viewer folder includes the standalone application, editable theme.css, current settings.json, scene.json, third-party licenses and original scan files under data/. The standalone viewer uses relative paths and selects Walk mode when collision permits. It contains no platform API URLs or R2 credentials. Supported skybox/audio/poster references must point to files uploaded with the scan; export rewrites their paths and rejects missing or external dependencies.
+
+Instructions and the embed example are maintained in backend/src/main/resources/viewer-export. GET and HEAD /api/scans/{scanId}/download enforce the same current membership and READY checks as the viewer. Failed or truncated storage reads do not finish a valid-looking ZIP. Downloads use a 30-minute async timeout.
+Zone.Identifier sidecar files are excluded from upload selection, generated bundle manifests and downloadable ZIPs. Windows may still add its own origin metadata after download/extraction; the server cannot prevent that.
+
+## Hosted public sharing
+
+The Shareable switch enables or disables public access using a permanent per-scan share token.
+URL and IFRAME copy the existing link without enabling sharing. GET /api/scans/{id}/share
+reads the saved switch state without modifying it.
+Anonymous viewers use /view/{token} and /api/public/views/{token}; they do not
+need a login session. Scan data remains in the private R2 bucket.
+
+Set PUBLIC_ORIGIN on the backend to the externally reachable HTTPS origin
+of the frontend (for example https://tours.example.com). Without it, local
+development uses the browser's current origin. A localhost URL is only usable
+on that same computer.
+
+Production hosting must serve the frontend entry point for /view/* and proxy
+/api/* to the backend on the same origin. Allow framing on /view/*: do not add
+X-Frame-Options DENY/SAMEORIGIN or a restrictive CSP frame-ancestors there.
+Keep frame restrictions on authenticated management pages. Serve public viewer
+pages with Referrer-Policy: no-referrer and X-Robots-Tag: noindex, nofollow, noarchive.
+Do not cache public manifests or scene responses across entitlement changes.
+
+POST /api/scans/{id}/share requires an authenticated scan owner/member or
+platform administrator and CSRF. It returns the same link on repeated calls.
+DELETE on that endpoint disables sharing without changing its token.
+Both the manifest and every file request require share_enabled, hosting_enabled
+and READY status. hosting_enabled is reserved for trusted administration/billing;
+the public and member-facing share endpoints cannot change it. It defaults to
+true during the pre-billing phase. A future billing service can suspend and
+restore it without replacing the URL. Bytes already received by a visitor
+cannot be revoked.
+## Scan deletion
+
+DELETE /api/scans/{id} requires a platform administrator and CSRF.
+The card asks for confirmation before calling it. Deletion first commits
+FAILED status and disables sharing, preventing new viewer/download/upload
+requests. It then aborts recorded multipart uploads, deletes recorded R2
+objects and managed viewer settings, and finally deletes file and scan rows.
+A storage failure retains database keys for retry; missing objects and a
+previously deleted scan are safe to retry. There is no automatic retry worker:
+an administrator retries Delete after a failure.
+Migration V10 grants the backend role DELETE on scans and scan_files.

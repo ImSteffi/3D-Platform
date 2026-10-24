@@ -10,6 +10,8 @@ public interface ScanRepository extends JpaRepository<Scan, Long> {
 
     List<Scan> findByProject_IdAndStatusOrderByIdAsc(Long projectId, Scan.Status status);
 
+    java.util.Optional<Scan> findByShareToken(String token);
+
     long countByProject_IdAndStatus(Long projectId, Scan.Status status);
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)

@@ -82,6 +82,7 @@ class ScanViewerServiceTest {
     @Test void nonMemberCannotReadManifestOrFiles() {
         when(projects.findAccessibleProject(2L, 10L)).thenReturn(Optional.empty());
         denied(() -> service.manifest(1L, auth));
+        denied(() -> service.download(1L, auth));
         denied(() -> service.file(1L, "room.sog", auth));
         verifyNoInteractions(files);
     }
@@ -90,6 +91,7 @@ class ScanViewerServiceTest {
         admin();
         when(scans.findById(1L)).thenReturn(Optional.of(new Scan(project, "Uploading")));
         denied(() -> service.manifest(1L, auth));
+        denied(() -> service.download(1L, auth));
         denied(() -> service.file(1L, "room.sog", auth));
         verifyNoInteractions(files);
     }

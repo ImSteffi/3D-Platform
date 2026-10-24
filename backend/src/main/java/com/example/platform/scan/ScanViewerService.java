@@ -59,7 +59,11 @@ public class ScanViewerService {
     }
 
     public Manifest manifest(Long scanId, Authentication authentication) {
-        var scan = accessibleScan(scanId, authentication);
+        return manifest(accessibleScan(scanId, authentication), "/api/scans/" + scanId + "/viewer");
+    }
+
+    private Manifest manifest(Scan scan, String base) {
+        var scanId = scan.getId();
         var entries = files.findByScan_IdOrderByIdAsc(scanId);
         var scenes = entries.stream().filter(file -> {
             var path = file.getRelativePath().toLowerCase(Locale.ROOT);
@@ -77,9 +81,61 @@ public class ScanViewerService {
                 && file.getRelativePath().endsWith(".voxel.json")
                 && entries.stream().anyMatch(binary -> binary.getRelativePath().equals(
                         file.getRelativePath().replace(".voxel.json", ".voxel.bin")))).toList();
-        return new Manifest(url(scanId, path), path,
-                collisions.size() == 1 ? url(scanId, collisions.getFirst().getRelativePath()) : null, settings(scan, entries));
+        return new Manifest(fileUrl(base, path), path,
+                collisions.size() == 1 ? fileUrl(base, collisions.getFirst().getRelativePath()) : null, settings(scan, entries));
     }
+
+    private Scan sharedScan(String token) {
+        if (token == null || !token.matches("[A-Za-z0-9_-]{43}")) throw notFound();
+        var scan = scans.findByShareToken(token).orElseThrow(ScanViewerService::notFound);
+        if (!scan.isShareEnabled() || !scan.isHostingEnabled() || scan.getStatus() != Scan.Status.READY)
+            throw notFound();
+        return scan;
+    }
+
+    public record SharingState(boolean enabled, boolean hostingEnabled, String token) {}
+
+    public SharingState sharingState(Long scanId, Authentication authentication) {
+        var scan = accessibleScan(scanId, authentication);
+        return new SharingState(scan.isShareEnabled(), scan.isHostingEnabled(), scan.getShareToken());
+    }
+
+    @Transactional
+    public String enableSharing(Long scanId, Authentication authentication) {
+        var scan = scans.findForUpdate(scanId).orElseThrow(ScanViewerService::notFound);
+        accessibleScan(scanId, authentication);
+        if (!scan.isHostingEnabled()) throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Hosted sharing is unavailable for this scan.");
+        var bytes = new byte[32];
+        new java.security.SecureRandom().nextBytes(bytes);
+        scan.enableSharing(java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes));
+        return scan.getShareToken();
+    }
+
+    @Transactional
+    public void disableSharing(Long scanId, Authentication authentication) {
+        var scan = scans.findForUpdate(scanId).orElseThrow(ScanViewerService::notFound);
+        accessibleScan(scanId, authentication);
+        scan.disableSharing();
+    }
+
+    public Manifest sharedManifest(String token) {
+        return manifest(sharedScan(token), "/api/public/views/" + token);
+    }
+
+    public ScanFile sharedFile(String token, String path) {
+        var scan = sharedScan(token);
+        return files.findByScan_IdOrderByIdAsc(scan.getId()).stream()
+                .filter(file -> file.getRelativePath().equals(path))
+                .findFirst().orElseThrow(ScanViewerService::notFound);
+    }
+    public Download download(Long scanId, Authentication authentication) {
+        var scan = accessibleScan(scanId, authentication);
+        var entries = files.findByScan_IdOrderByIdAsc(scanId);
+        return new Download(scan.getId(), scan.getName(), java.util.List.copyOf(entries), manifest(scanId, authentication));
+    }
+
+    public record Download(Long id, String name, java.util.List<ScanFile> files, Manifest viewer) {}
 
     public ScanFile file(Long scanId, String path, Authentication authentication) {
         var scan = accessibleScan(scanId, authentication);
@@ -93,9 +149,9 @@ public class ScanViewerService {
     public InputStream openFile(ScanFile file) {
         return r2.getObject(GetObjectRequest.builder().bucket(bucket).key(file.getObjectKey()).build());
     }
-    private static String url(Long scanId, String path) {
+    private static String fileUrl(String base, String path) {
         // Voxel loading swaps .voxel.json for .voxel.bin, so preserve that filename.
-        return "/api/scans/" + scanId + "/viewer/file?path="
+        return base + "/file?path="
                 + UriUtils.encodeQueryParam(path, StandardCharsets.UTF_8);
     }
 

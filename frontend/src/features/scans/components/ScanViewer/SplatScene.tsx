@@ -5,7 +5,7 @@ import { useWorkspaceUser } from '../../../../shared/layout/WorkspaceLayout/Work
 import { saveStartingView, type StartingView, type ViewerManifest } from '../../api/viewer'
 import './SplatScene.css'
 
-export default function SplatScene({ scanId }: { scanId: number }) {
+export default function SplatScene({ scanId, shareToken }: { scanId?: number; shareToken?: string }) {
  const user = useWorkspaceUser()
  const container = useRef<HTMLDivElement>(null)
  const activeViewer = useRef<ViewerHandle | null>(null)
@@ -22,9 +22,9 @@ export default function SplatScene({ scanId }: { scanId: number }) {
   const abort = new AbortController()
   async function load() {
    try {
-    const response = await fetch('/api/scans/' + scanId + '/viewer', { signal: abort.signal })
+    const response = await fetch(shareToken ? '/api/public/views/' + encodeURIComponent(shareToken) : '/api/scans/' + scanId + '/viewer', { signal: abort.signal, credentials: shareToken ? 'omit' : 'same-origin' })
     if (!response.ok) throw new Error(response.status === 401 ? 'Your session expired. Please sign in again.'
-     : response.status === 404 ? 'This scan is unavailable.'
+     : response.status === 404 ? 'This 3D tour is currently unavailable.'
      : 'Could not open this scan. Please close the viewer and try again.')
     const assets: ViewerManifest = await response.json()
     const [{ createViewer }, { importSettings, validateSettings }] = await Promise.all([
@@ -85,11 +85,11 @@ export default function SplatScene({ scanId }: { scanId: number }) {
    activeViewer.current = null
    viewer?.destroy()
   }
- }, [scanId])
+ }, [scanId, shareToken])
 
  async function setStartingView() {
   const viewer = activeViewer.current
-  if (!user.platformAdmin || !viewer?.state.loaded || saveRequest.current) return
+  if (shareToken || !scanId || !user.platformAdmin || !viewer?.state.loaded || saveRequest.current) return
   if (viewer.state.xrMode) {
    setSaveError(true)
    setSaveMessage('Exit VR or AR before setting the starting view.')
@@ -128,7 +128,7 @@ export default function SplatScene({ scanId }: { scanId: number }) {
 
  return <>
   <div ref={container} className="splat-scene" />
-  {user.platformAdmin && <div className="scan-starting-view-controls">
+  {!shareToken && user.platformAdmin && <div className="scan-starting-view-controls">
    <button type="button" className="btn btn-primary" disabled={!ready || !!error || saving}
     onClick={() => { void setStartingView() }}>{saving ? 'Saving…' : 'Set starting view'}</button>
    {saveMessage && <p className={saveError ? 'scan-starting-view-message scan-starting-view-message--error' : 'scan-starting-view-message'}

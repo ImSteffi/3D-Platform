@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run build:viewer && tsc -b && vite build",
+    "build:viewer": "tsc -p tsconfig.viewer.json && node scripts/build-viewer.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
