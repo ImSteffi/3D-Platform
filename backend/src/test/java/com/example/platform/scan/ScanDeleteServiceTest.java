@@ -46,6 +46,8 @@ class ScanDeleteServiceTest {
         order.verify(r2).deleteObject(DeleteObjectRequest.builder().bucket("bucket").key(file.getObjectKey()).build());
         order.verify(r2).deleteObject(DeleteObjectRequest.builder().bucket("bucket")
                 .key("viewer-settings/scans/12/settings.json").build());
+        order.verify(r2).deleteObject(DeleteObjectRequest.builder().bucket("bucket")
+                .key("viewer-previews/scans/12/preview.png").build());
         order.verify(files).deleteAll(List.of(file));
         order.verify(scans).delete(scan);
         order.verify(transactions).commit(any());

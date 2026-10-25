@@ -21,7 +21,16 @@ class ScanViewerServiceTest {
     final ProjectRepository projects = mock(ProjectRepository.class);
     final UserRepository users = mock(UserRepository.class);
     final S3Client r2 = mock(S3Client.class);
-    final ScanViewerService service = new ScanViewerService(scans, files, projects, users, r2, "test");
+    final software.amazon.awssdk.services.s3.presigner.S3Presigner signer =
+            software.amazon.awssdk.services.s3.presigner.S3Presigner.builder()
+                    .endpointOverride(java.net.URI.create("https://r2.example.test"))
+                    .region(software.amazon.awssdk.regions.Region.of("auto"))
+                    .credentialsProvider(software.amazon.awssdk.auth.credentials.StaticCredentialsProvider.create(
+                            software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create("test-key", "test-secret")))
+                    .serviceConfiguration(software.amazon.awssdk.services.s3.S3Configuration.builder()
+                            .pathStyleAccessEnabled(true).build()).build();
+    final ScanViewerService service = new ScanViewerService(scans, files, projects, users, r2, signer, "test");
+    @org.junit.jupiter.api.AfterEach void closeSigner() { signer.close(); }
     final User user = new User("Test", "test@example.test", "unused");
     final Project project = new Project(null, "Project");
     final Scan scan = new Scan(project, "Scene");
@@ -70,6 +79,9 @@ class ScanViewerServiceTest {
                 List.of(file("room.sog"), file("scene.voxel.json"), file("scene.voxel.bin")));
         var result = service.manifest(1L, auth);
         assertEquals("room.sog", result.contentFilename());
+        assertTrue(result.contentUrl().startsWith("https://r2.example.test/test/private/room.sog?"));
+        assertTrue(result.contentUrl().contains("X-Amz-Expires=3600"));
+        assertTrue(result.contentUrl().contains("X-Amz-Signature="));
         assertEquals("/api/scans/1/viewer/file?path=scene.voxel.json", result.collisionUrl());
     }
 
@@ -207,4 +219,24 @@ class ScanViewerServiceTest {
         assertArrayEquals(bytes, objects.get("viewer-settings/scans/1/settings.json"));
         verify(r2, never()).putObject(any(software.amazon.awssdk.services.s3.model.PutObjectRequest.class),
                 any(software.amazon.awssdk.core.sync.RequestBody.class));
+    }
+    @Test void collisionObjectsHaveIndependentSignaturesAndKeepPublicAccessChecks() {
+        admin();
+        scan.enableSharing("a".repeat(43));
+        when(scans.findByShareToken(scan.getShareToken())).thenReturn(Optional.of(scan));
+        var meta = file("scene.voxel.json");
+        var binary = file("scene.voxel.bin");
+        when(files.findByScan_IdOrderByIdAsc(1L)).thenReturn(List.of(file("room.sog"), meta, binary));
+        var manifest = service.sharedManifest(scan.getShareToken());
+        assertTrue(manifest.contentUrl().startsWith("https://r2.example.test/"));
+        assertTrue(manifest.collisionUrl().startsWith("/api/public/views/" + scan.getShareToken()));
+        var metaUrl = service.signedUrl(service.sharedFile(scan.getShareToken(), "scene.voxel.json"));
+        var binaryUrl = service.signedUrl(service.sharedFile(scan.getShareToken(), "scene.voxel.bin"));
+        assertNotEquals(metaUrl, binaryUrl);
+        assertTrue(metaUrl.contains("X-Amz-Expires=3600"));
+        assertNotEquals(metaUrl.replace(".voxel.json", ".voxel.bin"), binaryUrl);
+        scan.disableSharing();
+        clearInvocations(r2);
+        denied(() -> service.sharedManifest(scan.getShareToken()));
+        denied(() -> service.sharedFile(scan.getShareToken(), "scene.voxel.bin"));
     }}

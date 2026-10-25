@@ -81,13 +81,28 @@ Play opens the shared SuperSplat Viewer for admin and client scan cards in a sma
 
 The SuperSplat Viewer and its PlayCanvas peer are pinned in package.json. Each scan currently supports one SOG or PLY scene and an optional matching voxel JSON/binary pair. Walk is selected after loading whenever collision data and scene dimensions allow it; otherwise the viewer uses fly mode and explains why. Administrators can move to a viewpoint and click Set starting view at the top right. The saved position, target and field of view are applied on the next open for every authorized user. Scans without a saved viewpoint use the viewer environment defaults.
 
-The backend exposes /api/scans/{scanId}/viewer and /api/scans/{scanId}/viewer/file?path=... . Both require a session and a READY scan, and verify organization membership or platform administrator status. File paths must match database records exactly. R2 files are streamed through the backend, keeping credentials and object URLs out of the browser and allowing the voxel loader to resolve its matching binary without changing R2 CORS. This adds backend bandwidth; no public bucket access is required. Starting views now live in R2 at viewer-settings/scans/{scanId}/settings.json. Saving replaces the first camera pose while preserving other settings. An uploaded settings.json is used as the initial template; the managed copy keeps original upload metadata intact and is the file to include as settings.json in a future viewer ZIP. Existing database-saved viewpoints remain a read-only fallback until a settings file is saved. V8 is retained as applied migration history; new saves do not update its camera columns.
+The backend exposes /api/scans/{scanId}/viewer and /api/scans/{scanId}/viewer/file?path=... . Both require a session and a READY scan, and verify organization membership or platform administrator status. File paths must match database records exactly. The manifest signs the scene object
+for one hour, and the browser fetches scene bytes directly from private R2 without
+sending platform cookies. The voxel loader derives the binary URL from the metadata
+URL, so collisionUrl remains a same-origin resolver. Each JSON/BIN request checks
+access and responds with a no-store 307 redirect to its independently signed R2 URL;
+neither collision file's bytes pass through Java. This keeps the pinned viewer
+package unchanged and works for authenticated and public shared viewers.
 
-PUT /api/scans/{scanId}/viewer/starting-view is restricted to platform administrators and requires a CSRF token. Restart the backend after adding these endpoints. Share and Delete buttons remain placeholders. Download creates a standalone viewer ZIP.
+R2 CORS must allow each frontend origin (scheme, hostname and port), GET/HEAD
+and any requested headers; retain PUT for uploads. Expose ETag, Content-Length,
+Content-Range and Accept-Ranges. For embeds the origin is the hosted viewer's
+origin, not the client website surrounding its iframe. Signed file responses use
+private, no-store. Turning sharing/hosting off blocks new manifests and collision
+resolutions immediately, but already-issued R2 links can work until their one-hour
+expiry and already-loaded data cannot be revoked. The bucket stays private and
+R2 credentials stay on the server. Starting views now live in R2 at viewer-settings/scans/{scanId}/settings.json. Saving replaces the first camera pose while preserving other settings. An uploaded settings.json is used as the initial template; the managed copy keeps original upload metadata intact and is the file to include as settings.json in a future viewer ZIP. Existing database-saved viewpoints remain a read-only fallback until a settings file is saved. V8 is retained as applied migration history; new saves do not update its camera columns.
+
+PUT /api/scans/{scanId}/viewer/starting-view is restricted to platform administrators and requires a CSRF token. Restart the backend after adding these endpoints. Share supports public URL/IFRAME links and a Shareable switch; Delete is administrator-only with a confirmation dialog. Download creates a standalone viewer ZIP.
 
 ## Downloadable viewer ZIP
 
-Download is available for READY scans to platform administrators and members of the scan's organization. The browser first checks access, then streams the authenticated ZIP download directly to disk. Large scene files are not converted to browser Blobs or buffered as a whole on the backend.
+Download is available for READY scans to platform administrators and members of the scan's organization. The browser starts an authenticated export job, waits for completion, then downloads the ZIP directly from private R2 using a 15-minute signed link. Large scene files are not converted to browser Blobs or buffered as a whole on the backend.
 
 Build the standalone viewer before starting or packaging the backend:
 
@@ -101,7 +116,33 @@ The usual frontend build also runs build:viewer. Generated files live in fronten
 
 Downloads are named 3D-viewer.zip. ZIPs include one bilingual README.html at the root with copyable iframe code and no live preview; the viewer folder includes the standalone application, editable theme.css, current settings.json, scene.json, third-party licenses and original scan files under data/. The standalone viewer uses relative paths and selects Walk mode when collision permits. It contains no platform API URLs or R2 credentials. Supported skybox/audio/poster references must point to files uploaded with the scan; export rewrites their paths and rejects missing or external dependencies.
 
-Instructions and the embed example are maintained in backend/src/main/resources/viewer-export. GET and HEAD /api/scans/{scanId}/download enforce the same current membership and READY checks as the viewer. Failed or truncated storage reads do not finish a valid-looking ZIP. Downloads use a 30-minute async timeout.
+Instructions and the embed example are maintained in backend/src/main/resources/viewer-export. POST /api/scans/{scanId}/download requires CSRF and starts background preparation.
+GET /api/scans/{scanId}/download/{exportId} checks current membership and READY status
+on every poll and returns PREPARING, READY (with a signed URL) or FAILED.
+ZIP creation streams into R2 using an 8 MiB multipart buffer; a failed build aborts the
+multipart upload and preserves any valid completed content-addressed object for a later HEAD check. R2 remains private.
+Objects are stored at temporary-exports/scans/{scanId}/{contentHash}/3D-viewer.zip.
+Configure an R2 object lifecycle rule for the exact temporary-exports/ prefix to
+delete completed objects after one day; lifecycle deletion is asynchronous.
+Keep the multipart-abort lifecycle rule as a fallback if cleanup cannot reach R2.
+The application does not modify bucket lifecycle settings automatically.
+
+One export runs at a time with at most two queued. Concurrent starts for the same
+scan reuse its pending job. A later Download prepares a current snapshot and computes a
+SHA-256 fingerprint from settings, scene metadata, immutable source object keys/sizes,
+README and the actual packaged viewer resource bytes. HEAD checks the deterministic
+R2 key before generating a ZIP. Unchanged ZIPs are reused across backend restarts;
+missing or near-expiry ZIPs are rebuilt at the same key. Objects older than 22 hours
+are refreshed to leave room for job polling and signed-link lifetime before the
+one-day lifecycle can expire them. Settings, file identity or bundle changes produce
+a different key. Source objects of READY scans must remain immutable. No database
+cache table is used.
+Job state is in memory for up to one hour; after a backend restart the user retries
+Download. This queue/deduplication is per backend instance, not distributed.
+The frontend polls for up to 30 minutes and aborts polling when its card unmounts.
+Signed URLs already issued can work for their 15-minute lifetime even if access is
+revoked afterwards. Temporary ZIPs remain until lifecycle cleanup, including after
+scan deletion. No database migration is required.
 Zone.Identifier sidecar files are excluded from upload selection, generated bundle manifests and downloadable ZIPs. Windows may still add its own origin metadata after download/extraction; the server cannot prevent that.
 
 ## Hosted public sharing
@@ -127,8 +168,8 @@ Do not cache public manifests or scene responses across entitlement changes.
 POST /api/scans/{id}/share requires an authenticated scan owner/member or
 platform administrator and CSRF. It returns the same link on repeated calls.
 DELETE on that endpoint disables sharing without changing its token.
-Both the manifest and every file request require share_enabled, hosting_enabled
-and READY status. hosting_enabled is reserved for trusted administration/billing;
+The manifest and every collision resolver request require share_enabled, hosting_enabled
+and READY status before issuing one-hour R2 links. Already-issued links remain valid until expiry. hosting_enabled is reserved for trusted administration/billing;
 the public and member-facing share endpoints cannot change it. It defaults to
 true during the pre-billing phase. A future billing service can suspend and
 restore it without replacing the URL. Bytes already received by a visitor
@@ -144,3 +185,14 @@ A storage failure retains database keys for retry; missing objects and a
 previously deleted scan are safe to retry. There is no automatic retry worker:
 an administrator retries Delete after a failure.
 Migration V10 grants the backend role DELETE on scans and scan_files.
+## Scan previews
+
+Platform admins can use Set preview below Set starting view to capture the
+current 3D scene without viewer overlays. The capture is converted from raw
+RGBA into an 800x600 PNG and saved to the private R2 object
+viewer-previews/scans/{id}/preview.png. Saving replaces the previous preview
+and refreshes the shared scan card immediately. There is no file picker.
+GET /api/scans/{id}/preview requires scan access; PUT requires an administrator
+and CSRF. Missing previews return 204. Inputs are limited to 4 MiB and 2048x2048,
+decoded and normalized as PNG. Scan deletion removes the preview as well.
+No database migration is needed.

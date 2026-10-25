@@ -31,7 +31,7 @@ export default function ScanDraftForm({ organizationId, projectId, onPublished, 
   const totalSize = files.reduce((total, item) => total + item.file.size, 0);
 
   function selectFolder(fileList: FileList | null) {
-    if (!fileList || fileList.length === 0 || readingRef.current || busy || serverScan) return;
+    if (!fileList || fileList.length === 0 || readingRef.current || busy || serverScan || files.length > 0) return;
 
     const selected = Array.from(fileList)
       .map((file) => ({
@@ -55,7 +55,7 @@ export default function ScanDraftForm({ organizationId, projectId, onPublished, 
     event.preventDefault();
     event.stopPropagation();
 
-    if (readingRef.current || busy || serverScan) return;
+    if (readingRef.current || busy || serverScan || files.length > 0) return;
 
     // Capture dropped entries before awaiting directory reads.
     const entries = Array.from(event.dataTransfer.items)
@@ -146,7 +146,7 @@ export default function ScanDraftForm({ organizationId, projectId, onPublished, 
             onChange={setName}
           />
 
-          <div
+          {files.length === 0 && <div
             className="file-dropzone"
             onDragOver={(event) => {
               event.preventDefault();
@@ -175,7 +175,7 @@ export default function ScanDraftForm({ organizationId, projectId, onPublished, 
               }}
             />
             {reading && <p role="status">Reading folder contents…</p>}
-          </div>
+          </div>}
 
           {files.length > 0 && (
             <section className="scene-file-selection">

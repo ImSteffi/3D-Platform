@@ -1,3 +1,4 @@
+import ScanPreview from './ScanPreview'
 import ConfirmDialog from '../../../../shared/ui/ConfirmDialog/ConfirmDialog'
 import { useContext, useEffect, useRef, useState } from 'react'
 import Icon from '../../../../shared/ui/Icon/Icon'
@@ -35,6 +36,8 @@ export default function ScanCard({ scan, onDeleted }: ScanCardProps) {
  const [shareOpen, setShareOpen] = useState(false)
  const [copied, setCopied] = useState<'URL' | 'IFRAME' | null>(null)
  const [actionError, setActionError] = useState('')
+ const downloadRequest = useRef<AbortController | null>(null)
+ useEffect(() => () => downloadRequest.current?.abort(), [])
  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
  useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current) }, [])
  useEffect(() => {
@@ -95,15 +98,18 @@ export default function ScanCard({ scan, onDeleted }: ScanCardProps) {
   if (deleting || deleteFailed || downloading || scan.status !== 'READY') return
   setDownloading(true)
   setActionError('')
-  try { await downloadScan(scan.id) }
-  catch (error) { setActionError(error instanceof Error ? error.message : 'Could not download this scan.') }
-  finally { setDownloading(false) }
+  const request = new AbortController()
+  downloadRequest.current = request
+  try { await downloadScan(scan.id, request.signal) }
+  catch (error) { if (!request.signal.aborted) setActionError(error instanceof Error ? error.message : 'Could not download this scan.') }
+  finally { if (!request.signal.aborted) { downloadRequest.current = null; setDownloading(false) } }
  }
  const totalSize = scan.sizeBytes ?? scan.files.reduce((sum, file) => sum + file.sizeBytes, 0)
  if (deleted) return null
  return <>
  <article className="saved-scan-card">
   <div className="saved-scan-preview">
+   {scan.status === 'READY' && <ScanPreview scanId={scan.id} />}
    <button type="button" className="scan-play-button" aria-label={`Open scan ${scan.name}`} disabled={deleting || deleteFailed || scan.status !== 'READY'} onClick={event => openViewer?.(scan, event.currentTarget)}>
     <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
    </button>

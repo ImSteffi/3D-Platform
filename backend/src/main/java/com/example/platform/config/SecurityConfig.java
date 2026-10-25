@@ -21,7 +21,7 @@ public class SecurityConfig {
                                                 "/api/organizations/**")
                                 .hasRole("PLATFORM_ADMIN")
                                 .requestMatchers(org.springframework.http.HttpMethod.PUT,
-                                                "/api/scans/*/viewer/starting-view")
+                                                "/api/scans/*/viewer/starting-view", "/api/scans/*/preview")
                                 .hasRole("PLATFORM_ADMIN")
                                 .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/scans/*")
                                 .hasRole("PLATFORM_ADMIN")

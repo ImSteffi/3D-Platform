@@ -34,19 +34,22 @@ public class ScanViewerService {
     private final UserRepository users;
     private final S3Client r2;
     private final String bucket;
+    private final software.amazon.awssdk.services.s3.presigner.S3Presigner signer;
 
     public ScanViewerService(ScanRepository scans, ScanFileRepository files,
             ProjectRepository projects, UserRepository users, S3Client r2,
+            software.amazon.awssdk.services.s3.presigner.S3Presigner signer,
             @Value("${storage.r2.bucket-name}") String bucket) {
         this.scans = scans;
         this.files = files;
         this.projects = projects;
         this.users = users;
         this.r2 = r2;
+        this.signer = signer;
         this.bucket = bucket;
     }
 
-    private Scan accessibleScan(Long scanId, Authentication authentication) {
+    Scan accessibleScan(Long scanId, Authentication authentication) {
         var scan = scans.findById(scanId).orElseThrow(ScanViewerService::notFound);
         var user = users.findByEmailIgnoreCase(authentication.getName())
                 .orElseThrow(ScanViewerService::notFound);
@@ -81,7 +84,7 @@ public class ScanViewerService {
                 && file.getRelativePath().endsWith(".voxel.json")
                 && entries.stream().anyMatch(binary -> binary.getRelativePath().equals(
                         file.getRelativePath().replace(".voxel.json", ".voxel.bin")))).toList();
-        return new Manifest(fileUrl(base, path), path,
+        return new Manifest(signedUrl(scene), path,
                 collisions.size() == 1 ? fileUrl(base, collisions.getFirst().getRelativePath()) : null, settings(scan, entries));
     }
 
@@ -149,8 +152,18 @@ public class ScanViewerService {
     public InputStream openFile(ScanFile file) {
         return r2.getObject(GetObjectRequest.builder().bucket(bucket).key(file.getObjectKey()).build());
     }
+    public String signedUrl(ScanFile file) {
+        return signer.presignGetObject(
+                software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest.builder()
+                        .signatureDuration(java.time.Duration.ofHours(1))
+                        .getObjectRequest(GetObjectRequest.builder().bucket(bucket).key(file.getObjectKey())
+                                .responseCacheControl("private, no-store").build())
+                        .build()).url().toString();
+    }
+
     private static String fileUrl(String base, String path) {
-        // Voxel loading swaps .voxel.json for .voxel.bin, so preserve that filename.
+        // SuperSplat swaps .voxel.json for .voxel.bin. Keep this same-origin resolver
+        // so each object gets its own signature; its response redirects directly to R2.
         return base + "/file?path="
                 + UriUtils.encodeQueryParam(path, StandardCharsets.UTF_8);
     }

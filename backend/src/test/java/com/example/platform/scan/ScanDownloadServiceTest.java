@@ -134,4 +134,19 @@ class ScanDownloadServiceTest {
             }
         }
         for (var file : files.subList(1, files.size())) verify(viewer, never()).openFile(file);
+    }
+    @Test void fingerprintIsStableAndChangesWithSettingsFilesOrPackagedResources() throws Exception {
+        setup(List.of(sog, collision, binary), "{\"version\":2}");
+        var export = downloads.prepare(1L, auth);
+        var hash = downloads.fingerprint(export);
+        assertEquals(64, hash.length());
+        assertEquals(hash, downloads.fingerprint(downloads.prepare(1L, auth)));
+        assertNotEquals(hash, downloads.fingerprint(new ScanDownloadService.Export(export.name(), export.files(),
+                "{\"version\":2,\"changed\":true}".getBytes(StandardCharsets.UTF_8), export.metadata(), export.bundle())));
+        var replacement = new ScanFile(null, sog.getRelativePath(), "replacement/object", sog.getSizeBytes());
+        assertNotEquals(hash, downloads.fingerprint(new ScanDownloadService.Export(export.name(),
+                List.of(replacement, collision, binary), export.settings(), export.metadata(), export.bundle())));
+        assertNotEquals(hash, downloads.fingerprint(new ScanDownloadService.Export(export.name(), export.files(),
+                export.settings(), export.metadata(), export.bundle().subList(1, export.bundle().size()))));
+        verify(viewer, never()).openFile(any());
     }}

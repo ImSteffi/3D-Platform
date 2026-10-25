@@ -2,7 +2,6 @@ package com.example.platform.scan;
 
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import software.amazon.awssdk.core.exception.SdkException;
 
 @RestController
@@ -20,15 +19,11 @@ public class PublicScanViewerController {
     }
 
     @GetMapping("/file")
-    public ResponseEntity<StreamingResponseBody> file(@PathVariable String token, @RequestParam String path) {
+    public ResponseEntity<Void> file(@PathVariable String token, @RequestParam String path) {
         var file = viewer.sharedFile(token, path);
-        StreamingResponseBody body = output -> {
-            try (var input = viewer.openFile(file)) { input.transferTo(output); }
-        };
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+        return ResponseEntity.status(HttpStatus.TEMPORARY_REDIRECT).cacheControl(CacheControl.noStore())
                 .header("Referrer-Policy", "no-referrer")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .contentLength(file.getSizeBytes()).body(body);
+                .location(java.net.URI.create(viewer.signedUrl(file))).build();
     }
 
     @ExceptionHandler(SdkException.class)

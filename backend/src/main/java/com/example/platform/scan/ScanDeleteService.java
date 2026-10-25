@@ -62,6 +62,7 @@ public class ScanDeleteService {
             }
             r2.deleteObject(DeleteObjectRequest.builder().bucket(bucket)
                     .key("viewer-settings/scans/" + scanId + "/settings.json").build());
+            r2.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(ScanPreviewService.key(scanId)).build());
             // Keep every key recorded until all storage cleanup has succeeded.
             files.deleteAll(entries);
             files.flush();

@@ -12,7 +12,7 @@
 .scan-action-notice { margin-top: 10px; }
 @media(max-width:1100px) { .saved-scan-content { grid-template-columns: minmax(0,1fr); gap: 16px; } }
 @media(max-width:800px) { .saved-scan-card { grid-template-columns: 100px minmax(0,1fr); }.saved-scan-status { grid-column: 2; } }
-@media(max-width:600px) { .saved-scan-card { grid-template-columns: 80px minmax(0,1fr); gap: 14px; padding: 18px; } }
+
 
 .scan-play-button { display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border-radius: 50%; border: 1px solid #ffffff30; background: #ffffff0b; color: var(--text-h); cursor: pointer; transition: transform 220ms var(--ease), background 180ms, border-color 180ms; }
 .scan-play-button svg { margin-left: 2px; }
@@ -44,3 +44,22 @@
 .scan-shareable:disabled { opacity: .5; cursor: not-allowed; }
 .scan-shareable:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; border-radius: 4px; }
 @media (prefers-reduced-motion: reduce) { .scan-shareable-track, .scan-shareable-track > span { transition: none; } }
+.saved-scan-preview { position: relative; }
+.scan-preview-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.saved-scan-preview .scan-play-button { position: relative; z-index: 1; background: #17181a88; }
+
+@media (max-width: 600px) {
+ .saved-scan-card { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 16px; }
+ .saved-scan-preview { aspect-ratio: 4 / 3; }
+ .scan-preview-image { object-fit: contain; }
+ .saved-scan-preview .scan-play-button { width: 54px; height: 54px; }
+ .saved-scan-content { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+ .saved-scan-heading h3 { font-size: 17px; }
+ .saved-scan-card p { font-size: 12px; }
+ .saved-scan-actions { margin-top: 16px; gap: 8px; }
+ .saved-scan-actions .btn { min-height: 44px; padding: 10px 12px; font-size: 12px; }
+ .scan-share-actions { max-width: 100%; }
+ .saved-scan-files .scene-file-list li { gap: 12px; padding: 12px; font-size: 12px; }
+ .saved-scan-status { grid-column: 1; justify-self: stretch; flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-top: 4px; }
+ .scan-shareable { min-height: 44px; font-size: 12px; }
+}

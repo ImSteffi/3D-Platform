@@ -47,6 +47,42 @@ public class ScanDownloadService {
                 JSON.writeValueAsBytes(metadata), bundle);
     }
 
+    public String fingerprint(Export export) throws IOException {
+        try {
+            var digest = java.security.MessageDigest.getInstance("SHA-256");
+            var output = new java.io.DataOutputStream(new java.security.DigestOutputStream(
+                    OutputStream.nullOutputStream(), digest));
+            // Bump when changing ZIP layout/encoding outside the packaged resource files.
+            output.writeUTF("viewer-export-format-v1");
+            output.writeUTF(export.name());
+            output.writeInt(export.settings().length);
+            output.write(export.settings());
+            output.writeInt(export.metadata().length);
+            output.write(export.metadata());
+            var entries = export.files().stream().sorted(
+                    java.util.Comparator.comparing(ScanFile::getRelativePath)).toList();
+            output.writeInt(entries.size());
+            for (var file : entries) {
+                // READY scan objects are immutable; replacement uploads receive new object keys.
+                output.writeUTF(file.getRelativePath());
+                output.writeUTF(file.getObjectKey());
+                output.writeLong(file.getSizeBytes());
+            }
+            fingerprintResource(output, "viewer-export/README.html");
+            for (var file : export.bundle().stream().sorted().toList())
+                fingerprintResource(output, "viewer-export/bundle/" + file);
+            output.flush();
+            return java.util.HexFormat.of().formatHex(digest.digest());
+        } catch (java.security.NoSuchAlgorithmException error) { throw new IllegalStateException(error); }
+    }
+
+    private static void fingerprintResource(java.io.DataOutputStream output, String path) throws IOException {
+        var resource = new ClassPathResource(path);
+        output.writeUTF(path);
+        output.writeLong(resource.contentLength());
+        try (var input = resource.getInputStream()) { input.transferTo(output); }
+    }
+
     public void write(Export export, OutputStream output) throws IOException {
         var zip = new ExportZip(output);
         var root = export.name() + "/";

@@ -16,7 +16,7 @@ class ScanSharingTest {
     final ScanFileRepository files = mock(ScanFileRepository.class);
     final ProjectRepository projects = mock(ProjectRepository.class);
     final UserRepository users = mock(UserRepository.class);
-    final ScanViewerService service = new ScanViewerService(scans, files, projects, users, mock(S3Client.class), "test");
+    final ScanViewerService service = new ScanViewerService(scans, files, projects, users, mock(S3Client.class), mock(software.amazon.awssdk.services.s3.presigner.S3Presigner.class), "test");
     final String token = "a".repeat(43);
 
     Scan shared(boolean enabled, boolean entitled, Scan.Status status) {

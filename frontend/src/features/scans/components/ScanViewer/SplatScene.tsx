@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ViewerHandle } from '@playcanvas/supersplat-viewer/viewer'
 import type { CameraComponent } from 'playcanvas'
 import { useWorkspaceUser } from '../../../../shared/layout/WorkspaceLayout/WorkspaceContext'
-import { saveStartingView, type StartingView, type ViewerManifest } from '../../api/viewer'
+import { savePreview, saveStartingView, type StartingView, type ViewerManifest } from '../../api/viewer'
 import './SplatScene.css'
 
 export default function SplatScene({ scanId, shareToken }: { scanId?: number; shareToken?: string }) {
@@ -13,6 +13,7 @@ export default function SplatScene({ scanId, shareToken }: { scanId?: number; sh
  const [error, setError] = useState('')
  const [notice, setNotice] = useState('')
  const [ready, setReady] = useState(false)
+ const [savingPreview, setSavingPreview] = useState(false)
  const [saving, setSaving] = useState(false)
  const [saveMessage, setSaveMessage] = useState('')
  const [saveError, setSaveError] = useState(false)
@@ -38,7 +39,7 @@ export default function SplatScene({ scanId, shareToken }: { scanId?: number; sh
     const instance = await createViewer({
      container: container.current,
      contentUrl: assets.contentUrl,
-     contents: fetch(assets.contentUrl, { signal: abort.signal }).then(response => {
+     contents: fetch(assets.contentUrl, { signal: abort.signal, credentials: 'omit' }).then(response => {
       if (!response.ok) throw new Error('Could not download the scene.')
       return response
      }).catch(cause => {
@@ -87,6 +88,48 @@ export default function SplatScene({ scanId, shareToken }: { scanId?: number; sh
   }
  }, [scanId, shareToken])
 
+ async function setPreview() {
+  const viewer = activeViewer.current
+  if (shareToken || !scanId || !user.platformAdmin || !viewer?.state.loaded || saveRequest.current) return
+  if (viewer.state.xrMode) {
+   setSaveError(true)
+   setSaveMessage('Exit VR or AR before setting the preview.')
+   return
+  }
+  const request = new AbortController()
+  saveRequest.current = request
+  setSavingPreview(true)
+  setSaveMessage('')
+  setSaveError(false)
+  try {
+   const frame = await viewer.captureFrame({ width: 800, height: 600, supersample: 2 })
+   if (request.signal.aborted) return
+   // captureFrame returns base64 RGBA pixels, not an encoded image.
+   const pixels = Uint8ClampedArray.from(atob(frame.data), char => char.charCodeAt(0))
+   const canvas = document.createElement('canvas')
+   canvas.width = frame.width
+   canvas.height = frame.height
+   const context = canvas.getContext('2d')
+   if (!context) throw new Error('Could not create the preview image.')
+   context.putImageData(new ImageData(pixels, frame.width, frame.height), 0, 0)
+   const image = await new Promise<Blob>((resolve, reject) => canvas.toBlob(
+    blob => blob ? resolve(blob) : reject(new Error('Could not create the preview image.')), 'image/png'))
+   if (request.signal.aborted) return
+   await savePreview(scanId, image, request.signal)
+   if (!request.signal.aborted) setSaveMessage('Preview saved.')
+  } catch (cause) {
+   if (!request.signal.aborted) {
+    setSaveError(true)
+    setSaveMessage(cause instanceof Error ? cause.message : 'Could not save the preview.')
+   }
+  } finally {
+   if (!request.signal.aborted) {
+    saveRequest.current = null
+    setSavingPreview(false)
+   }
+  }
+ }
+
  async function setStartingView() {
   const viewer = activeViewer.current
   if (shareToken || !scanId || !user.platformAdmin || !viewer?.state.loaded || saveRequest.current) return
@@ -129,8 +172,10 @@ export default function SplatScene({ scanId, shareToken }: { scanId?: number; sh
  return <>
   <div ref={container} className="splat-scene" />
   {!shareToken && user.platformAdmin && <div className="scan-starting-view-controls">
-   <button type="button" className="btn btn-primary" disabled={!ready || !!error || saving}
+   <button type="button" className="btn btn-primary" disabled={!ready || !!error || saving || savingPreview}
     onClick={() => { void setStartingView() }}>{saving ? 'Saving…' : 'Set starting view'}</button>
+   <button type="button" className="btn btn-primary" disabled={!ready || !!error || saving || savingPreview}
+    onClick={() => { void setPreview() }}>{savingPreview ? 'Saving…' : 'Set preview'}</button>
    {saveMessage && <p className={saveError ? 'scan-starting-view-message scan-starting-view-message--error' : 'scan-starting-view-message'}
     role={saveError ? 'alert' : 'status'}>{saveMessage}</p>}
   </div>}

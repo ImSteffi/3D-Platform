@@ -26,3 +26,17 @@ export async function saveStartingView(scanId: number, view: StartingView, signa
   : response.status === 401 ? 'Your session expired. Please sign in again.'
   : 'Could not save the starting view. Please try again.')
 }
+
+export async function savePreview(scanId: number, image: Blob, signal: AbortSignal) {
+ const csrfResponse = await fetch('/api/auth/csrf', { signal })
+ if (!csrfResponse.ok) throw new Error('Could not prepare the preview. Please sign in again.')
+ const csrf: { headerName: string; token: string } = await csrfResponse.json()
+ const response = await fetch('/api/scans/' + scanId + '/preview', {
+  method: 'PUT',
+  headers: { 'Content-Type': 'image/png', [csrf.headerName]: csrf.token },
+  body: image,
+  signal,
+ })
+ if (!response.ok) throw new Error('Could not save the preview. Please try again.')
+ window.dispatchEvent(new CustomEvent('scan-preview-updated', { detail: { scanId } }))
+}

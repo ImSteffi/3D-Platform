@@ -2,11 +2,9 @@ package com.example.platform.scan;
 
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import software.amazon.awssdk.core.exception.SdkException;
 
 @RestController
@@ -30,15 +28,11 @@ public class ScanViewerController {
     }
 
     @GetMapping("/file")
-    public ResponseEntity<StreamingResponseBody> file(@PathVariable Long scanId,
+    public ResponseEntity<Void> file(@PathVariable Long scanId,
             @RequestParam String path, Authentication authentication) {
         var file = viewer.file(scanId, path, authentication);
-        StreamingResponseBody body = output -> {
-            try (var input = viewer.openFile(file)) { input.transferTo(output); }
-        };
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .contentLength(file.getSizeBytes()).body(body);
+        return ResponseEntity.status(HttpStatus.TEMPORARY_REDIRECT).cacheControl(CacheControl.noStore())
+                .location(java.net.URI.create(viewer.signedUrl(file))).build();
     }
 
     @ExceptionHandler(SdkException.class)
