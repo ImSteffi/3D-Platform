@@ -71,6 +71,29 @@ class ScanDownloadServiceTest {
                 .path("cameras").get(0).path("initial").path("fov").asInt());
     }
 
+    @Test void exportsOneSettingsSnapshotWithoutStreamingTheMutableOriginal() throws Exception {
+        var settingsFile = new ScanFile(null, "folder/settings.json", "private/settings", 100);
+        setup(List.of(sog, settingsFile), "{\"version\":2,\"custom\":\"current\"}");
+        var export = downloads.prepare(1L, auth);
+        assertEquals(List.of(sog), export.files());
+        var output = new ByteArrayOutputStream();
+        downloads.write(export, output);
+        int settingsCount = 0;
+        try (var zip = new ZipInputStream(new ByteArrayInputStream(output.toByteArray()))) {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                if (entry.getName().endsWith("/settings.json")) {
+                    settingsCount++;
+                    assertEquals("3D-viewer/viewer/settings.json", entry.getName());
+                    assertEquals("current", json.readTree(zip.readAllBytes()).path("custom").asString());
+                }
+            }
+        }
+        assertEquals(1, settingsCount);
+        verify(viewer, never()).openFile(settingsFile);
+        setup(List.of(sog, settingsFile), "{\"version\":2,\"custom\":\"updated\"}");
+        assertNotEquals(downloads.fingerprint(export), downloads.fingerprint(downloads.prepare(1L, auth)));
+    }
     @Test void accessIsCheckedBeforeBuildingOrReadingObjects() {
         when(viewer.download(1L, auth)).thenThrow(new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND));
         assertThrows(ResponseStatusException.class, () -> downloads.prepare(1L, auth));

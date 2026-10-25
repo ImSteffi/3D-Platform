@@ -43,7 +43,7 @@ public class ScanDownloadService {
             metadata.put("collisionUrl", dataUrl(path));
         }
         var name = "3D-viewer";
-        return new Export(name, files, JSON.writeValueAsBytes(settings),
+        return new Export(name, files.stream().filter(file -> !ScanViewerService.isSettingsFile(file)).toList(), JSON.writeValueAsBytes(settings),
                 JSON.writeValueAsBytes(metadata), bundle);
     }
 
@@ -53,7 +53,7 @@ public class ScanDownloadService {
             var output = new java.io.DataOutputStream(new java.security.DigestOutputStream(
                     OutputStream.nullOutputStream(), digest));
             // Bump when changing ZIP layout/encoding outside the packaged resource files.
-            output.writeUTF("viewer-export-format-v1");
+            output.writeUTF("viewer-export-format-v2");
             output.writeUTF(export.name());
             output.writeInt(export.settings().length);
             output.write(export.settings());

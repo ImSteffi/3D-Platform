@@ -96,7 +96,7 @@ origin, not the client website surrounding its iframe. Signed file responses use
 private, no-store. Turning sharing/hosting off blocks new manifests and collision
 resolutions immediately, but already-issued R2 links can work until their one-hour
 expiry and already-loaded data cannot be revoked. The bucket stays private and
-R2 credentials stay on the server. Starting views now live in R2 at viewer-settings/scans/{scanId}/settings.json. Saving replaces the first camera pose while preserving other settings. An uploaded settings.json is used as the initial template; the managed copy keeps original upload metadata intact and is the file to include as settings.json in a future viewer ZIP. Existing database-saved viewpoints remain a read-only fallback until a settings file is saved. V8 is retained as applied migration history; new saves do not update its camera columns.
+R2 credentials stay on the server. Starting views overwrite the scan's own uploaded settings.json in R2. When no settings file was uploaded, the first save creates projects/{projectId}/scans/{scanId}/settings.json and records it in scan_files. Saves preserve other settings and update the file byte count. Legacy viewer-settings overrides remain readable and are deleted after the next successful admin save into the scan folder. Existing database-saved viewpoints remain a fallback. V11 grants only UPDATE(size_bytes); no new tables or columns are added.
 
 PUT /api/scans/{scanId}/viewer/starting-view is restricted to platform administrators and requires a CSRF token. Restart the backend after adding these endpoints. Share supports public URL/IFRAME links and a Shareable switch; Delete is administrator-only with a confirmation dialog. Download creates a standalone viewer ZIP.
 
@@ -135,7 +135,7 @@ R2 key before generating a ZIP. Unchanged ZIPs are reused across backend restart
 missing or near-expiry ZIPs are rebuilt at the same key. Objects older than 22 hours
 are refreshed to leave room for job polling and signed-link lifetime before the
 one-day lifecycle can expire them. Settings, file identity or bundle changes produce
-a different key. Source objects of READY scans must remain immutable. No database
+a different key. Scene and media objects of READY scans remain immutable. settings.json is mutable and exported once from the captured settings snapshot, not streamed again from R2. No database
 cache table is used.
 Job state is in memory for up to one hour; after a backend restart the user retries
 Download. This queue/deduplication is per backend instance, not distributed.

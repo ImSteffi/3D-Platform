@@ -181,19 +181,45 @@ public class ScanViewerService {
         var scan = accessibleScan(scanId, authentication);
         // Serialize edits to this scan, including when multiple application instances run.
         scans.findForUpdate(scanId).orElseThrow(ScanViewerService::notFound);
-        var settings = settings(scan, files.findByScan_IdOrderByIdAsc(scanId));
+        var entries = files.findByScan_IdOrderByIdAsc(scanId);
+        var target = settingsFile(entries);
+        var settings = settings(scan, entries);
         applyView(settings, view);
         var bytes = JSON.writeValueAsBytes(settings);
         if (bytes.length > 1024 * 1024) throw new ResponseStatusException(
                 HttpStatus.UNPROCESSABLE_ENTITY, "Viewer settings are too large.");
-        r2.putObject(PutObjectRequest.builder().bucket(bucket).key(settingsKey(scan))
+        r2.putObject(PutObjectRequest.builder().bucket(bucket).key(target == null ? settingsKey(scan) : target.getObjectKey())
                 .contentType("application/json").cacheControl("no-store").build(),
                 RequestBody.fromBytes(bytes));
+        if (target == null) {
+            files.save(new ScanFile(scan, "settings.json", settingsKey(scan), bytes.length));
+        } else {
+            target.setSizeBytes(bytes.length);
+        }
+        // Remove the old override only after the canonical file and metadata are saved.
+        files.flush();
+        r2.deleteObject(software.amazon.awssdk.services.s3.model.DeleteObjectRequest.builder()
+                .bucket(bucket).key(legacySettingsKey(scan)).build());
     }
 
     private static String settingsKey(Scan scan) {
-        // Kept outside uploaded files so their recorded sizes and file checks remain valid.
+        return "projects/" + scan.getProject().getId() + "/scans/" + scan.getId() + "/settings.json";
+    }
+
+    private static String legacySettingsKey(Scan scan) {
         return "viewer-settings/scans/" + scan.getId() + "/settings.json";
+    }
+
+    static boolean isSettingsFile(ScanFile file) {
+        return file.getRelativePath().equals("settings.json")
+                || file.getRelativePath().endsWith("/settings.json");
+    }
+
+    private static ScanFile settingsFile(java.util.List<ScanFile> entries) {
+        var matches = entries.stream().filter(ScanViewerService::isSettingsFile).toList();
+        if (matches.size() > 1) throw new ResponseStatusException(
+                HttpStatus.CONFLICT, "This scan contains more than one settings.json file.");
+        return matches.isEmpty() ? null : matches.getFirst();
     }
 
     private ObjectNode readSettings(String key, boolean optional) {
@@ -220,11 +246,15 @@ public class ScanViewerService {
     }
 
     private ObjectNode settings(Scan scan, java.util.List<ScanFile> entries) {
-        var managed = readSettings(settingsKey(scan), true);
-        if (managed != null) return managed;
-        var uploaded = entries.stream().filter(file -> file.getRelativePath().equals("settings.json")
-                || file.getRelativePath().endsWith("/settings.json")).toList();
-        if (uploaded.size() == 1) return readSettings(uploaded.getFirst().getObjectKey(), false);
+        var uploaded = settingsFile(entries);
+        // Compatibility for existing scans. The next admin save overwrites the scan's
+        // own file and deletes this legacy override; no new overrides are written.
+        var previousSettings = readSettings(legacySettingsKey(scan), true);
+        if (previousSettings != null) return previousSettings;
+        if (uploaded != null) return readSettings(uploaded.getObjectKey(), false);
+        // Also recover a settings object if a previous R2 write succeeded but its DB transaction failed.
+        var canonical = readSettings(settingsKey(scan), true);
+        if (canonical != null) return canonical;
         try (var stream = getClass().getResourceAsStream("/viewer-default-settings.json")) {
             var defaults = (ObjectNode) JSON.readTree(stream);
             // Preserve viewpoints saved by the earlier database-based implementation.

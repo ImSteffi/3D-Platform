@@ -69,6 +69,8 @@ public class ScanFile {
         return objectKey;
     }
 
+    public void setSizeBytes(long sizeBytes) { this.sizeBytes = sizeBytes; }
+
     public long getSizeBytes() {
         return sizeBytes;
     }

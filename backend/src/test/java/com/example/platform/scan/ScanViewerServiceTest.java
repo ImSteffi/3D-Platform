@@ -57,6 +57,11 @@ class ScanViewerServiceTest {
             try (var stream = body.contentStreamProvider().newStream()) { objects.put(request.key(), stream.readAllBytes()); }
             return software.amazon.awssdk.services.s3.model.PutObjectResponse.builder().build();
         });
+        when(r2.deleteObject(any(software.amazon.awssdk.services.s3.model.DeleteObjectRequest.class))).thenAnswer(call -> {
+            var request = call.getArgument(0, software.amazon.awssdk.services.s3.model.DeleteObjectRequest.class);
+            objects.remove(request.key());
+            return software.amazon.awssdk.services.s3.model.DeleteObjectResponse.builder().build();
+        });
         ReflectionTestUtils.setField(user, "id", 2L);
         ReflectionTestUtils.setField(project, "id", 10L);
         ReflectionTestUtils.setField(scan, "id", 1L);
@@ -144,7 +149,10 @@ class ScanViewerServiceTest {
         var result = service.manifest(1L, auth).settings().path("cameras").get(0).path("initial");
         assertEquals(pose(), json.treeToValue(result, ScanViewerService.StartingView.class));
         assertNull(scan.getStartingView());
-        assertTrue(objects.containsKey("viewer-settings/scans/1/settings.json"));
+        assertTrue(objects.containsKey("projects/10/scans/1/settings.json"));
+        verify(files).save(argThat(file -> file.getRelativePath().equals("settings.json")
+                && file.getObjectKey().equals("projects/10/scans/1/settings.json")
+                && file.getSizeBytes() == objects.get(file.getObjectKey()).length));
     }
 
     @Test void memberCannotChangeViewEvenWithProjectAccess() {
@@ -181,14 +189,14 @@ class ScanViewerServiceTest {
 
     @Test void preservesOtherSettingsAndRepeatedSavesUseSameFile() {
         admin();
-        objects.put("viewer-settings/scans/1/settings.json", """
+        objects.put("projects/10/scans/1/settings.json", """
                 {"version":2,"background":{"color":[1,0,0]},"annotations":[{"title":"Keep"}],
                  "cameras":[{"initial":{},"extras":"keep"},{"initial":{"fov":75}}],"custom":"keep"}
                 """.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         service.setStartingView(1L, pose(), auth);
         service.setStartingView(1L, new ScanViewerService.StartingView(
                 List.of(5.0,6.0,7.0), List.of(6.0,6.0,7.0), 80.0), auth);
-        var saved = json.readTree(objects.get("viewer-settings/scans/1/settings.json"));
+        var saved = json.readTree(objects.get("projects/10/scans/1/settings.json"));
         assertEquals("Keep", saved.path("annotations").get(0).path("title").asString());
         assertEquals("keep", saved.path("custom").asString());
         assertEquals("keep", saved.path("cameras").get(0).path("extras").asString());
@@ -197,26 +205,55 @@ class ScanViewerServiceTest {
         assertEquals(1, objects.size());
     }
 
-    @Test void importsAnUploadedSettingsFileWithoutChangingItsOriginalObject() {
+    @Test void overwritesTheUploadedSettingsObjectAndUpdatesItsSize() {
         admin();
         var bytes = """
                 {"version":2,"background":{"color":[1,0,0]},"cameras":[],"annotations":[],"custom":"keep"}
                 """.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         objects.put("private/settings.json", bytes);
-        when(files.findByScan_IdOrderByIdAsc(1L)).thenReturn(List.of(file("settings.json")));
+        var settingsFile = file("settings.json");
+        when(files.findByScan_IdOrderByIdAsc(1L)).thenReturn(List.of(settingsFile));
         service.setStartingView(1L, pose(), auth);
-        assertArrayEquals(bytes, objects.get("private/settings.json"));
-        var saved = json.readTree(objects.get("viewer-settings/scans/1/settings.json"));
+        assertFalse(java.util.Arrays.equals(bytes, objects.get("private/settings.json")));
+        assertEquals(objects.get("private/settings.json").length, settingsFile.getSizeBytes());
+        assertEquals(1, objects.size());
+        var saved = json.readTree(objects.get("private/settings.json"));
         assertEquals("keep", saved.path("custom").asString());
     }
 
     @Test void malformedSettingsAreNotOverwritten() {
         admin();
         var bytes = "not JSON".getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        objects.put("viewer-settings/scans/1/settings.json", bytes);
+        objects.put("projects/10/scans/1/settings.json", bytes);
         assertEquals(422, assertThrows(ResponseStatusException.class,
                 () -> service.setStartingView(1L, pose(), auth)).getStatusCode().value());
-        assertArrayEquals(bytes, objects.get("viewer-settings/scans/1/settings.json"));
+        assertArrayEquals(bytes, objects.get("projects/10/scans/1/settings.json"));
+        verify(r2, never()).putObject(any(software.amazon.awssdk.services.s3.model.PutObjectRequest.class),
+                any(software.amazon.awssdk.core.sync.RequestBody.class));
+    }
+    @Test void migratesLegacyOverrideToUploadedFileWithoutLosingCustomSettings() {
+        admin();
+        var uploaded = file("folder/settings.json");
+        when(files.findByScan_IdOrderByIdAsc(1L)).thenReturn(List.of(file("folder/room.sog"), uploaded));
+        objects.put(uploaded.getObjectKey(), "{\"version\":2,\"custom\":\"original\"}".getBytes());
+        objects.put("viewer-settings/scans/1/settings.json",
+                "{\"version\":2,\"custom\":\"saved\",\"cameras\":[]}".getBytes());
+        service.setStartingView(1L, pose(), auth);
+        assertFalse(objects.containsKey("viewer-settings/scans/1/settings.json"));
+        assertFalse(objects.containsKey("projects/10/scans/1/settings.json"));
+        assertEquals("saved", json.readTree(objects.get(uploaded.getObjectKey())).path("custom").asString());
+        assertEquals(pose(), json.treeToValue(service.manifest(1L, auth).settings()
+                .path("cameras").get(0).path("initial"), ScanViewerService.StartingView.class));
+        assertEquals(objects.get(uploaded.getObjectKey()).length, uploaded.getSizeBytes());
+        verify(files, never()).save(any());
+    }
+
+    @Test void ambiguousSettingsAreRejectedBeforeAnyWrite() {
+        admin();
+        when(files.findByScan_IdOrderByIdAsc(1L)).thenReturn(
+                List.of(file("settings.json"), file("folder/settings.json")));
+        assertEquals(409, assertThrows(ResponseStatusException.class,
+                () -> service.setStartingView(1L, pose(), auth)).getStatusCode().value());
         verify(r2, never()).putObject(any(software.amazon.awssdk.services.s3.model.PutObjectRequest.class),
                 any(software.amazon.awssdk.core.sync.RequestBody.class));
     }

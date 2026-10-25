@@ -3,7 +3,6 @@ import ConfirmDialog from '../../../../shared/ui/ConfirmDialog/ConfirmDialog'
 import { useContext, useEffect, useRef, useState } from 'react'
 import Icon from '../../../../shared/ui/Icon/Icon'
 import SceneFileList from '../SceneFileList/SceneFileList'
-import { formatFileSize } from '../../utils/sceneFiles'
 import { ScanViewerContext } from '../ScanViewer/ScanViewerContext'
 import { getSharingStatus, setShareable, sharingUrl, type SharingStatus } from '../../api/share'
 import { deleteScan } from '../../api/delete'
@@ -104,7 +103,6 @@ export default function ScanCard({ scan, onDeleted }: ScanCardProps) {
   catch (error) { if (!request.signal.aborted) setActionError(error instanceof Error ? error.message : 'Could not download this scan.') }
   finally { if (!request.signal.aborted) { downloadRequest.current = null; setDownloading(false) } }
  }
- const totalSize = scan.sizeBytes ?? scan.files.reduce((sum, file) => sum + file.sizeBytes, 0)
  if (deleted) return null
  return <>
  <article className="saved-scan-card">
@@ -117,8 +115,18 @@ export default function ScanCard({ scan, onDeleted }: ScanCardProps) {
   <div className="saved-scan-content">
    <div className="saved-scan-summary">
     <div className="saved-scan-heading"><span className="saved-scan-icon"><Icon name="scan" size={21} /></span><h3>{scan.name}</h3></div>
-    <p>{scan.fileCount ?? scan.files.length} files · {formatFileSize(totalSize)}</p>
     {scan.status === 'UPLOADING' && <p>This upload was interrupted. Its files may only be partially uploaded.</p>}
+    <div className="saved-scan-sharing-status">
+   {scan.status === 'READY' && <button type="button" role="switch" aria-checked={shareSettings?.enabled ?? false}
+    aria-label={'Shareable: ' + scan.name} aria-busy={updatingShare}
+    className="scan-shareable" disabled={deleting || deleteFailed || !shareSettings || updatingShare || sharing || (!shareSettings.hostingEnabled && !shareSettings.enabled)}
+    onClick={() => { void toggleShareable() }}>
+    <span className="scan-shareable-track" aria-hidden="true"><span /></span><span>Shareable</span>
+   </button>}
+  <div className="saved-scan-status"><span className={`status-pill ${scan.status === 'READY' ? 'status-pill--ready' : ''}`}>{scan.status === 'READY' ? 'Published' : scan.status === 'UPLOADING' ? 'Incomplete' : 'Failed'}</span>
+
+  </div>
+    </div>
     <div className="saved-scan-actions">
      <div className="scan-share-actions">
       <button type="button" className={'btn btn-ghost scan-share-toggle' + (shareOpen ? ' is-open' : '')}
@@ -129,7 +137,7 @@ export default function ScanCard({ scan, onDeleted }: ScanCardProps) {
         {(['URL', 'IFRAME'] as const).map(kind => <button key={kind} type="button" disabled={sharing || updatingShare || !shareSettings?.enabled}
          className={'btn btn-ghost scan-copy-button' + (copied === kind ? ' is-copied' : '')}
          aria-label={copied === kind ? kind + ' copied' : 'Copy ' + kind} onClick={() => { void copyShare(kind) }}>
-         {copied === kind && <span aria-hidden="true">✓ </span>}{kind}
+         {copied === kind ? 'copied to clipboard' : kind}
         </button>)}
        </div>
       </div>
@@ -142,14 +150,7 @@ export default function ScanCard({ scan, onDeleted }: ScanCardProps) {
    </div>
    <div className="saved-scan-files"><SceneFileList files={scan.files} /></div>
   </div>
-  <div className="saved-scan-status"><span className={`status-pill ${scan.status === 'READY' ? 'status-pill--ready' : ''}`}>{scan.status === 'READY' ? 'Published' : scan.status === 'UPLOADING' ? 'Incomplete' : 'Failed'}</span>
-   {scan.status === 'READY' && <button type="button" role="switch" aria-checked={shareSettings?.enabled ?? false}
-    aria-label={'Shareable: ' + scan.name} aria-busy={updatingShare}
-    className="scan-shareable" disabled={deleting || deleteFailed || !shareSettings || updatingShare || sharing || (!shareSettings.hostingEnabled && !shareSettings.enabled)}
-    onClick={() => { void toggleShareable() }}>
-    <span className="scan-shareable-track" aria-hidden="true"><span /></span><span>Shareable</span>
-   </button>}
-  </div>
+
  </article>
  {confirmDelete && <ConfirmDialog title="Delete scan?" confirmLabel="Delete scan" busy={deleting}
   error={actionError} onCancel={() => setConfirmDelete(false)} onConfirm={() => { void removeScan() }}>
