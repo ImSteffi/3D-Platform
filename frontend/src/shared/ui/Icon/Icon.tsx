@@ -1,5 +1,6 @@
-export type IconName = 'cube' | 'grid' | 'folder' | 'building' | 'scan' | 'arrow' | 'plus' | 'search' | 'logout' | 'chevron' | 'menu' | 'check' | 'upload' | 'shield' | 'close'
+export type IconName = 'cube' | 'grid' | 'folder' | 'building' | 'scan' | 'arrow' | 'plus' | 'search' | 'logout' | 'chevron' | 'menu' | 'check' | 'upload' | 'shield' | 'close' | 'planner'
 const paths: Record<IconName, string> = {
+ planner: 'M4 3h16v18H4zM4 8h16M9 8v13M9 14h11M14 8v6',
  cube: 'M12 3 3 8v9l9 5 9-5V8l-9-5ZM3 8l9 5 9-5M12 13v9M7.5 5.5l9 5',
  grid: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
  folder: 'M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6Z',

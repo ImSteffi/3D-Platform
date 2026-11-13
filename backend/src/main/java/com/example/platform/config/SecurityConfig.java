@@ -16,6 +16,7 @@ public class SecurityConfig {
                                 .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
                                 .requestMatchers("/api/auth/csrf").permitAll()
                                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/public/views/**").permitAll()
+                                .requestMatchers("/api/admin/**").hasRole("PLATFORM_ADMIN")
                                 .requestMatchers(
                                                 "/api/organizations",
                                                 "/api/organizations/**")

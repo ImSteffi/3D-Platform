@@ -4,6 +4,7 @@ import type { CameraComponent } from 'playcanvas'
 import { useWorkspaceUser } from '../../../../shared/layout/WorkspaceLayout/WorkspaceContext'
 import { savePreview, saveStartingView, type StartingView, type ViewerManifest } from '../../api/viewer'
 import './SplatScene.css'
+import { installViewerTools } from '../../utils/viewerTools'
 
 export default function SplatScene({ scanId, shareToken }: { scanId?: number; shareToken?: string }) {
  const user = useWorkspaceUser()
@@ -20,6 +21,7 @@ export default function SplatScene({ scanId, shareToken }: { scanId?: number; sh
  useEffect(() => {
   let disposed = false
   let viewer: ViewerHandle | undefined
+  let removeTools: (() => void) | undefined
   const abort = new AbortController()
   async function load() {
    try {
@@ -53,6 +55,7 @@ export default function SplatScene({ scanId, shareToken }: { scanId?: number; sh
     })
     if (disposed) { instance.destroy(); return }
     viewer = instance
+    removeTools = installViewerTools(instance, container.current!, assets.collisionUrl)
     activeViewer.current = instance
     instance.app.assets.on('error', () => {
      if (!disposed) setError('Could not read this scene. Please check its files and try again.')
@@ -84,6 +87,7 @@ export default function SplatScene({ scanId, shareToken }: { scanId?: number; sh
    abort.abort()
    saveRequest.current?.abort()
    activeViewer.current = null
+   removeTools?.()
    viewer?.destroy()
   }
  }, [scanId, shareToken])

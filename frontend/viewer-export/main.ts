@@ -1,3 +1,4 @@
+import { installViewerTools } from '../src/features/scans/utils/viewerTools'
 import { createViewer, type ViewerHandle } from '@playcanvas/supersplat-viewer/viewer'
 import { importSettings, validateSettings } from '@playcanvas/supersplat-viewer/settings'
 import '@playcanvas/supersplat-viewer/viewer.css'
@@ -5,6 +6,7 @@ import './page.css'
 
 const message = document.getElementById('message')!
 let viewer: ViewerHandle | undefined
+let removeTools: (() => void) | undefined
 async function open() {
  const [sceneResponse, settingsResponse] = await Promise.all([fetch('./scene.json'), fetch('./settings.json')])
  if (!sceneResponse.ok || !settingsResponse.ok) throw new Error('Viewer files could not be loaded. Check that the entire viewer folder was uploaded.')
@@ -20,6 +22,7 @@ async function open() {
   noanim: true,
  })
  viewer = instance
+ removeTools = installViewerTools(instance, document.getElementById('viewer')!, scene.collisionUrl)
  instance.app.assets.on('error', () => {
   message.hidden = false
   message.textContent = 'The scene could not be loaded. Check that all data files were uploaded.'
@@ -44,4 +47,4 @@ void open().catch(() => {
   ? 'Upload this folder to a web server or use a local HTTP server. This viewer cannot run by double-clicking index.html.'
   : 'Could not open the viewer. Check that all files are present and settings.json is valid.'
 })
-window.addEventListener('pagehide', () => viewer?.destroy())
+window.addEventListener('pagehide', () => { removeTools?.(); viewer?.destroy() })

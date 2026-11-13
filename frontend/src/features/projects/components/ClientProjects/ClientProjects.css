@@ -1,7 +1,12 @@
-.client-project-stats { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; margin-bottom: 35px; }
+.client-project-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 18px; margin-bottom: 35px; }
 .client-project-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .client-project-row { display: flex; align-items: center; gap: 17px; padding: 23px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; transition: border-color 200ms, transform 240ms var(--ease); }
 .client-project-row:hover { border-color: var(--accent-border); transform: translateX(3px); }.client-project-row h3 { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 15px; }
 .client-project-icon { color: var(--accent); display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: var(--accent-bg); }
 .client-project-count { font-size: 11px; }.client-project-row > svg { color: var(--text); }
 @media(max-width:600px) { .client-project-stats { gap: 10px; }.client-project-stats .card { padding: 18px; }.client-project-row { flex-wrap: wrap; padding: 18px; gap: 12px; }.client-project-count { flex-basis: 100%; padding-left: 50px; } }
+
+.client-project-stats > .card { aspect-ratio: 1 / 1; min-width: 0; }
+.client-project-stats > .card:hover { transform: none; border-color: var(--border); }
+@media (max-width: 1100px) { .client-project-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 380px) { .client-project-stats { grid-template-columns: minmax(0, 1fr); } }

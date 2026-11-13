@@ -62,6 +62,9 @@ export default function WorkspaceLayout() {
      {user.platformAdmin
       ? <NavLink to="/organizations" onClick={() => setMenuOpen(false)}><Icon name="building" />Organizations</NavLink>
       : <NavLink to="/projects" onClick={() => setMenuOpen(false)}><Icon name="folder" />Projects</NavLink>}
+     {user.platformAdmin && <NavLink to="/tour-requests" onClick={() => setMenuOpen(false)}><Icon name="scan" />Tour requests</NavLink>}
+     {!user.platformAdmin && <NavLink to="/generate"onClick={() => setMenuOpen(false)}><Icon name="scan" />Generate</NavLink>}
+     {!user.platformAdmin && <NavLink to="/planner" onClick={() => setMenuOpen(false)}><Icon name="planner" />Planner</NavLink>}
     </nav>
     <div className="sidebar-bottom">
      <button className="sidebar-logout" onClick={() => { void signOut() }} disabled={loggingOut}><Icon name="logout" />{loggingOut ? 'Signing out…' : 'Sign out'}</button>

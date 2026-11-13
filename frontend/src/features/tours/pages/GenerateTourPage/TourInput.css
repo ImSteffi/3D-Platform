@@ -1,0 +1,94 @@
+.tour-page-intro { margin: 12px 0 0 60px; font-size: 14px; color: var(--text); }
+.tour-file-input { display: none; }
+.tour-source-option p { max-width: 300px; font-size: 14px; line-height: 1.6; color: var(--text); }
+.tour-source-option .btn { margin-top: 4px; min-height: 44px; }
+.tour-back-button { border: 0; background: transparent; cursor: pointer; }
+.tour-input-steps { display: flex; align-items: center; flex-wrap: wrap; gap: 28px; padding: 0; margin: 36px 0; list-style: none; }
+.tour-input-steps li { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #858990; }
+.tour-input-steps li > span { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 50%; font-size: 12px; }
+.tour-input-steps .is-current { color: var(--text-h); }
+.tour-input-steps .is-current > span, .tour-input-steps .is-complete > span { color: var(--accent); background: #ff803c0d; border-color: #ff803c55; }
+.tour-input-workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); align-items: start; gap: 28px; }
+.tour-input-media { min-width: 0; }
+.tour-panel-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+.tour-panel-heading h2, .tour-settings h2 { font-size: 20px; }
+.tour-panel-heading h2:focus { outline: none; }
+.tour-muted { color: var(--text); font-size: 12px; line-height: 1.6; margin-top: 6px; }
+.tour-dropzone { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; min-height: 240px; padding: 28px; border: 1px dashed #4b4d52; border-radius: 16px; background: #191a1c; }
+.tour-dropzone > svg { color: var(--accent); }
+.tour-dropzone h3 { font-size: 17px; }
+.tour-dropzone p { font-size: 12px; color: var(--text); }
+.tour-dropzone.is-dragging { border-color: var(--accent); background: #ff803c0d; }
+.tour-media-actions, .tour-camera-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.tour-media-actions .btn, .tour-camera-actions .btn, .tour-panel-heading .btn { min-height: 44px; }
+.tour-input-error { color: var(--danger); font-size: 13px; line-height: 1.5; margin-top: 14px; }
+.tour-media-grid { list-style: none; padding: 0; margin: 20px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
+.tour-media-item { overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: #1b1c1e; }
+.tour-media-item--video { grid-column: 1 / -1; }
+.tour-media-preview { aspect-ratio: 4 / 3; display: grid; place-items: center; background: #101113; }
+.tour-media-item--video .tour-media-preview { aspect-ratio: 16 / 9; }
+.tour-media-preview img, .tour-media-preview video { display: block; width: 100%; height: 100%; object-fit: contain; min-height: 0; }
+.tour-media-preview p { padding: 20px; text-align: center; font-size: 12px; }
+.tour-media-caption { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; }
+.tour-media-caption > div { min-width: 0; }
+.tour-media-caption strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-h); font-size: 12px; font-weight: 500; }
+.tour-media-caption span { display: block; font-size: 11px; color: var(--text); margin-top: 4px; }
+.tour-remove-media { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border: 0; border-radius: 8px; background: transparent; color: var(--text); cursor: pointer; }
+.tour-remove-media:hover { color: var(--danger); background: #ffffff08; }
+.tour-remove-media:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tour-local-note { display: flex; gap: 8px; align-items: center; font-size: 12px; line-height: 1.5; color: var(--text); margin-top: 18px; }
+.tour-local-note svg { flex-shrink: 0; color: #a7b9ad; }
+.tour-settings { padding: 26px; border: 1px solid var(--border); border-radius: 16px; background: #1b1c1e; min-width: 0; }
+.tour-settings h2 { margin-bottom: 24px; }
+.tour-settings label { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; color: var(--text-h); font-size: 13px; margin-bottom: 10px; }
+.tour-settings label span { color: var(--text); font-size: 11px; }
+.tour-settings input, .tour-settings textarea { display: block; width: 100%; min-width: 0; border: 1px solid #383a3e; background: #141517; border-radius: 9px; padding: 12px; margin-bottom: 22px; font: inherit; font-size: 13px; color: var(--text-h); }
+.tour-settings textarea { resize: vertical; min-height: 100px; }
+.tour-settings input:focus-visible, .tour-settings textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tour-summary { border-top: 1px solid var(--border); padding-top: 18px; margin-bottom: 22px; }
+.tour-summary > div { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; font-size: 12px; }
+.tour-summary strong { font-weight: 500; color: var(--text-h); text-align: right; }
+.tour-settings .tour-generate-button { width: 100%; min-height: 46px; cursor: not-allowed; opacity: .45; transform: none; }
+.tour-settings > .tour-muted { text-align: center; }
+.tour-draft-status { font-size: 12px; line-height: 1.6; color: var(--text); margin-top: 18px; }
+.tour-camera { padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: #1b1c1e; margin-bottom: 20px; }
+.tour-camera-preview { position: relative; aspect-ratio: 16 / 9; display: grid; place-items: center; background: #101113; border-radius: 10px; overflow: hidden; }
+.tour-camera-preview video { width: 100%; height: 100%; object-fit: contain; }
+.tour-camera-preview p { position: absolute; font-size: 13px; }
+@media (max-width: 1000px) { .tour-input-workspace { grid-template-columns: minmax(0, 1fr); }.tour-settings { width: 100%; } }
+@media (max-width: 600px) {
+ .tour-page-intro { margin-left: 0; font-size: 13px; }
+ .tour-input-steps { gap: 14px; margin: 28px 0; }
+ .tour-input-steps li { gap: 6px; font-size: 12px; }
+ .tour-input-workspace { gap: 22px; }
+ .tour-dropzone, .tour-settings, .tour-camera { padding: 20px; }
+ .tour-media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+ .tour-source-option { gap: 18px; }
+ .tour-source-option h2 { max-width: 100%; }
+}
+
+.tour-camera-header-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tour-camera button:disabled { opacity: .45; cursor: not-allowed; }
+.tour-camera-preview--guide { min-height: 390px; }
+.tour-capture-guide-backdrop { position: absolute; inset: 0; display: grid; place-items: center; background: #101113d9; padding: 20px; }
+.tour-capture-guide { width: min(100%, 480px); max-height: 100%; overflow-y: auto; padding: 26px; border: 1px solid #ffffff20; border-radius: 16px; background: #222326; box-shadow: 0 16px 48px #0005; }
+.tour-capture-guide-eyebrow { display: block; color: var(--accent); font-size: 10px; font-weight: 600; letter-spacing: 1.5px; margin-bottom: 10px; }
+.tour-capture-guide h3 { color: var(--text-h); font-size: 22px; line-height: 1.3; }
+.tour-capture-guide ul { padding-left: 18px; margin: 18px 0 22px; display: grid; gap: 12px; }
+.tour-capture-guide li { color: var(--text); font-size: 13px; line-height: 1.5; }
+.tour-capture-guide strong { color: var(--text-h); font-weight: 500; }
+.tour-capture-guide .btn { width: 100%; min-height: 44px; }
+@media (max-width: 600px) {
+ .tour-camera-preview--guide { min-height: 460px; }
+ .tour-capture-guide-backdrop { padding: 12px; }
+ .tour-capture-guide { padding: 20px; }
+ .tour-capture-guide h3 { font-size: 20px; }
+}
+.tour-capture-guide .tour-overlapping-emphasis { font-size: inherit; font-weight: 650; color: var(--text-h); }
+
+.tour-input-guide-dialog { margin: auto; padding: 0; width: min(520px, calc(100% - 32px)); max-height: calc(100svh - 48px); border: 0; border-radius: 16px; background: transparent; color: var(--text-h); }
+.tour-input-guide-dialog::backdrop { background: #08090bc9; backdrop-filter: blur(4px); }
+.tour-input-guide-dialog .tour-capture-guide { width: 100%; max-height: none; }
+.tour-input-guide-dialog h2 { font-size: 22px; line-height: 1.3; }
+.tour-guide-trigger { margin-left: auto; flex-shrink: 0; min-height: 44px; }
+@media (max-width: 600px) { .tour-input-page .generate-detail-heading { flex-wrap: wrap; }.tour-guide-trigger { margin-left: 60px; } }
