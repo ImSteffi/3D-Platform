@@ -3,6 +3,7 @@ import { Button, ConfirmDialog, Field, Icon, InlineError, Panel, StatusPill } fr
 import PlanView from '../PlanView/PlanView'
 import { deletePhoto, photoUrl, planUrl, reviewPhotos, type TourArea, type TourDetail, type TourPoint } from '../../api/tourRequests'
 import FitPlan from './FitPlan'
+import PlanEditor from './PlanEditor'
 import { errorText, pad, plural } from './reviewText'
 import './review.css'
 
@@ -24,10 +25,12 @@ type Props = {
  onTour: (tour: TourDetail) => void
  /** review: judge every photo, draft retakes, approve or send them. browse: look and delete only. */
  mode: 'review' | 'browse'
+ /** Shows the live point editor beside the photo instead of a read-only plan. */
+ editable?: boolean
 }
 
 /** One photo large on an opaque well, the flat plan beside it with the active point lit, every point in a filmstrip. */
-export default function PhotoDesk({ tour, onTour, mode }: Props) {
+export default function PhotoDesk({ tour, onTour, mode, editable = false }: Props) {
  const review = mode === 'review'
  const entries: Entry[] = tour.areas.flatMap(area => [...area.points].sort((a, b) => a.seq - b.seq).map(point => ({ area, point })))
  const [activeId, setActiveId] = useState<number | null>(() => (entries.find(entry => entry.point.hasPhoto) ?? entries[0])?.point.id ?? null)
@@ -117,7 +120,9 @@ export default function PhotoDesk({ tour, onTour, mode }: Props) {
   finally { setBusy('') }
  }
 
- if (!active) return <p className="rv-quiet">This plan has no capture points yet.</p>
+ if (!active) return editable
+  ? <PlanEditor key={tour.id} tour={tour} onTour={onTour} mode="live" />
+  : <p className="rv-quiet">This plan has no capture points yet.</p>
 
  const { area, point } = active
  const note = retakes[point.id] ?? ''
@@ -128,7 +133,7 @@ export default function PhotoDesk({ tour, onTour, mode }: Props) {
   : (retakes[candidate.id]?.trim() || candidate.retakeNote) ? 'retake' as const
   : candidate.hasPhoto ? 'done' as const : 'pending' as const
 
- return <div className={'pd pd--' + mode}>
+ return <div className={'pd pd--' + mode + (editable ? ' pd--editing' : '')}>
   <div className="pd-main">
    <Panel variant="solid" padding="none" as="div" className={'rv-well pd-photo' + (point.hasPhoto && !broken[point.id] && loadedPhoto !== point.id ? ' skeleton-bg' : '')}>
     {point.hasPhoto && !broken[point.id]
@@ -175,7 +180,10 @@ export default function PhotoDesk({ tour, onTour, mode }: Props) {
   </div>
 
   <aside className="pd-side">
-   <Panel variant="solid" padding="none" as="div" className="rv-well pd-plan">
+   {editable
+    ? <PlanEditor key={tour.id} tour={tour} onTour={onTour} mode="live" layout="stack" reserve={review ? 620 : 460}
+     focusPointId={point.id} onFocusPoint={setActiveId} />
+    : <Panel variant="solid" padding="none" as="div" className="rv-well pd-plan">
     <p className="pd-plan-name">{area.name}</p>
     {area.hasPlan
      ? <FitPlan src={planUrl(tour.id, area.id)} reserve={review ? 560 : 420}>
@@ -185,7 +193,7 @@ export default function PhotoDesk({ tour, onTour, mode }: Props) {
        onSelect={key => setActiveId(Number(key))} />
      </FitPlan>
      : <p className="rv-well-empty">This area has no floor plan.</p>}
-   </Panel>
+   </Panel>}
 
    {review && <>
     <section className="pd-tray" aria-label="Retakes to send">

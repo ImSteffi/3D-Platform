@@ -23,7 +23,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      navigate("/home", { replace: true });
+      navigate("/spaces", { replace: true });
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "Connection to server failed.",

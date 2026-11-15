@@ -68,6 +68,26 @@ public class AdminTourRequestController {
         return service.savePoints(id, areaId, request.captureGroup(), inputs, authentication);
     }
 
+    @PostMapping("/tour-requests/{id}/areas/{areaId}/points")
+    public TourRequestService.Detail createPoint(@PathVariable Long id, @PathVariable Long areaId,
+            @Valid @RequestBody PointRequest request, Authentication authentication) {
+        return service.createPoint(id, areaId, new TourRequestService.PointInput(
+                request.x(), request.y(), request.direction(), request.note()), authentication);
+    }
+
+    @PatchMapping("/tour-requests/{id}/points/{pointId}")
+    public TourRequestService.Detail updatePoint(@PathVariable Long id, @PathVariable Long pointId,
+            @Valid @RequestBody PointPatchRequest request, Authentication authentication) {
+        return service.updatePoint(id, pointId, new TourRequestService.PointPatch(
+                request.x(), request.y(), request.direction(), request.note()), authentication);
+    }
+
+    @DeleteMapping("/tour-requests/{id}/points/{pointId}")
+    public TourRequestService.Detail deletePoint(@PathVariable Long id, @PathVariable Long pointId,
+            Authentication authentication) {
+        return service.deletePoint(id, pointId, authentication);
+    }
+
     @PostMapping("/tour-requests/{id}/plan/send")
     public TourRequestService.Detail sendPlan(@PathVariable Long id, Authentication authentication) {
         return service.sendPlan(id, authentication);
@@ -112,6 +132,7 @@ public class AdminTourRequestController {
 
     public record PointRequest(@NotNull Double x, @NotNull Double y, @NotNull Double direction,
             @Size(max = 500) String note) {}
+    public record PointPatchRequest(Double x, Double y, Double direction, @Size(max = 500) String note) {}
     public record PointsRequest(@NotNull Integer captureGroup, @NotNull List<@NotNull @Valid PointRequest> points) {}
     public record MarkerSizesRequest(@NotNull Integer dotSize, @NotNull Integer lineLength) {}
     public record RetakeRequest(@NotNull Long pointId, @Size(max = 500) String note) {}

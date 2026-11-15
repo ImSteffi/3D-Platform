@@ -50,3 +50,4 @@ a.desk-row:hover > svg { color: var(--ink); transform: translateX(2px); }
 @media (max-width: 520px) {
  .desk-form-actions .btn { flex: 1; }
 }
+.desk-title-link { color: inherit; } .desk-title-link:hover { text-decoration: underline; }

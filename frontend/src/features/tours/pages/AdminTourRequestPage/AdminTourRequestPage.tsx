@@ -19,7 +19,7 @@ function ApprovedPhotos({ tour, onTour }: { tour: TourDetail; onTour: (tour: Tou
  if (!total) return null
  return <details className="rq-photos" onToggle={event => setOpen(event.currentTarget.open)}>
   <summary><Icon name="chevron" size={16} /><span>The customer's photos</span><span className="num">{taken} / {total}</span></summary>
-  {open && <PhotoDesk tour={tour} onTour={onTour} mode="browse" />}
+  {open && <PhotoDesk tour={tour} onTour={onTour} mode="browse" editable />}
  </details>
 }
 
@@ -101,7 +101,7 @@ export default function AdminTourRequestPage() {
    {tour.notes && <p className="rq-notes"><Icon name="info" size={16} /><span><b>Note from the customer.</b> {tour.notes}</span></p>}
    {tour.status === 'SUBMITTED' && <PlanEditor key={tour.id} tour={tour} onTour={setTour} />}
    {tour.status === 'PLAN_READY' && <PlanWaiting key={tour.id} tour={tour} onTour={setTour} />}
-   {tour.status === 'PHOTOS_SUBMITTED' && <PhotoDesk key={tour.id} tour={tour} onTour={setTour} mode="review" />}
+   {tour.status === 'PHOTOS_SUBMITTED' && <PhotoDesk key={tour.id} tour={tour} onTour={setTour} mode="review" editable />}
    {(tour.status === 'APPROVED' || tour.status === 'DELIVERED') && <>
     <DeliverTour key={tour.id + tour.status} tour={tour} onTour={setTour} />
     <ApprovedPhotos tour={tour} onTour={setTour} />

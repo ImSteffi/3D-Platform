@@ -73,7 +73,7 @@ export default function DeliverTour({ tour, onTour }: Props) {
   </InlineError>}
   {scans && !scans.length && <EmptyState level={3} icon="cube" title="No finished tours for this customer yet"
    text="Upload the finished tour under the customer's organization in Customers. It will be listed here as soon as it is ready."
-   action={<Button variant="secondary" to="/organizations" iconAfter="arrow">Open Customers</Button>} />}
+   action={<Button variant="secondary" to="/users" iconAfter="arrow">Open Users</Button>} />}
   {scans && !!scans.length && <>
    <ul className="dt-list" aria-label="Finished tours">
     {scans.map(scan => {
@@ -103,7 +103,7 @@ export default function DeliverTour({ tour, onTour }: Props) {
  if (!delivered) return <div className="dt">
   <div className="dt-head">
    <h2>Deliver the tour</h2>
-   <p>Build the tour, upload it under the customer's organization in <Link to="/organizations" className="rv-link">Customers</Link>, then pick it here.</p>
+   <p>Build the tour, upload it under the customer's organization in <Link to="/users" className="rv-link">Users</Link>, then pick it here.</p>
   </div>
   {picker}
  </div>

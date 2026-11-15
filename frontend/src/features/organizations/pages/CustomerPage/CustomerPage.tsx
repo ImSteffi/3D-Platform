@@ -1,7 +1,8 @@
+import BackLink from '../../../../shared/ui/BackLink/BackLink'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { useParams } from 'react-router'
 import { useShellMode } from '../../../../shared/layout/Backdrop'
-import { Button, EmptyState, Icon, InlineError, Panel, Skeleton, SkeletonGroup } from '../../../../shared/ui'
+import { Button, EmptyState, InlineError, Panel, Skeleton, SkeletonGroup } from '../../../../shared/ui'
 import ScanCard from '../../../scans/components/ScanCard/ScanCard'
 import { getAdminUser, getAdminUserTourRequests, type AdminUser, type TourSummary } from '../../../tours/api/tourRequests'
 import AdminSpace from './AdminSpace'
@@ -38,7 +39,6 @@ export default function CustomerPage() {
  const { tours, error: toursError, retry: retryTours, remove } = useCustomerTours(user?.organizations ?? null)
 
  function retry() { setUser(null); setUserError(''); setSpaces(null); setSpacesError(''); setAttempt(value => value + 1) }
- const backOrg = user?.organizations.find(organization => organization.id === orgId)
  const validId = Number.isInteger(id) && id > 0
 
  // A tour belongs to the space it was delivered to. The rest have no space yet.
@@ -50,7 +50,7 @@ export default function CustomerPage() {
 
  return <main className="page customer-page person-page">
   <h1 className="visually-hidden">{user?.displayName ?? 'Customer'}</h1>
-  <Link className="desk-back" to={`/organizations/${orgId}`}><Icon name="back" size={16} />{backOrg?.name ?? 'Customer'}</Link>
+  <BackLink to={`/organizations/${orgId}`} />
 
   {userError && <Panel><InlineError onRetry={retry}>{userError}</InlineError></Panel>}
 

@@ -58,4 +58,8 @@ public class CapturePoint {
     public String getRetakeNote() { return retakeNote; }
     public void setPhotoObjectKey(String photoObjectKey) { this.photoObjectKey = photoObjectKey; }
     public void setRetakeNote(String retakeNote) { this.retakeNote = retakeNote; }
+    public void setSeq(int seq) { this.seq = seq; }
+    public void setPosition(double x, double y) { this.x = x; this.y = y; }
+    public void setDirection(double direction) { this.direction = direction; }
+    public void setNote(String note) { this.note = note; }
 }

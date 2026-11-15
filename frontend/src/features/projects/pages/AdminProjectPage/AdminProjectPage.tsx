@@ -1,6 +1,7 @@
+import BackLink from '../../../../shared/ui/BackLink/BackLink'
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router'
-import { Button, EmptyState, Icon, InlineError, Panel } from '../../../../shared/ui'
+import { useParams } from 'react-router'
+import { Button, EmptyState, InlineError, Panel } from '../../../../shared/ui'
 import { useShellMode } from '../../../../shared/layout/Backdrop'
 import { getOrganizations } from '../../../organizations/api/organizations'
 import { getProjects, type Project } from '../../api/projects'
@@ -18,7 +19,7 @@ export default function AdminProjectPage() {
  const validOrg = Number.isSafeInteger(orgId) && orgId > 0
  const valid = validOrg && Number.isSafeInteger(id) && id > 0
  const [project, setProject] = useState<Project | null>(null)
- const [customerName, setCustomerName] = useState('')
+ const [, setCustomerName] = useState('')
  const [missingId, setMissingId] = useState<number | null>(null)
  const [error, setError] = useState('')
  const [attempt, setAttempt] = useState(0)
@@ -40,14 +41,14 @@ export default function AdminProjectPage() {
  }, [orgId, id, valid, attempt])
 
  const retry = useCallback(() => { setError(''); setAttempt(value => value + 1) }, [])
- const back = validOrg ? `/organizations/${orgId}` : '/organizations'
+ const back = validOrg ? `/organizations/${orgId}` : '/users'
  const notFound = !valid || missingId === id
  const shown = project && project.id === id ? project : null
 
  return <main className="page admin-space-page">
   <header className="page-header">
    <div>
-    <Link className="desk-back" to={back}><Icon name="back" size={16} />{validOrg ? customerName || 'Customer' : 'Customers'}</Link>
+    <BackLink to={back} />
     <h1 className="desk-title">{shown?.name ?? 'Space'}</h1>
    </div>
   </header>

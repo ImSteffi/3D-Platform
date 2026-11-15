@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { Button, EmptyState, Field, Icon, InlineError, Panel, Skeleton, SkeletonGroup, WhoseMove } from '../../../../shared/ui'
+import { Button, EmptyState, Field, InlineError, Panel, Skeleton, SkeletonGroup } from '../../../../shared/ui'
 import { useShellMode } from '../../../../shared/layout/Backdrop'
 import {
  getTourRequest, getTourRequests, nextMoveLine, planUrl, whoseMove,
@@ -77,7 +77,6 @@ function SpaceCard({ tour, cache }: { tour: TourSummary; cache: DetailCache }) {
   <div className="spaces-card-body">
    <div className="spaces-card-top">
     <h2 className="spaces-card-name">{tour.name}</h2>
-    <WhoseMove who={whoseMove(tour.status)} />
    </div>
    <span className="spaces-card-line">{bareLine(nextMoveLine(detail ?? tour))}</span>
    {started && <span className="spaces-card-date">Started <span className="num">{started}</span></span>}
@@ -120,7 +119,6 @@ export default function SpacesPage() {
  const shown = tours ? tours.filter(tour => !needle || tour.name.toLowerCase().includes(needle)) : []
  const moves = tours ? tours.filter(tour => whoseMove(tour.status) === 'you').length : 0
  const extraLoading = extra.attempt !== extraAttempt
- const published = extraLoading ? [] : (extra.projects ?? []).filter(project => project.publishedScanCount > 0)
 
  const setQuery = (value: string) => setParams(current => {
   const next = new URLSearchParams(current)
@@ -132,11 +130,11 @@ export default function SpacesPage() {
  const context = !tours ? 'Every place you are capturing.'
   : tours.length === 0 ? 'Every place you are capturing will be here.'
   : moves > 0 ? `${moves === 1 ? 'One space is' : `${moves} spaces are`} waiting on you.`
-  : 'Nothing is waiting on you right now.'
+  : ''
 
  return <main className="page spaces-page">
   <header className="page-header">
-   <div><h1>Spaces</h1><p>{context}</p></div>
+   <div><h1>Spaces</h1>{context && <p>{context}</p>}</div>
    {tours && tours.length > 0 && <div className="spaces-tools">
     <Field className="spaces-search" label="Search spaces by name" type="search" inputMode="search" name="q" value={query} onChange={setQuery} placeholder="Search spaces" autoComplete="off" />
     <Button to="/spaces/new" icon="plus">New space</Button>
@@ -183,24 +181,5 @@ export default function SpacesPage() {
    <InlineError onRetry={() => setExtraAttempt(value => value + 1)}>{extra.error} Your spaces above are not affected.</InlineError>
   </Panel>}
 
-  {published.length > 0 && !loading && <Panel className="spaces-more" padding="sm" aria-labelledby="spaces-more-title">
-   <div className="spaces-more-head">
-    <h2 id="spaces-more-title">More tours from the team</h2>
-    <p>Tours the team delivered to you outside a capture.</p>
-   </div>
-   <ul>
-    {published.map(project => <li key={project.id}>
-     <Link to={`/projects/${project.id}`} className="spaces-more-row">
-      <span className="spaces-more-icon"><Icon name="cube" size={18} /></span>
-      <span className="spaces-more-text">
-       <span className="spaces-more-name">{project.name}</span>
-       <span className="spaces-more-org">{project.organizationName}</span>
-      </span>
-      <span className="spaces-more-count"><span className="num">{project.publishedScanCount}</span> {project.publishedScanCount === 1 ? 'tour' : 'tours'}</span>
-      <Icon name="chevron" size={16} />
-     </Link>
-    </li>)}
-   </ul>
-  </Panel>}
  </main>
 }

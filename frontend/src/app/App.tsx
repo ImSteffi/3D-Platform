@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes, useParams } from 'react-router'
 import LoginPage from '../features/auth/pages/LoginPage/LoginPage'
-import HomePage from '../features/home/pages/HomePage/HomePage'
 import SpacesPage from '../features/spaces/pages/SpacesPage/SpacesPage'
 import NewSpacePage from '../features/spaces/pages/NewSpacePage/NewSpacePage'
 import SpacePage from '../features/spaces/pages/SpacePage/SpacePage'
@@ -9,8 +8,8 @@ import AdminTourRequestsPage from '../features/tours/pages/AdminTourRequestsPage
 import AdminTourRequestPage from '../features/tours/pages/AdminTourRequestPage/AdminTourRequestPage'
 import SharedViewerPage from '../features/scans/components/ScanViewer/SharedViewerPage'
 import AdminProjectPage from '../features/projects/pages/AdminProjectPage/AdminProjectPage'
-import OrganizationsPage from '../features/organizations/pages/OrganizationsPage/OrganizationsPage'
 import OrganizationDetailsPage from '../features/organizations/pages/OrganizationDetailsPage/OrganizationDetailsPage'
+import UsersPage from '../features/organizations/pages/UsersPage/UsersPage'
 import CustomerPage from '../features/organizations/pages/CustomerPage/CustomerPage'
 import ClientProjectPage from '../features/projects/pages/ClientProjectPage/ClientProjectPage'
 import WorkspaceLayout from '../shared/layout/WorkspaceLayout/WorkspaceLayout'
@@ -28,9 +27,9 @@ export default function App() {
   <Route path="/view/:token" element={<SharedViewerPage />} />
   <Route path="/login" element={<LoginPage />} />
   <Route element={<WorkspaceLayout />}>
-   <Route path="/" element={<Navigate to="/home" replace />} />
+   <Route path="/" element={<Navigate to="/spaces" replace />} />
    <Route element={<RequireRole role="customer" />}>
-    <Route path="/home" element={<HomePage />} />
+    <Route path="/home" element={<Navigate to="/spaces" replace />} />
     <Route path="/spaces" element={<SpacesPage />} />
     <Route path="/spaces/new" element={<NewSpacePage />} />
     <Route path="/spaces/:spaceId/:tab?" element={<SpacePage />} />
@@ -40,13 +39,14 @@ export default function App() {
    <Route element={<RequireRole role="operator" />}>
     <Route path="/review" element={<AdminTourRequestsPage />} />
     <Route path="/review/:tourId" element={<AdminTourRequestPage />} />
-    <Route path="/organizations" element={<OrganizationsPage />} />
+    <Route path="/organizations" element={<Navigate to="/users" replace />} />
     <Route path="/organizations/:organizationId/projects/:projectId" element={<AdminProjectPage />} />
     <Route path="/organizations/:organizationId/people/:userId" element={<CustomerPage />} />
+    <Route path="/users" element={<UsersPage />} />
     <Route path="/organizations/:organizationId" element={<OrganizationDetailsPage />} />
    </Route>
    {/* Legacy paths */}
-   <Route path="/dashboard" element={<Navigate to="/home" replace />} />
+   <Route path="/dashboard" element={<Navigate to="/spaces" replace />} />
    <Route path="/projects" element={<Navigate to="/spaces" replace />} />
    <Route path="/generate" element={<Navigate to="/spaces" replace />} />
    <Route path="/generate/tour" element={<Navigate to="/spaces/new" replace />} />

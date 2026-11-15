@@ -7,6 +7,8 @@ import SpaceSections from './SpaceSections'
 import DeliveredSpace from './DeliveredSpace'
 import { message, plural, type Run, type SpaceProps } from './spaceModel'
 import './SpacePage.css'
+import BackLink from '../../../../shared/ui/BackLink/BackLink'
+import '../../../organizations/styles/customers.css'
 
 
 /** The space page's shape while it loads: the header, then two floors with their plan on the left and photo frames on the right. */
@@ -105,6 +107,7 @@ export default function SpacePage() {
  return <main className="page space">
   <header className="page-header space-head">
    <div className="space-head-title">
+    <BackLink to="/spaces" />
     <h1>{tour.name}</h1>
     <p>{line}</p>
    </div>

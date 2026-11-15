@@ -146,6 +146,12 @@ export const photoUrl = (id: number, pointId: number, version = 0) =>
 export const getAdminTourRequests = () => get<TourSummary[]>(adminRoot)
 export const saveAreaPoints = (id: number, areaId: number, captureGroup: number, points: PointInput[]) =>
  send<TourDetail>('PUT', `${adminRoot}/${id}/areas/${areaId}/points`, { captureGroup, points })
+export const createPoint = (id: number, areaId: number, point: PointInput) =>
+ send<TourDetail>('POST', `${adminRoot}/${id}/areas/${areaId}/points`, point)
+export const updatePoint = (id: number, pointId: number, changes: Partial<PointInput>) =>
+ send<TourDetail>('PATCH', `${adminRoot}/${id}/points/${pointId}`, changes)
+export const deletePoint = (id: number, pointId: number) =>
+ send<TourDetail>('DELETE', `${adminRoot}/${id}/points/${pointId}`)
 export const sendPlan = (id: number) => send<TourDetail>('POST', `${adminRoot}/${id}/plan/send`)
 export const saveMarkerSizes = (id: number, areaId: number, dotSize: number, lineLength: number) =>
  send<TourDetail>('PUT', `${adminRoot}/${id}/areas/${areaId}/markers`, { dotSize, lineLength })

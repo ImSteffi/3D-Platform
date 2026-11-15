@@ -312,6 +312,79 @@ public class TourRequestService {
         return detail(tour, user);
     }
 
+    // ---- Single capture points ----
+    // The administrator edits the plan point by point in every status, so the customer always sees
+    // the current plan and can keep uploading photos meanwhile. A moved or turned point keeps its photo.
+
+    @Transactional
+    public Detail createPoint(Long id, Long areaId, PointInput input, Authentication authentication) {
+        var user = admin(authentication);
+        var tour = tours.findById(id).orElseThrow(() -> error(404, "Tour request not found."));
+        var area = area(tour, areaId);
+        if (area.getPlanObjectKey() == null) throw error(409, "This floor has no plan yet.");
+        validatePoint(input);
+        var existing = points.findByArea_IdOrderBySeqAsc(areaId);
+        int total = existing.size() + 1;
+        for (var other : areas.findByTourRequest_IdOrderByIdAsc(id)) {
+            if (!other.getId().equals(areaId) && other.getCaptureGroup() == area.getCaptureGroup())
+                total += points.findByArea_IdOrderBySeqAsc(other.getId()).size();
+        }
+        if (total > MAX_POINTS_PER_GROUP) throw error(409, "Group " + area.getCaptureGroup()
+                + " would have " + total + " capture points; the limit is " + MAX_POINTS_PER_GROUP + ".");
+        int seq = existing.stream().mapToInt(CapturePoint::getSeq).max().orElse(0) + 1;
+        points.save(new CapturePoint(area, seq, input.x(), input.y(), input.direction(), blankToNull(input.note())));
+        // The new point needs a photo, so a finished photo set is incomplete again.
+        var status = effectiveStatus(tour);
+        if (status == PHOTOS_SUBMITTED || status == APPROVED) {
+            tour.setScan(null);
+            tour.setStatus(PLAN_READY);
+        }
+        return detail(tour, user);
+    }
+
+    @Transactional
+    public Detail updatePoint(Long id, Long pointId, PointPatch patch, Authentication authentication) {
+        var user = admin(authentication);
+        var tour = tours.findById(id).orElseThrow(() -> error(404, "Tour request not found."));
+        var point = point(tour, pointId);
+        double x = patch.x() == null ? point.getX() : patch.x();
+        double y = patch.y() == null ? point.getY() : patch.y();
+        double direction = patch.direction() == null ? point.getDirection() : patch.direction();
+        validatePoint(new PointInput(x, y, direction, null));
+        point.setPosition(x, y);
+        point.setDirection(direction);
+        if (patch.note() != null) point.setNote(blankToNull(patch.note()));
+        return detail(tour, user);
+    }
+
+    @Transactional
+    public Detail deletePoint(Long id, Long pointId, Authentication authentication) {
+        var user = admin(authentication);
+        var tour = tours.findById(id).orElseThrow(() -> error(404, "Tour request not found."));
+        var point = point(tour, pointId);
+        var areaId = point.getArea().getId();
+        var key = point.getPhotoObjectKey();
+        points.delete(point);
+        points.flush();
+        // Keep the numbers the customer sees contiguous. Ascending order means each target seq is free.
+        int seq = 1;
+        for (var rest : points.findByArea_IdOrderBySeqAsc(areaId)) {
+            if (rest.getSeq() != seq) {
+                rest.setSeq(seq);
+                points.flush();
+            }
+            seq++;
+        }
+        discard(key);
+        return detail(tour, user);
+    }
+
+    private static void validatePoint(PointInput input) {
+        if (!(input.x() >= 0 && input.x() <= 1 && input.y() >= 0 && input.y() <= 1
+                && input.direction() >= 0 && input.direction() < 360))
+            throw error(400, "A capture point is outside the plan or has an invalid direction.");
+    }
+
     /** One customer's requests, drafts included, for the administrator's page per customer. */
     @Transactional(readOnly = true)
     public List<Summary> listForUser(Long userId, Authentication authentication) {
@@ -642,6 +715,7 @@ public class TourRequestService {
     public record Customer(Long id, String displayName, String email, List<OrganizationRef> organizations) {}
     public record OrganizationRef(Long id, String name) {}
     public record PointInput(double x, double y, double direction, String note) {}
+    public record PointPatch(Double x, Double y, Double direction, String note) {}
     public record Retake(Long pointId, String note) {}
     public record Summary(Long id, String name, String status, Instant createdAt, long areaCount, String ownerName,
             Long scanId, String scanName, Long projectId, int areasToPlan) {}

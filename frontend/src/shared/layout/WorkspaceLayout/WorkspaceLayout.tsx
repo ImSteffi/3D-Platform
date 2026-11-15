@@ -1,18 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { getCurrentUser, logout, type CurrentUser } from '../../../features/auth/api/auth'
-import { getAdminTourRequests, getTourRequests, whoseMove, type TourSummary } from '../../../features/tours/api/tourRequests'
+import { getAdminTourRequests, getTourRequests, type TourSummary } from '../../../features/tours/api/tourRequests'
 import { WorkspaceContext } from './WorkspaceContext'
 import Backdrop from '../Backdrop/Backdrop'
 import BackdropProvider from '../Backdrop/BackdropProvider'
 import { useBackdropState, type ShellMode } from '../Backdrop/backdropContext'
 import Icon, { type IconName } from '../../ui/Icon/Icon'
-import Skeleton, { SkeletonGroup } from '../../ui/Skeleton/Skeleton'
 import ScanViewer from '../../../features/scans/components/ScanViewer/ScanViewer'
 import './WorkspaceLayout.css'
 
-const moveOrder = { you: 0, team: 1, done: 2 }
-const moveWords = { you: 'Your move', team: 'With the team', done: 'Tour ready' }
 const waitingOnOperator = (tour: TourSummary) => tour.status === 'SUBMITTED' || tour.status === 'PHOTOS_SUBMITTED' || tour.status === 'APPROVED'
  || (tour.status === 'PLAN_READY' && (tour.areasToPlan ?? 0) > 0)
 // The tabs of one Space share a key so switching tab does not remount the page.
@@ -80,16 +77,13 @@ function Shell() {
  if (!user) return <div className="workspace-gate"><Backdrop /><p className="workspace-gate-panel workspace-gate-panel--loading" role="status"><Icon name="cube" size={22} />Opening your account…</p></div>
 
  const mode: ShellMode = backdrop.mode ?? (operator ? 'desk' : 'place')
- const home = operator ? '/review' : '/home'
+ const home = operator ? '/review' : '/spaces'
  const roleLine = operator ? 'Team' : 'Customer'
  const initials = user.displayName.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase() || '?'
  const queueCount = operator && tours ? tours.filter(waitingOnOperator).length : 0
- const spaces = !operator && tours
-  ? [...tours].sort((a, b) => moveOrder[whoseMove(a.status)] - moveOrder[whoseMove(b.status)]).slice(0, 5)
-  : []
  const items: { to: string; icon: IconName; label: string; badge?: number }[] = operator
-  ? [{ to: '/review', icon: 'queue', label: 'Queue', badge: queueCount }, { to: '/organizations', icon: 'users', label: 'Customers' }]
-  : [{ to: '/home', icon: 'home', label: 'Home' }, { to: '/spaces', icon: 'spaces', label: 'Spaces' }, { to: '/learn', icon: 'learn', label: 'Learn' }]
+  ? [{ to: '/review', icon: 'queue', label: 'Queue', badge: queueCount }, { to: '/users', icon: 'users', label: 'Users' }]
+  : [{ to: '/spaces', icon: 'spaces', label: 'Spaces' }, { to: '/learn', icon: 'learn', label: 'Learn' }]
  const signOutLabel = loggingOut ? 'Signing out…' : 'Sign out'
 
  return <WorkspaceContext.Provider value={user}>
@@ -117,28 +111,6 @@ function Shell() {
       {!!item.badge && <b className="sidebar-badge" aria-label={`${item.badge} waiting for you`}>{item.badge}</b>}
      </NavLink>)}
     </nav>
-    {!operator && <section className="sidebar-spaces" aria-labelledby="sidebar-spaces-title">
-     <h2 id="sidebar-spaces-title">Your spaces</h2>
-     <ul>
-      {!tours && <li><SkeletonGroup label="Loading your spaces">
-       {['68%', '52%'].map((width, row) => <div key={row} className="sidebar-space">
-        <Skeleton width={34} height={34} radius={10} index={row * 2} />
-        <span className="sidebar-space-text"><Skeleton width={width} height={13} index={row * 2 + 1} /><Skeleton width="44%" height={11} index={row * 2 + 1} style={{ marginTop: 5 }} /></span>
-       </div>)}
-      </SkeletonGroup></li>}
-      {spaces.map(space => {
-       const who = whoseMove(space.status)
-       return <li key={space.id}><NavLink className="sidebar-space" to={`/spaces/${space.id}`}>
-        <span className={`sidebar-space-mark sidebar-space-mark--${who}`}><Icon name={who === 'done' ? 'check' : 'pin'} size={17} /></span>
-        <span className="sidebar-space-text"><span>{space.name}</span><small>{moveWords[who]}</small></span>
-       </NavLink></li>
-      })}
-      <li><Link className="sidebar-space sidebar-space--new" to="/spaces/new">
-       <span className="sidebar-space-mark sidebar-space-mark--new"><Icon name="plus" size={17} /></span>
-       <span className="sidebar-space-text"><span>Start a space</span></span>
-      </Link></li>
-     </ul>
-    </section>}
     <div className="sidebar-account">
      <div className="account-id"><span className="workspace-avatar" aria-hidden="true">{initials}</span><p className="account-text"><strong>{user.displayName}</strong><small>{roleLine}</small></p></div>
      <button type="button" className="account-signout" onClick={() => { void signOut() }} disabled={loggingOut}><Icon name="logout" size={17} />{signOutLabel}</button>

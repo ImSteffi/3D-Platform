@@ -31,7 +31,7 @@
 
 /* Rows split exactly in half: the space on the left, the tour delivered to it on the right. The back button has its own narrow column. */
 .person-page { position: relative; --back-col: 104px; }
-.person-page > .desk-back { position: absolute; top: 0; left: 0; z-index: 1; max-width: calc(var(--back-col) - var(--s-3)); margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.person-page > .desk-back { margin-bottom: var(--s-3); }
 .person-rows { display: flex; flex-direction: column; }
 .person-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .person-row-main { min-width: 0; padding: var(--s-4) var(--s-5) var(--s-4) var(--back-col); }
@@ -69,3 +69,4 @@
   .person-row:not(.person-row--head) > .person-row-tours { padding-top: 0; }
 }
 .person-row--single { grid-template-columns: 1fr; }
+.admin-space-owner { color: var(--ink); font-weight: 500; }
