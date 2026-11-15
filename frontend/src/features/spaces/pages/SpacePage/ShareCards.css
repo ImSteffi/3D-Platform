@@ -1,0 +1,25 @@
+/* Share cards: three equal plain-word cards, each one sentence and one action. */
+.share-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-5); align-items: stretch; }
+.share-card { display: flex; flex-direction: column; align-items: flex-start; }
+.share-card-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--fill); color: var(--ink); }
+.share-card h2 { margin-top: var(--s-4); }
+.share-card-text { margin-top: 6px; max-width: 38ch; font-size: 15px; color: var(--ink-2); }
+.share-card-body { align-self: stretch; display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-3); margin-top: auto; padding-top: var(--s-6); }
+.share-card-note { font-size: 13px; color: var(--ink-2); }
+.share-card-note--done { display: flex; align-items: flex-start; gap: 7px; font-weight: 500; color: var(--green-ink); }
+.share-card-note--done svg { margin-top: 1px; color: var(--green); }
+.share-card-body .inline-error { align-self: stretch; }
+
+.share-link { align-self: stretch; display: flex; gap: var(--s-2); }
+.share-link input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border: 1px solid var(--hair-strong); border-radius: 22px; background: rgba(255, 255, 255, .78); color: var(--ink); font-family: var(--mono); font-size: 13px; letter-spacing: -.02em; text-overflow: ellipsis; transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
+.share-link input:hover { border-color: rgba(23, 25, 27, .34); background: rgba(255, 255, 255, .9); }
+.share-link input:focus-visible { outline: none; border-color: var(--ink); background: #fff; box-shadow: 0 0 0 1px var(--ink); }
+.share-off { height: 32px; margin: -4px 0 -4px -10px; padding: 0 10px; border: 0; border-radius: 16px; background: transparent; color: var(--ink-2); font-size: 13px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.share-off:hover:not(:disabled) { background: var(--fill); color: var(--ink); }
+.share-off:active:not(:disabled) { background: var(--fill-hover); }
+
+@media (max-width: 1180px) { .share-cards { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); } }
+@media (max-width: 900px) {
+ .share-cards { grid-template-columns: minmax(0, 1fr); gap: var(--s-3); }
+ .share-card-body { padding-top: var(--s-5); }
+}

@@ -13,6 +13,16 @@ public interface OrganizationMembershipRepository
                         Long organizationId);
 
         @Query("""
+                        SELECT membership.organization
+                        FROM OrganizationMembership membership
+                        WHERE membership.user.id = :userId
+                        ORDER BY membership.organization.id
+                        """)
+        List<Organization> findOrganizationsByUserId(@Param("userId") Long userId);
+
+        boolean existsByOrganization_IdAndUser_Id(Long organizationId, Long userId);
+
+        @Query("""
                         SELECT membership.organization.name
                         FROM OrganizationMembership membership
                         WHERE membership.user.id = :userId

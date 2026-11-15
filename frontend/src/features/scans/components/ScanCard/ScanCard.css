@@ -1,73 +1,61 @@
-.saved-scan-card { display: grid; grid-template-columns: 160px minmax(0,1fr); align-items: start; gap: 22px; padding: 22px; border-radius: 13px; border: 1px solid var(--border); background: #1f2022; animation: arrive 300ms var(--ease); }
-.saved-scan-preview { display: grid; place-items: center; width: 100%; aspect-ratio: 4 / 3; background: #17181a; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
-.saved-scan-content { min-width: 0; display: grid; grid-template-columns: minmax(0,1fr) minmax(240px,440px); align-items: start; gap: 24px; }
-.saved-scan-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
-.saved-scan-heading h3 { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 15px; }
-.saved-scan-icon { color: #b7c6bd; }.saved-scan-card p { font-size: 11px; }
-.saved-scan-files { min-width: 0; width: 100%; max-width: 440px; justify-self: end; }.saved-scan-files .scene-file-list { max-height: none; }
-.saved-scan-sharing-status { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 16px; }
-.saved-scan-summary { min-width: 0; }
-.saved-scan-actions { display: flex; flex-wrap: nowrap; gap: 8px; margin-top: 8px; overflow-x: auto; }
-.saved-scan-actions > * { flex-shrink: 0; }
-.saved-scan-actions .btn { min-height: 34px; padding: 8px 12px; font-size: 11px; }
-.scan-delete-action .btn { color: var(--danger); }.scan-delete-action .btn:hover { border-color: #ffa29d60; background: #ffa29d08; }
-.scan-action-notice { margin-top: 10px; }
-@media(max-width:1100px) { .saved-scan-content { grid-template-columns: minmax(0,1fr); gap: 16px; } }
-@media(max-width:800px) { .saved-scan-card { grid-template-columns: 100px minmax(0,1fr); } }
+/* A tour. Built on Panel: frosted glass when it sits on a place photo, a quiet well when it is inside the operator's window. */
+.tour-card { display: flex; flex-direction: column; overflow: hidden; height: 100%; animation: arrive 320ms var(--ease) both; }
 
+.tour-card-media { position: relative; display: block; width: 100%; aspect-ratio: 16 / 10; padding: 0; border: 0; overflow: hidden; background: var(--fill); color: var(--ink-2); cursor: pointer; }
+.tour-card-media:disabled { cursor: default; opacity: 1; }
+.tour-card-placeholder { position: absolute; inset: 0; display: grid; place-items: center; }
+.tour-card-image { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; animation: fade-in var(--t-panel) var(--ease) both; transition: transform 600ms var(--ease); }
+.tour-card-media:hover:not(:disabled) .tour-card-image { transform: scale(1.03); }
+.tour-card-play { position: absolute; left: 14px; bottom: 14px; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--lens-bar); color: var(--on-dark); transition: transform var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
+.tour-card-media:hover:not(:disabled) .tour-card-play { background: var(--lens); transform: scale(1.06); }
+.tour-card-media:active:not(:disabled) .tour-card-play { transform: scale(.96); }
+.tour-card-media:focus-visible { outline-offset: -4px; }
 
-.scan-play-button { display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border-radius: 50%; border: 1px solid #ffffff30; background: #ffffff0b; color: var(--text-h); cursor: pointer; transition: transform 220ms var(--ease), background 180ms, border-color 180ms; }
-.scan-play-button svg { margin-left: 2px; }
-.scan-play-button:hover { transform: scale(1.08); background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
-.scan-play-button:active { transform: scale(.96); }
+.tour-card-body { flex: 1; display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-5); min-width: 0; }
+.tour-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-3); }
+.tour-card-head h3 { min-width: 0; overflow-wrap: anywhere; }
+.tour-card-head .pill { flex: none; }
+.tour-card-meta { margin-top: -6px; font-family: var(--mono); font-size: 13px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.tour-card-note { font-size: 13px; color: var(--ink-2); }
 
-.saved-scan-actions .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+/* Sharing: a switch, and the two copy actions once it is on. */
+.tour-card-share { display: flex; flex-direction: column; gap: 10px; margin-top: var(--s-1); padding-top: var(--s-3); border-top: 1px solid var(--hair); }
+.tour-switch { display: flex; align-items: center; gap: var(--s-3); min-height: 44px; padding: 4px 6px; margin: 0 -6px; width: calc(100% + 12px); border: 0; border-radius: var(--r-control); background: transparent; text-align: left; color: var(--ink); transition: background-color var(--t-fast) var(--ease); }
+.tour-switch:hover:not(:disabled) { background: var(--fill); }
+.tour-switch:active:not(:disabled) { background: var(--fill-hover); }
+.tour-switch-track { flex: none; width: 40px; height: 24px; padding: 2px; border-radius: 12px; background: rgba(23, 25, 27, .28); transition: background-color var(--t-fast) var(--ease); }
+.tour-switch-track > span { display: block; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(23, 25, 27, .3); transition: transform var(--t-fast) var(--ease); }
+.tour-switch[aria-checked='true'] .tour-switch-track { background: var(--ink); }
+.tour-switch[aria-checked='true'] .tour-switch-track > span { transform: translateX(16px); }
+.tour-switch[aria-busy='true'] .tour-switch-track { animation: pulse 900ms ease-in-out infinite; }
+.tour-switch-text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.tour-switch-text strong { font-size: 14px; font-weight: 500; }
+.tour-switch-text span { font-size: 13px; color: var(--ink-2); }
+.tour-card-copy { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.tour-card-copy:empty { display: none; }
+.tour-card-copy .btn { flex: 1 1 auto; padding: 0 16px; }
 
-.scan-share-actions { display: inline-flex; align-items: center; min-width: 0; }
-.scan-share-toggle span { transition: opacity 220ms; }
-.scan-share-toggle.is-open span { opacity: .5; }
-.scan-share-options { display: grid; grid-template-columns: 0fr; opacity: 0; transform: translateX(-8px); visibility: hidden; transition: grid-template-columns 280ms var(--ease), opacity 220ms, transform 280ms var(--ease), visibility 280ms; }
-.scan-share-options.is-open { grid-template-columns: 1fr; opacity: 1; transform: translateX(0); visibility: visible; }
-.scan-share-options-inner { display: flex; gap: 8px; overflow: hidden; min-width: 0; }
-.scan-share-options-inner::before { content: ''; width: 0; flex-shrink: 0; }
-.saved-scan-actions .scan-copy-button { flex-shrink: 0; white-space: nowrap; transition: color 180ms, background 180ms, border-color 180ms; }
-.saved-scan-actions .scan-copy-button.is-copied { color: #95dfb3; background: #254936; border-color: #5bbd83; animation: scan-copy-pop 220ms ease-out; }
-.scan-action-error { display: block; color: var(--danger); font-size: 11px; margin-top: 10px; }
-@keyframes scan-copy-pop { 50% { transform: scale(1.06); } }
-@media (prefers-reduced-motion: reduce) { .scan-share-options, .scan-share-toggle span { transition: none; }.saved-scan-actions .scan-copy-button.is-copied { animation: none; } }
-.saved-scan-card .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+/* The quiet row: everything that is not the one primary action. */
+.tour-card-quiet { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--s-2); margin: 0 -10px; }
+.tour-card-quiet:empty { display: none; }
+.tour-card-quiet .btn { padding: 0 12px; color: var(--ink); }
+.tour-card-quiet .tour-card-delete { margin-left: auto; color: var(--red-ink); }
+.tour-card-quiet .tour-card-delete:hover:not(:disabled, [aria-disabled='true']) { background: var(--red-soft); }
 
-.saved-scan-status { display: flex; align-items: center; }
-.scan-shareable { display: inline-flex; align-items: center; gap: 8px; border: 0; padding: 4px 0; background: transparent; color: var(--text-h); font: inherit; font-size: 11px; cursor: pointer; }
-.scan-shareable-track { display: inline-flex; align-items: center; width: 30px; height: 18px; padding: 2px; border: 1px solid var(--border); border-radius: 999px; background: #353638; transition: background 180ms, border-color 180ms; }
-.scan-shareable-track > span { width: 12px; height: 12px; border-radius: 50%; background: #aaa; transition: transform 180ms, background 180ms; }
-.scan-shareable[aria-checked="true"] .scan-shareable-track { background: #304d3c; border-color: #5b9c74; }
-.scan-shareable[aria-checked="true"] .scan-shareable-track > span { transform: translateX(12px); background: #95dfb3; }
-.scan-shareable:disabled { opacity: .5; cursor: not-allowed; }
-.scan-shareable:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; border-radius: 4px; }
-@media (prefers-reduced-motion: reduce) { .scan-shareable-track, .scan-shareable-track > span { transition: none; } }
-.saved-scan-preview { position: relative; }
-.scan-preview-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.saved-scan-preview .scan-play-button { position: relative; z-index: 1; background: #17181a88; }
+.tour-card-files { margin-top: auto; padding-top: var(--s-3); border-top: 1px solid var(--hair); }
+.tour-card-files summary { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin-left: -8px; padding: 0 10px 0 8px; border-radius: 16px; list-style: none; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--ink-2); transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.tour-card-files summary::-webkit-details-marker { display: none; }
+.tour-card-files summary:hover { background: var(--fill); color: var(--ink); }
+.tour-card-files summary svg { transition: transform var(--t-fast) var(--ease); }
+.tour-card-files[open] summary svg { transform: rotate(90deg); }
+.tour-card-files .scene-file-list { margin-top: var(--s-2); }
 
-@media (max-width: 600px) {
- .saved-scan-card { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 16px; }
- .saved-scan-preview { aspect-ratio: 4 / 3; }
- .scan-preview-image { object-fit: contain; }
- .saved-scan-preview .scan-play-button { width: 54px; height: 54px; }
- .saved-scan-content { grid-template-columns: minmax(0, 1fr); gap: 20px; }
- .saved-scan-heading h3 { font-size: 17px; }
- .saved-scan-card p { font-size: 12px; }
- .saved-scan-actions { margin-top: 8px; gap: 8px; }
- .saved-scan-actions .btn { min-height: 44px; padding: 10px 12px; font-size: 12px; }
- .scan-share-actions { max-width: 100%; }
- .saved-scan-files .scene-file-list li { gap: 12px; padding: 12px; font-size: 12px; }
- .saved-scan-sharing-status { margin-top: 12px; gap: 12px; }
- .scan-shareable { min-height: 44px; font-size: 12px; }
-}
-@media (min-width: 801px) {
- .saved-scan-summary { min-height: 120px; display: grid; grid-template-rows: minmax(min-content, 1fr) auto minmax(min-content, 1fr); }
- .saved-scan-heading { align-self: start; margin-bottom: 0; }
- .saved-scan-sharing-status { margin-top: 0; }
- .saved-scan-actions { align-self: end; margin-top: 0; }
+/* Compact: the picture, the name and the status. Nothing else. */
+.tour-card--compact .tour-card-body { gap: var(--s-2); padding: var(--s-3) var(--s-4) var(--s-4); }
+.tour-card--compact .tour-card-head h3 { font-size: 15px; }
+.tour-card--compact .tour-card-meta { margin-top: -4px; font-size: 12px; }
+.tour-card--compact .tour-card-play { left: 10px; bottom: 10px; width: 36px; height: 36px; }
+
+@media (max-width: 900px) {
+ .tour-card-body { padding: var(--s-4); }
 }

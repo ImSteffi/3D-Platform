@@ -1,1 +1,7 @@
-.upload-progress { margin-top: 20px; }.upload-progress-track { height: 4px; background: #34302d; border-radius: 4px; overflow: hidden; margin-bottom: 10px; }.upload-progress-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#d86b2e,#ffad74); transition: width 300ms var(--ease); }.upload-progress p { color: #d0a284; }
+.upload-progress { display: flex; flex-direction: column; gap: var(--s-2); }
+.upload-progress-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-4); }
+.upload-progress-label { min-width: 0; font-size: 14px; font-weight: 500; color: var(--ink); overflow-wrap: anywhere; }
+.upload-progress-value { flex: none; font-family: var(--mono); font-size: 15px; font-weight: 500; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.upload-progress-track { height: 6px; border-radius: 3px; background: var(--fill-hover); overflow: hidden; }
+.upload-progress-track > span { display: block; height: 100%; min-width: 6px; border-radius: inherit; background: var(--ink); transition: width 300ms var(--ease); }
+.upload-progress-note { font-size: 13px; color: var(--ink-2); }

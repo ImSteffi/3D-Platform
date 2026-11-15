@@ -1,29 +1,32 @@
-.sketcher { width: min(1100px, calc(100% - 24px)); max-height: calc(100svh - 24px); margin: auto; padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text); overflow-y: auto; }
-.sketcher::backdrop { background: #08090bc9; backdrop-filter: blur(4px); }
-.sketcher-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
-.sketcher-head h2 { min-width: 0; overflow-wrap: anywhere; }
-.sketcher-head-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.sketcher-head-actions .btn { min-height: 44px; }
+/* Drawing a floor plan: an opaque sheet (never frosted glass over a plan being edited). */
+.sketcher { width: min(1100px, calc(100% - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: var(--s-6); border: 1px solid var(--edge); border-radius: var(--r-panel); background: var(--solid); color: var(--ink); box-shadow: var(--shadow-panel), 0 40px 80px -30px rgba(40, 30, 15, .5); overflow-y: auto; animation: sketcher-enter var(--t-panel) var(--ease); }
+.sketcher::backdrop { background: rgba(23, 25, 27, .42); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+@keyframes sketcher-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.sketcher-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-3); margin-bottom: var(--s-4); }
+.sketcher-head h2 { min-width: 0; font-size: 20px; overflow-wrap: anywhere; }
+.sketcher-head-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .sketcher-tools { display: flex; flex-wrap: wrap; gap: 6px; }
 .sketcher-gap { flex: 1 1 12px; }
-.sketcher-tool { min-height: 40px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 9px; background: #ffffff03; color: var(--text-h); font-size: 12px; font-weight: 550; cursor: pointer; }
-.sketcher-tool:hover:not(:disabled) { background: var(--surface-hover); }
-.sketcher-tool.is-active { border-color: var(--accent-border); background: var(--accent-bg); color: var(--accent); }
-.sketcher-tool:disabled { cursor: default; opacity: .4; }
-.sketcher-bar { display: flex; align-items: center; min-height: 44px; margin: 10px 0; font-size: 12px; }
-.sketcher-label { display: flex; align-items: center; gap: 10px; width: min(100%, 360px); color: var(--text-h); }
-.sketcher-label input { flex: 1; min-width: 0; min-height: 40px; padding: 8px 12px; border: 1px solid #383a3e; border-radius: 9px; background: #141517; color: var(--text-h); font-size: 13px; }
-.sketcher-label input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.sketcher-error { margin-bottom: 10px; color: var(--danger); font-size: 13px; }
-.sketcher-stage { overflow: hidden; border: 1px solid var(--border); border-radius: 12px; }
+.sketcher-tool { height: 40px; padding: 0 15px; border: 1px solid var(--hair); border-radius: 20px; background: var(--control); color: var(--ink); font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.sketcher-tool:hover:not(:disabled, .is-active) { background: #fff; border-color: var(--hair-strong); }
+.sketcher-tool:active:not(:disabled) { transform: scale(.97); }
+.sketcher-tool.is-active { border-color: var(--ink); background: var(--ink); color: #fff; }
+.sketcher-tool:disabled { cursor: not-allowed; opacity: .45; }
+.sketcher-bar { display: flex; align-items: center; min-height: 46px; margin: 10px 0; font-size: 14px; color: var(--ink-2); }
+.sketcher-label { display: flex; align-items: center; gap: 10px; width: min(100%, 380px); font-size: 13px; font-weight: 500; color: var(--ink); }
+.sketcher-label input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border: 1px solid var(--hair-strong); border-radius: var(--r-control); background: #fff; color: var(--ink); font-size: 15px; font-weight: 400; transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
+.sketcher-label input:hover { border-color: rgba(23, 25, 27, .34); }
+.sketcher-label input:focus-visible { outline: none; border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.sketcher-error { margin-bottom: 10px; }
+.sketcher-stage { overflow: hidden; border: 1px solid var(--hair-strong); border-radius: 16px; background: var(--solid); }
 .sketcher-canvas { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; cursor: crosshair; touch-action: none; user-select: none; -webkit-user-select: none; }
 .sketcher-canvas--select { cursor: default; }
 .sketcher-canvas--select [data-id] { cursor: move; }
 .sketcher-canvas text { pointer-events: none; }
 @media (max-width: 600px) {
- .sketcher { padding: 14px; }
+ .sketcher { padding: var(--s-4); border-radius: 22px; }
  .sketcher-head-actions { width: 100%; }
  .sketcher-head-actions .btn { flex: 1; }
- .sketcher-tool { flex: 1 1 auto; padding: 8px 10px; }
+ .sketcher-tool { flex: 1 1 auto; padding: 0 10px; }
  .sketcher-gap { flex-basis: 100%; height: 0; }
 }

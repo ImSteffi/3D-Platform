@@ -1,0 +1,17 @@
+.pill { display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px 0 10px; border-radius: 14px; background: var(--fill); color: var(--ink-2); font-size: 13px; font-weight: 500; line-height: 1; white-space: nowrap; vertical-align: middle; }
+.pill--plain { padding: 0 12px; }
+.pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); flex: none; }
+.pill--amber { background: var(--amber-soft); color: var(--amber-ink); }
+.pill--amber i { background: var(--amber); }
+.pill--green { background: var(--green-soft); color: var(--green-ink); }
+.pill--green i { background: var(--green); }
+.pill--red { background: var(--red-soft); color: var(--red-ink); }
+.pill--red i { background: var(--red); }
+/* Lens: solid chips, never frosted. */
+.on-dark .pill, :root[data-mode='lens'] .pill { background: rgba(246, 245, 242, .14); color: var(--on-dark); }
+.on-dark .pill i, :root[data-mode='lens'] .pill i { background: var(--on-dark-2); }
+.on-dark .pill--amber, :root[data-mode='lens'] .pill--amber { background: var(--amber); color: var(--ink); }
+.on-dark .pill--amber i, :root[data-mode='lens'] .pill--amber i { background: var(--ink); }
+.on-dark .pill--green i, :root[data-mode='lens'] .pill--green i { background: #5fd3a0; }
+.on-dark .pill--red, :root[data-mode='lens'] .pill--red { background: var(--red); color: #fff; }
+.on-dark .pill--red i, :root[data-mode='lens'] .pill--red i { background: #fff; }

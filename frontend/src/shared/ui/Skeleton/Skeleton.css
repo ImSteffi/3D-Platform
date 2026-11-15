@@ -1,0 +1,22 @@
+/* Loading placeholders: a soft band of light sweeps left to right, staggered by --i so a group reads as one wave. */
+.skeleton {
+ position: relative; display: block; flex: none; max-width: 100%; overflow: hidden;
+ background: rgba(23, 25, 27, .07);
+}
+.skeleton::after, .skeleton-bg::after {
+ content: ''; position: absolute; inset: 0; pointer-events: none;
+ background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, .62) 50%, transparent 100%);
+ transform: translateX(-100%);
+ animation: skeleton-wave 1.6s cubic-bezier(.4, 0, .2, 1) infinite;
+ animation-delay: calc(var(--i, 0) * 90ms);
+}
+.on-dark .skeleton, .lens .skeleton { background: rgba(255, 255, 255, .09); }
+.on-dark .skeleton::after, .lens .skeleton::after { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .14), transparent); }
+/* For image wells: the shimmer runs behind the picture and is covered once it has loaded. */
+/* The well is its own stacking context and the band sits at z-index -1 inside it: above the well's background, below every child.
+   So a loaded picture covers it, and children keep their own positioning (absolute numbers, buttons, markers) untouched. */
+.skeleton-bg { position: relative; overflow: hidden; isolation: isolate; background-color: rgba(23, 25, 27, .07); }
+.skeleton-bg::after { z-index: -1; }
+.skeleton-group { display: block; }
+@keyframes skeleton-wave { 0% { transform: translateX(-100%); } 60%, 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .skeleton::after, .skeleton-bg::after { animation: none; opacity: 0; } }

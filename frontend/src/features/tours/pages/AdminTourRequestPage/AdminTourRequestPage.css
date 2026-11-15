@@ -1,0 +1,40 @@
+/* One request (Desk): header on the ground, one frosted window, opaque wells inside it (review.css). */
+.page.rq-page { max-width: 1560px; gap: var(--s-3); }
+.rq-top { display: flex; margin: -4px 0 -8px -10px; }
+.rq-back { height: 36px; }
+.rq-header { align-items: flex-end; }
+.rq-heading { min-width: 0; }
+.rq-heading h1 { overflow-wrap: anywhere; }
+.rq-heading p { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; max-width: none; }
+.rq-heading p > * + *::before { content: ''; display: inline-block; width: 3px; height: 3px; margin: 0 10px; border-radius: 50%; background: var(--ink-3); vertical-align: middle; }
+.rq-mail { color: var(--ink-2); border-radius: 4px; transition: color var(--t-fast) var(--ease); }
+.rq-mail:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.rq-meta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2) var(--s-3); padding-bottom: 2px; }
+.rq-created { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.rq-created .num { color: var(--ink); }
+
+.rq-window { display: flex; flex-direction: column; gap: var(--s-5); margin-top: var(--s-2); }
+/* Loading shape: plan well on the left, the side column of text and actions on the right. */
+.rq-skel-well { min-height: 280px; }
+.rq-skel-side { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+.rq-notes { display: flex; align-items: flex-start; gap: 10px; max-width: none; padding: 12px 14px; border-radius: var(--r-control); background: var(--well); border: 1px solid var(--edge); font-size: 14px; color: var(--ink-2); overflow-wrap: anywhere; }
+.rq-notes svg { margin-top: 2px; color: var(--ink-2); }
+.rq-notes b { color: var(--ink); }
+.rq-draft { padding: var(--s-6) var(--s-2); }
+.rq-draft p { margin-top: 6px; font-size: 15px; color: var(--ink-2); }
+
+/* The customer's photos, folded under the delivery. */
+.rq-photos { border-top: 1px solid var(--hair); padding-top: var(--s-3); }
+.rq-photos summary { display: flex; align-items: center; gap: 10px; width: fit-content; min-height: 44px; padding: 0 14px 0 8px; margin-left: -8px; border-radius: var(--r-control); cursor: pointer; list-style: none; font-size: 15px; font-weight: 500; color: var(--ink);
+ transition: background-color var(--t-fast) var(--ease); }
+.rq-photos summary::-webkit-details-marker { display: none; }
+.rq-photos summary:hover { background: var(--fill); }
+.rq-photos summary svg { transition: transform var(--t-fast) var(--ease); }
+.rq-photos[open] summary svg { transform: rotate(90deg); }
+.rq-photos summary .num { font-size: 13px; font-weight: 400; color: var(--ink-2); }
+.rq-photos[open] summary { margin-bottom: var(--s-3); }
+
+@media (max-width: 900px) {
+ .rq-top { margin: 0 0 -4px -6px; }
+ .rq-header { align-items: flex-start; flex-direction: column; }
+}

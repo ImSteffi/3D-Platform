@@ -2,9 +2,11 @@ import { useEffect } from 'react'
 import { useParams } from 'react-router'
 import { WorkspaceContext } from '../../../../shared/layout/WorkspaceLayout/WorkspaceContext'
 import SplatScene from './SplatScene'
+import './SplatScene.css'
 
 const guest = { displayName: '', email: '', platformAdmin: false, organizationNames: [] }
 
+/** What a customer's viewer sees with no account: the tour, full-bleed, and nothing else. */
 export default function SharedViewerPage() {
  const { token } = useParams()
  useEffect(() => {
@@ -17,8 +19,10 @@ export default function SharedViewerPage() {
   document.head.append(robots, referrer)
   return () => { robots.remove(); referrer.remove() }
  }, [])
- if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return <p role="alert">This 3D tour is currently unavailable.</p>
+ if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return <main className="shared-tour on-dark">
+  <div className="lens-stage-message lens-stage-message--solid" role="alert"><p>This tour isn't available. The link may have been turned off.</p></div>
+ </main>
  return <WorkspaceContext.Provider value={guest}>
-  <main style={{ position: 'fixed', inset: 0 }} aria-label="3D viewer"><SplatScene shareToken={token} /></main>
+  <main className="shared-tour on-dark" aria-label="Tour"><SplatScene shareToken={token} /></main>
  </WorkspaceContext.Provider>
 }

@@ -1,0 +1,16 @@
+.segmented { display: inline-flex; max-width: 100%; padding: 3px; gap: 2px; border-radius: 22px; background: var(--fill); overflow-x: auto; scrollbar-width: none; }
+.segmented::-webkit-scrollbar { display: none; }
+.segmented--block { display: flex; }
+.segmented--block .segmented-option { flex: 1; }
+.segmented-option { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 36px; padding: 0 14px; border: 0; border-radius: 18px; background: transparent; color: var(--ink-2); font-size: 13px; font-weight: 500; white-space: nowrap; transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
+.segmented-option:hover:not(:disabled, [aria-pressed='true']) { color: var(--ink); background: rgba(255, 255, 255, .5); }
+.segmented-option:active:not(:disabled, [aria-pressed='true']) { background: rgba(255, 255, 255, .7); }
+.segmented-option[aria-pressed='true'] { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(23, 25, 27, .14); }
+.segmented-option:focus-visible { outline-offset: 0; }
+.segmented-count { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.on-dark .segmented, :root[data-mode='lens'] .segmented { background: rgba(246, 245, 242, .12); }
+.on-dark .segmented-option, :root[data-mode='lens'] .segmented-option { color: var(--on-dark-2); }
+.on-dark .segmented-option:hover:not(:disabled, [aria-pressed='true']), :root[data-mode='lens'] .segmented-option:hover:not(:disabled, [aria-pressed='true']) { color: var(--on-dark); background: rgba(246, 245, 242, .1); }
+.on-dark .segmented-option[aria-pressed='true'], :root[data-mode='lens'] .segmented-option[aria-pressed='true'] { background: var(--on-dark); color: var(--ink); }
+.on-dark .segmented-option[aria-pressed='true'] .segmented-count, :root[data-mode='lens'] .segmented-option[aria-pressed='true'] .segmented-count { color: var(--ink-2); }
+.on-dark .segmented-count, :root[data-mode='lens'] .segmented-count { color: var(--on-dark-2); }

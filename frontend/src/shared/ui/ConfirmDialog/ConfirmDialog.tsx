@@ -3,17 +3,21 @@ import { createPortal } from 'react-dom'
 import '../Button/Button.css'
 import './ConfirmDialog.css'
 
-type ConfirmDialogProps = {
+export type ConfirmDialogProps = {
  title: string
+ /** What will happen, in plain words. */
  children: ReactNode
+ /** Names the action, for example "Delete space". */
  confirmLabel: string
  busy?: boolean
+ /** Label shown on the confirm button while busy. Default "Deleting…". */
+ busyLabel?: string
  error?: string
  onConfirm: () => void
  onCancel: () => void
 }
 
-export default function ConfirmDialog({ title, children, confirmLabel, busy = false, error,
+export default function ConfirmDialog({ title, children, confirmLabel, busy = false, busyLabel = 'Deleting…', error,
  onConfirm, onCancel }: ConfirmDialogProps) {
  const dialog = useRef<HTMLDialogElement>(null)
  const cancel = useRef<HTMLButtonElement>(null)
@@ -33,8 +37,8 @@ export default function ConfirmDialog({ title, children, confirmLabel, busy = fa
   <div id={id + '-description'} className="confirm-dialog-description">{children}</div>
   {error && <p className="confirm-dialog-error" role="alert">{error}</p>}
   <div className="confirm-dialog-actions">
-   <button ref={cancel} type="button" className="btn btn-ghost" disabled={busy} onClick={onCancel}>Cancel</button>
-   <button type="button" className="btn confirm-dialog-danger" disabled={busy} onClick={onConfirm}>{busy ? 'Deleting…' : confirmLabel}</button>
+   <button ref={cancel} type="button" className="btn btn-secondary" disabled={busy} onClick={onCancel}>Cancel</button>
+   <button type="button" className="btn btn-danger" disabled={busy} onClick={onConfirm}>{busy ? busyLabel : confirmLabel}</button>
   </div>
  </dialog>, document.body)
 }

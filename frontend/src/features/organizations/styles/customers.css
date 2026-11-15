@@ -1,0 +1,52 @@
+/* Shared by the operator's Customers screens (Desk mode): one frosted window, calm lists. */
+.desk-back { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin: 0 0 6px -10px; padding: 0 12px 0 8px; border-radius: 16px; font-size: 13px; font-weight: 500; color: var(--ink-2); transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.desk-back:hover { background: var(--fill); color: var(--ink); }
+.desk-back:active { background: var(--fill-hover); }
+.desk-title { overflow-wrap: anywhere; }
+
+.desk-window { display: flex; flex-direction: column; gap: var(--s-7); }
+.desk-section { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+.desk-section + .desk-section { padding-top: var(--s-7); border-top: 1px solid var(--hair); }
+.desk-section-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-3) var(--s-4); min-height: 44px; }
+.desk-section-head h2 { display: flex; align-items: baseline; gap: 10px; }
+.desk-count { font-family: var(--mono); font-size: 14px; font-weight: 400; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.desk-note { font-size: 14px; color: var(--ink-2); max-width: 62ch; }
+.desk-note a { color: var(--ink); font-weight: 500; text-decoration: underline; text-decoration-color: var(--hair-strong); text-underline-offset: 3px; transition: text-decoration-color var(--t-fast) var(--ease); }
+.desk-note a:hover { text-decoration-color: var(--ink); }
+
+.desk-list { display: flex; flex-direction: column; }
+.desk-list > li + li { border-top: 1px solid var(--hair); }
+.desk-row { display: flex; align-items: center; gap: 14px; min-height: 64px; margin: 0 -12px; padding: 10px 12px; border-radius: var(--r-control); color: var(--ink); }
+a.desk-row { transition: background-color var(--t-fast) var(--ease); }
+a.desk-row:hover { background: var(--control); }
+a.desk-row:active { background: var(--control-hover); }
+.desk-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.desk-row-text strong { font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
+.desk-row-text span { font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+.desk-row > svg { color: var(--ink-3); transition: transform var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+a.desk-row:hover > svg { color: var(--ink); transform: translateX(2px); }
+
+.desk-mark { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--ink); color: #fff; font-family: var(--mono); font-size: 13px; font-weight: 500; letter-spacing: -.02em; }
+.desk-mark--person { border-radius: 50%; background: var(--fill-hover); color: var(--ink); }
+.desk-mark--space { background: var(--fill); color: var(--ink); }
+
+/* Inline create forms: an inset well, never a modal. */
+.desk-form { animation: arrive 280ms var(--ease) both; }
+.desk-form form, .desk-form-fields { display: flex; flex-direction: column; gap: var(--s-4); }
+.desk-form-fields { max-width: 520px; }
+.desk-form h3 + p { margin-top: -10px; font-size: 14px; color: var(--ink-2); }
+.desk-form-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: var(--s-1); }
+
+/* A Field whose label is for screen readers only (the small search box). */
+.desk-search { width: min(100%, 280px); }
+.desk-search > label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.field.desk-search input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']) { min-height: 44px; padding: 9px 16px; border-radius: 22px; font-size: 14px; }
+
+@media (max-width: 900px) {
+ .desk-window { gap: var(--s-6); }
+ .desk-section + .desk-section { padding-top: var(--s-6); }
+ .desk-search { width: 100%; }
+}
+@media (max-width: 520px) {
+ .desk-form-actions .btn { flex: 1; }
+}

@@ -6,6 +6,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+import com.example.platform.organization.OrganizationMembershipRepository;
+import com.example.platform.scan.Scan;
+import com.example.platform.scan.ScanRepository;
 import com.example.platform.user.User;
 import com.example.platform.user.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +32,7 @@ public class TourRequestService {
     // One generation accepts at most this many photos.
     static final int MAX_POINTS_PER_GROUP = 64;
     static final int MAX_AREAS = 20;
+    static final int MAX_CAPTURE_GROUP = 50;
     public static final int MAX_PLAN_BYTES = 20 * 1024 * 1024;
     public static final int MAX_PHOTO_BYTES = 30 * 1024 * 1024;
 
@@ -36,17 +40,22 @@ public class TourRequestService {
     private final TourAreaRepository areas;
     private final CapturePointRepository points;
     private final UserRepository users;
+    private final ScanRepository scans;
+    private final OrganizationMembershipRepository memberships;
     private final S3Client r2;
     private final S3Presigner signer;
     private final String bucket;
 
     public TourRequestService(TourRequestRepository tours, TourAreaRepository areas,
-            CapturePointRepository points, UserRepository users, S3Client r2, S3Presigner signer,
+            CapturePointRepository points, UserRepository users, ScanRepository scans,
+            OrganizationMembershipRepository memberships, S3Client r2, S3Presigner signer,
             @Value("${storage.r2.bucket-name}") String bucket) {
         this.tours = tours;
         this.areas = areas;
         this.points = points;
         this.users = users;
+        this.scans = scans;
+        this.memberships = memberships;
         this.r2 = r2;
         this.signer = signer;
         this.bucket = bucket;
@@ -89,33 +98,68 @@ public class TourRequestService {
     @Transactional
     public Detail addArea(Long id, String name, TourArea.Kind kind, Authentication authentication) {
         var user = user(authentication);
-        var tour = owned(id, user, DRAFT);
+        return addAreaTo(owned(id, user), name, kind, user);
+    }
+
+    // Floors can be added until the tour is delivered; each one then goes through
+    // plan, capture points and photos on its own.
+    private Detail addAreaTo(TourRequest tour, String name, TourArea.Kind kind, User user) {
+        var id = tour.getId();
+        var status = effectiveStatus(tour);
+        requireNotDelivered(tour);
         long count = areas.countByTourRequest_Id(id);
         if (count >= MAX_AREAS) throw error(409, "A tour can have at most " + MAX_AREAS + " areas.");
         // Each area starts as its own generation; an administrator may merge small ones.
-        int group = areas.findByTourRequest_IdOrderByIdAsc(id).stream()
-                .mapToInt(TourArea::getCaptureGroup).max().orElse(0) + 1;
+        var groups = areas.findByTourRequest_IdOrderByIdAsc(id).stream().map(TourArea::getCaptureGroup).toList();
+        int group = groups.stream().mapToInt(Integer::intValue).max().orElse(0) + 1;
+        // An administrator may already have used the highest group number.
+        if (group > MAX_CAPTURE_GROUP) {
+            group = 1;
+            while (groups.contains(group)) group++;
+        }
         areas.save(new TourArea(tour, name.strip(), kind, group));
+        // The photo set is no longer complete. Existing photos and plans stay as they are.
+        if (status == PHOTOS_SUBMITTED || status == APPROVED) {
+            tour.setScan(null);
+            tour.setStatus(PLAN_READY);
+        }
         return detail(tour, user);
     }
 
     @Transactional
     public Detail removeArea(Long id, Long areaId, Authentication authentication) {
         var user = user(authentication);
-        var tour = owned(id, user, DRAFT);
-        var area = area(tour, areaId);
-        var key = area.getPlanObjectKey();
+        var tour = owned(id, user);
+        return removeAreaFrom(tour, changeableArea(tour, areaId), user);
+    }
+
+    // Also removes the area's capture points and their photos (only an administrator can
+    // reach this for an area that has any).
+    private Detail removeAreaFrom(TourRequest tour, TourArea area, User user) {
+        if (tour.getStatus() != DRAFT && areas.countByTourRequest_Id(tour.getId()) <= 1)
+            throw error(409, "A tour that has been sent needs at least one floor.");
+        var entries = points.findByArea_IdOrderBySeqAsc(area.getId());
+        var keys = new java.util.ArrayList<String>();
+        keys.add(area.getPlanObjectKey());
+        entries.forEach(point -> keys.add(point.getPhotoObjectKey()));
+        // As in delete(): remove loaded children first so Hibernate can flush.
+        points.deleteAll(entries);
+        points.flush();
         areas.delete(area);
         areas.flush();
-        discard(key);
+        keys.forEach(this::discard);
         return detail(tour, user);
     }
 
     @Transactional
     public Detail savePlan(Long id, Long areaId, byte[] image, Authentication authentication) {
         var user = user(authentication);
-        var tour = owned(id, user, DRAFT);
-        var area = area(tour, areaId);
+        var tour = owned(id, user);
+        return storePlan(tour, changeableArea(tour, areaId), image, user);
+    }
+
+    // Capture points stay where they are: an administrator replacing a marked plan keeps them.
+    private Detail storePlan(TourRequest tour, TourArea area, byte[] image, User user) {
         var old = area.getPlanObjectKey();
         area.setPlanObjectKey(store(folder(area) + "floorplan_client/plan-", image, MAX_PLAN_BYTES));
         discard(old);
@@ -163,15 +207,19 @@ public class TourRequestService {
     }
 
     /**
-     * Removes one photo. The owner may do so while photos are being collected; an
-     * administrator also during review, which hands the request back to the client
-     * because the set is no longer complete.
+     * Removes one photo. The owner and an administrator may both do so while photos are being
+     * collected, during review and after approval; after the photos were sent this hands the request
+     * back to the client because the set is no longer complete. Not once the tour is delivered.
      */
     @Transactional
     public Detail deletePhoto(Long id, Long pointId, Authentication authentication) {
         var user = user(authentication);
         var tour = accessible(id, user);
-        boolean reviewing = user.isPlatformAdmin() && tour.getStatus() == PHOTOS_SUBMITTED;
+        // A delivered request is finished; one whose scan was deleted counts as approved again.
+        var status = effectiveStatus(tour);
+        // The customer and the team may both delete a photo after the photos were sent; the set is then
+        // incomplete, so the request goes back to taking photos.
+        boolean reviewing = status == PHOTOS_SUBMITTED || status == APPROVED;
         if (!reviewing) requireStatus(tour, PLAN_READY);
         var point = point(tour, pointId);
         var key = point.getPhotoObjectKey();
@@ -186,6 +234,12 @@ public class TourRequestService {
     public Detail submitPhotos(Long id, Authentication authentication) {
         var user = user(authentication);
         var tour = owned(id, user, PLAN_READY);
+        // A floor added after the plan was sent must be planned and marked first.
+        for (var area : areas.findByTourRequest_IdOrderByIdAsc(id)) {
+            if (area.getPlanObjectKey() == null) throw error(409, "Add a plan for " + area.getName() + " first.");
+            if (points.findByArea_IdOrderBySeqAsc(area.getId()).isEmpty())
+                throw error(409, "We're still marking where to stand on " + area.getName() + ".");
+        }
         var all = points.findByArea_TourRequest_IdOrderBySeqAsc(id);
         if (all.stream().anyMatch(point -> point.getPhotoObjectKey() == null))
             throw error(409, "Every capture point needs a photo before submitting.");
@@ -207,15 +261,32 @@ public class TourRequestService {
     public Detail savePoints(Long id, Long areaId, int captureGroup, List<PointInput> inputs,
             Authentication authentication) {
         var user = admin(authentication);
-        var tour = inStatus(id, SUBMITTED);
+        var tour = tours.findById(id).orElseThrow(() -> error(404, "Tour request not found."));
+        // A floor added after the plan was sent is marked without reopening the whole plan.
+        boolean late = tour.getStatus() == PLAN_READY;
+        if (!late) requireStatus(tour, SUBMITTED);
         var area = area(tour, areaId);
-        if (captureGroup < 1 || captureGroup > 50) throw error(400, "Capture group must be between 1 and 50.");
+        if (captureGroup < 1 || captureGroup > MAX_CAPTURE_GROUP)
+            throw error(400, "Capture group must be between 1 and " + MAX_CAPTURE_GROUP + ".");
         if (inputs.size() > MAX_POINTS_PER_GROUP)
             throw error(400, "An area can have at most " + MAX_POINTS_PER_GROUP + " capture points.");
         for (var input : inputs) {
             if (!(input.x() >= 0 && input.x() <= 1 && input.y() >= 0 && input.y() <= 1
                     && input.direction() >= 0 && input.direction() < 360))
                 throw error(400, "A capture point is outside the plan or has an invalid direction.");
+        }
+        if (area.getPlanObjectKey() == null) throw error(409, "This floor has no plan yet.");
+        if (late) {
+            if (points.findByArea_IdOrderBySeqAsc(areaId).stream().anyMatch(point -> point.getPhotoObjectKey() != null))
+                throw error(409, "This floor already has photos. Reopen the plan to change it.");
+            // The plan is not sent again, so the limit per generation is checked here.
+            int total = inputs.size();
+            for (var other : areas.findByTourRequest_IdOrderByIdAsc(id)) {
+                if (!other.getId().equals(areaId) && other.getCaptureGroup() == captureGroup)
+                    total += points.findByArea_IdOrderBySeqAsc(other.getId()).size();
+            }
+            if (total > MAX_POINTS_PER_GROUP) throw error(409, "Group " + captureGroup + " would have "
+                    + total + " capture points; the limit is " + MAX_POINTS_PER_GROUP + ".");
         }
         area.setCaptureGroup(captureGroup);
         // After a plan is reopened some points already have photos. A point that comes back
@@ -238,6 +309,60 @@ public class TourRequestService {
         }
         points.flush();
         previous.forEach(old -> discard(old.getPhotoObjectKey()));
+        return detail(tour, user);
+    }
+
+    /** One customer's requests, drafts included, for the administrator's page per customer. */
+    @Transactional(readOnly = true)
+    public List<Summary> listForUser(Long userId, Authentication authentication) {
+        admin(authentication);
+        var customer = users.findById(userId).orElseThrow(() -> error(404, "User not found."));
+        return tours.findByUser_IdOrderByIdDesc(customer.getId()).stream().map(this::summary).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Customer customer(Long userId, Authentication authentication) {
+        admin(authentication);
+        var customer = users.findById(userId).orElseThrow(() -> error(404, "User not found."));
+        return new Customer(customer.getId(), customer.getDisplayName(), customer.getEmail(),
+                memberships.findOrganizationsByUserId(customer.getId()).stream()
+                        .map(organization -> new OrganizationRef(organization.getId(), organization.getName()))
+                        .toList());
+    }
+
+    // The administrator edits floors at any step before delivery, including marked ones.
+
+    @Transactional
+    public Detail adminAddArea(Long id, String name, TourArea.Kind kind, Authentication authentication) {
+        var user = admin(authentication);
+        return addAreaTo(found(id), name, kind, user);
+    }
+
+    @Transactional
+    public Detail adminSavePlan(Long id, Long areaId, byte[] image, Authentication authentication) {
+        var user = admin(authentication);
+        var tour = editable(id);
+        return storePlan(tour, area(tour, areaId), image, user);
+    }
+
+    @Transactional
+    public Detail adminRemoveArea(Long id, Long areaId, Authentication authentication) {
+        var user = admin(authentication);
+        var tour = editable(id);
+        return removeAreaFrom(tour, area(tour, areaId), user);
+    }
+
+    @Transactional
+    public Detail adminUpdateArea(Long id, Long areaId, String name, TourArea.Kind kind,
+            Authentication authentication) {
+        var user = admin(authentication);
+        var tour = editable(id);
+        var area = area(tour, areaId);
+        if (name != null) {
+            if (name.isBlank()) throw error(400, "A floor needs a name.");
+            area.setName(name.strip());
+        }
+        if (kind != null) area.setKind(kind);
         return detail(tour, user);
     }
 
@@ -267,6 +392,8 @@ public class TourRequestService {
         var tour = inStatus(id, SUBMITTED);
         var perGroup = new HashMap<Integer, Integer>();
         for (var area : areas.findByTourRequest_IdOrderByIdAsc(id)) {
+            if (area.getPlanObjectKey() == null)
+                throw error(409, "\"" + area.getName() + "\" has no floor plan yet.");
             int count = points.findByArea_IdOrderBySeqAsc(area.getId()).size();
             if (count == 0) throw error(409, "\"" + area.getName() + "\" has no capture points yet.");
             perGroup.merge(area.getCaptureGroup(), count, Integer::sum);
@@ -297,6 +424,39 @@ public class TourRequestService {
         return detail(tour, user);
     }
 
+    /** Finished scans the client can already open: those of the organizations they belong to. */
+    @Transactional(readOnly = true)
+    public List<DeliverableScan> deliverableScans(Long id, Authentication authentication) {
+        admin(authentication);
+        var tour = tours.findById(id).orElseThrow(() -> error(404, "Tour request not found."));
+        return scans.findForMember(tour.getUser().getId(), Scan.Status.READY).stream()
+                .map(scan -> new DeliverableScan(scan.getId(), scan.getName(), scan.getProject().getId(),
+                        scan.getProject().getName(), scan.getProject().getOrganization().getName()))
+                .toList();
+    }
+
+    /**
+     * Hands a finished scan to the client as the result of an approved request. Delivering
+     * again replaces the scan. Access to the scan itself still comes from organization
+     * membership, so the client must already belong to the organization that owns it.
+     */
+    @Transactional
+    public Detail deliver(Long id, Long scanId, Authentication authentication) {
+        var user = admin(authentication);
+        var tour = tours.findById(id).orElseThrow(() -> error(404, "Tour request not found."));
+        if (tour.getStatus() != APPROVED && tour.getStatus() != DELIVERED)
+            throw error(409, "Approve the photos before delivering the tour.");
+        var scan = scanId == null ? null : scans.findById(scanId).orElse(null);
+        if (scan == null) throw error(404, "Tour not found.");
+        if (scan.getStatus() != Scan.Status.READY) throw error(409, "This tour is not ready to be viewed yet.");
+        if (!memberships.existsByOrganization_IdAndUser_Id(
+                scan.getProject().getOrganization().getId(), tour.getUser().getId()))
+            throw error(409, "The customer is not a member of the organization that owns this tour.");
+        tour.setScan(scan);
+        tour.setStatus(DELIVERED);
+        return detail(tour, user);
+    }
+
     // ---- Shared ----
 
     private User user(Authentication authentication) {
@@ -318,11 +478,42 @@ public class TourRequestService {
         return tour;
     }
 
-    private TourRequest owned(Long id, User user, TourRequest.Status required) {
+    private TourRequest found(Long id) {
+        return tours.findById(id).orElseThrow(() -> error(404, "Tour request not found."));
+    }
+
+    private TourRequest editable(Long id) {
+        var tour = found(id);
+        requireNotDelivered(tour);
+        return tour;
+    }
+
+    private static void requireNotDelivered(TourRequest tour) {
+        if (effectiveStatus(tour) == DELIVERED)
+            throw error(409, "This tour is already delivered. Start a new space to capture more.");
+    }
+
+    private TourRequest owned(Long id, User user) {
         var tour = tours.findById(id).orElseThrow(() -> error(404, "Tour request not found."));
         if (!tour.getUser().getId().equals(user.getId())) throw error(404, "Tour request not found.");
+        return tour;
+    }
+
+    private TourRequest owned(Long id, User user, TourRequest.Status required) {
+        var tour = owned(id, user);
         requireStatus(tour, required);
         return tour;
+    }
+
+    // The client may replace or remove a floor freely in a draft, and after sending only
+    // until the administrator has marked capture points on it.
+    private TourArea changeableArea(TourRequest tour, Long areaId) {
+        var status = tour.getStatus();
+        if (status != SUBMITTED && status != PLAN_READY) requireStatus(tour, DRAFT);
+        var area = area(tour, areaId);
+        if (status != DRAFT && !points.findByArea_IdOrderBySeqAsc(areaId).isEmpty())
+            throw error(409, "This floor already has capture points. Ask us if it needs to change.");
+        return area;
     }
 
     private TourRequest inStatus(Long id, TourRequest.Status required) {
@@ -392,16 +583,39 @@ public class TourRequestService {
                 .build()).url().toString();
     }
 
+    // The scan a delivered request points at, or null once it is gone or no longer viewable.
+    private static Scan deliveredScan(TourRequest tour) {
+        var scan = tour.getStatus() == DELIVERED ? tour.getScan() : null;
+        return scan != null && scan.getStatus() == Scan.Status.READY ? scan : null;
+    }
+
+    // Deleting the delivered scan clears the link but not the status, so such a request
+    // is reported as approved and can be delivered again.
+    private static TourRequest.Status effectiveStatus(TourRequest tour) {
+        return tour.getStatus() == DELIVERED && deliveredScan(tour) == null ? APPROVED : tour.getStatus();
+    }
+
+    // Floors that have a plan but are still waiting for the administrator's capture points.
+    private int areasToPlan(List<TourArea> entries) {
+        return (int) entries.stream().filter(area -> area.getPlanObjectKey() != null
+                && points.findByArea_IdOrderBySeqAsc(area.getId()).isEmpty()).count();
+    }
+
     private Summary summary(TourRequest tour) {
-        return new Summary(tour.getId(), tour.getName(), tour.getStatus().name(), tour.getCreatedAt(),
-                areas.countByTourRequest_Id(tour.getId()), tour.getUser().getDisplayName());
+        var scan = deliveredScan(tour);
+        return new Summary(tour.getId(), tour.getName(), effectiveStatus(tour).name(), tour.getCreatedAt(),
+                areas.countByTourRequest_Id(tour.getId()), tour.getUser().getDisplayName(),
+                scan == null ? null : scan.getId(), scan == null ? null : scan.getName(),
+                scan == null ? null : scan.getProject().getId(),
+                areasToPlan(areas.findByTourRequest_IdOrderByIdAsc(tour.getId())));
     }
 
     private Detail detail(TourRequest tour, User viewer) {
         // The plan stays hidden from the client while the administrator is still drafting it.
         boolean showPoints = viewer.isPlatformAdmin()
                 || (tour.getStatus() != DRAFT && tour.getStatus() != SUBMITTED);
-        var entries = areas.findByTourRequest_IdOrderByIdAsc(tour.getId()).stream().map(area ->
+        var all = areas.findByTourRequest_IdOrderByIdAsc(tour.getId());
+        var entries = all.stream().map(area ->
                 new AreaResponse(area.getId(), area.getName(), area.getKind().name(), area.getCaptureGroup(),
                         area.getPlanObjectKey() != null, area.getMarkerDotSize(), area.getMarkerLineLength(),
                         !showPoints ? List.of() : points.findByArea_IdOrderBySeqAsc(area.getId()).stream()
@@ -410,8 +624,11 @@ public class TourRequestService {
                                         point.getPhotoObjectKey() != null, point.getRetakeNote()))
                                 .toList()))
                 .toList();
-        return new Detail(tour.getId(), tour.getName(), tour.getNotes(), tour.getStatus().name(),
-                tour.getCreatedAt(), tour.getUser().getDisplayName(), tour.getUser().getEmail(), entries);
+        var scan = deliveredScan(tour);
+        return new Detail(tour.getId(), tour.getName(), tour.getNotes(), effectiveStatus(tour).name(),
+                tour.getCreatedAt(), tour.getUser().getDisplayName(), tour.getUser().getEmail(), entries,
+                scan == null ? null : scan.getId(), scan == null ? null : scan.getName(),
+                scan == null ? null : scan.getProject().getId(), areasToPlan(all));
     }
 
     private static String blankToNull(String value) {
@@ -422,14 +639,20 @@ public class TourRequestService {
         return new ResponseStatusException(HttpStatus.valueOf(status), message);
     }
 
+    public record Customer(Long id, String displayName, String email, List<OrganizationRef> organizations) {}
+    public record OrganizationRef(Long id, String name) {}
     public record PointInput(double x, double y, double direction, String note) {}
     public record Retake(Long pointId, String note) {}
-    public record Summary(Long id, String name, String status, Instant createdAt, long areaCount, String ownerName) {}
+    public record Summary(Long id, String name, String status, Instant createdAt, long areaCount, String ownerName,
+            Long scanId, String scanName, Long projectId, int areasToPlan) {}
+    public record DeliverableScan(Long scanId, String scanName, Long projectId, String projectName,
+            String organizationName) {}
     public record PointResponse(Long id, int seq, double x, double y, double direction, String note,
             boolean hasPhoto, String retakeNote) {}
     public record AreaResponse(Long id, String name, String kind, int captureGroup, boolean hasPlan,
             int dotSize, int lineLength,
             List<PointResponse> points) {}
     public record Detail(Long id, String name, String notes, String status, Instant createdAt,
-            String ownerName, String ownerEmail, List<AreaResponse> areas) {}
+            String ownerName, String ownerEmail, List<AreaResponse> areas,
+            Long scanId, String scanName, Long projectId, int areasToPlan) {}
 }

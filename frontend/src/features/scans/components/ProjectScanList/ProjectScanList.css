@@ -1,3 +1,19 @@
-.scan-draft-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }.scan-draft-heading > h4 { font-size: 13px; color: #aeb0b5; }
-.scan-draft-list { list-style: none; margin: 20px 0 0; padding: 0; display: grid; gap: 15px; }.scan-draft-list:empty { display: none; }
-.no-scans { padding: 25px; border: 1px dashed #38393c; border-radius: 10px; margin-top: 20px; text-align: center; font-size: 11px; }
+.tour-list { display: flex; flex-direction: column; gap: var(--s-5); min-width: 0; }
+.tour-list-head { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: var(--s-3) var(--s-5); }
+.tour-list-head h2 { display: flex; align-items: baseline; gap: 10px; }
+.tour-list-count { font-family: var(--mono); font-size: 14px; font-weight: 400; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.tour-list-hint { margin-top: 6px; font-size: 14px; color: var(--ink-2); max-width: 62ch; }
+.tour-list-hint a { color: var(--ink); font-weight: 500; text-decoration: underline; text-decoration-color: var(--hair-strong); text-underline-offset: 3px; transition: text-decoration-color var(--t-fast) var(--ease); }
+.tour-list-hint a:hover { text-decoration-color: var(--ink); }
+
+/* Also used by the customer's page of delivered tours. */
+.tour-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: var(--s-5); align-items: stretch; }
+.tour-grid > li { min-width: 0; }
+.tour-grid:empty { display: none; }
+
+@media (max-width: 900px) {
+ .tour-grid { gap: var(--s-3); }
+}
+@media (max-width: 520px) {
+ .tour-list-head > .btn { width: 100%; }
+}

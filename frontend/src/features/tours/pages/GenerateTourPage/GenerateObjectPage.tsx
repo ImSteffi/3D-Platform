@@ -22,6 +22,7 @@ function ReferencePhoto({ reference, primary, onPrimary, onView, onRemove }: {
  const [failed, setFailed] = useState(false)
  useEffect(() => {
   const objectUrl = URL.createObjectURL(reference.file)
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- the object URL is an external resource created and revoked by this effect
   setUrl(objectUrl)
   return () => URL.revokeObjectURL(objectUrl)
  }, [reference.file])
@@ -82,7 +83,7 @@ export default function GenerateObjectPage() {
  }
  return <main className="dashboard object-input-page">
   <header className="generate-detail-heading">
-   <Link to="/generate" className="generate-back" aria-label="Back to Generate"><Icon name="arrow" size={24} /></Link>
+   <Link to="/spaces" className="generate-back" aria-label="Back to spaces"><Icon name="arrow" size={24} /></Link>
    <h1>Generate Object</h1>
   </header>
   <div className="object-input-workspace">

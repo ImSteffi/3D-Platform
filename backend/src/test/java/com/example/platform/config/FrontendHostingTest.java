@@ -42,10 +42,16 @@ class FrontendHostingTest {
     @Test
     void anonymousPagesForwardToReactButApiRemainsProtected() throws Exception {
         for (var path : new String[]{"/", "/login", "/dashboard", "/projects/1",
-                "/organizations/1/projects/1"}) {
+                "/organizations/1/projects/1", "/home", "/spaces", "/spaces/new", "/spaces/7",
+                "/spaces/7/photos", "/learn", "/review", "/review/7", "/generate/tour/7",
+                "/tour-requests/7"}) {
             mvc.perform(get(path)).andExpect(status().isOk())
                     .andExpect(forwardedUrl("/index.html"))
                     .andExpect(header().string("X-Frame-Options", "DENY"));
+        }
+        // Assets and unknown pages are never answered with the React page.
+        for (var path : new String[]{"/assets/index.js", "/favicon.ico", "/spaces/7/photos/extra"}) {
+            mvc.perform(get(path)).andExpect(forwardedUrl(null));
         }
         mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/scans/1/viewer")).andExpect(status().isUnauthorized());

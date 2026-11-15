@@ -1,5 +1,11 @@
-import { Link } from 'react-router'
+import { Button, Panel } from '../../ui'
 import './NotFoundPage.css'
 export default function NotFoundPage() {
- return <main className="not-found"><span className="eyebrow">404 / A little off the map</span><h1>This space doesn’t exist.</h1><p>The page may have moved, or the address might be incorrect.</p><Link className="btn btn-primary" to="/dashboard">Back to overview →</Link></main>
+ return <main className="not-found">
+  <Panel as="div" padding="lg" className="not-found-panel">
+   <h1>This page does not exist</h1>
+   <p>The address may be wrong, or the page may have moved. Nothing of yours is lost.</p>
+   <Button to="/" icon="back">Back to the start</Button>
+  </Panel>
+ </main>
 }

@@ -1,0 +1,24 @@
+/* Space page (Place mode): the header. */
+.space { animation: arrive var(--t-panel) var(--ease) both; }
+
+/* Header: name + context line | help. Nothing here is a tab. */
+.space-head { align-items: center; flex-wrap: wrap; gap: var(--s-3) var(--s-4); }
+.space-head-title { flex: 1 1 220px; min-width: 0; }
+.space-head-title h1 { font-size: 26px; overflow-wrap: anywhere; }
+.space-help { display: inline-flex; align-items: center; gap: 9px; flex: none; height: 52px; padding: 0 20px 0 16px; border-radius: 26px; background: var(--glass-chrome); border: 1px solid var(--edge); box-shadow: var(--shadow-panel); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); color: var(--ink); font-size: 14px; font-weight: 500; white-space: nowrap; transition: background-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.space-help:hover { background: rgba(255, 255, 255, .8); }
+.space-help:active { transform: scale(.975); background: rgba(255, 255, 255, .92); }
+:root[data-backdrop='photo'] .space-help:focus-visible { outline-color: #fff; }
+
+/* Loading shape: the help pill keeps its place; the plan well matches .area-plan's minimum height. */
+.space-skel-help { flex: none; }
+.space-skel-plan { min-height: 220px; }
+
+@media (max-width: 900px) {
+ .space-skel-help { grid-column: 2; grid-row: 1; width: 44px !important; height: 44px !important; }
+ /* Name and help stay on one row. */
+ .space-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+ .space-help { grid-column: 2; grid-row: 1; width: 44px; height: 44px; padding: 0; justify-content: center; border-radius: 22px; }
+ .space-help span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+@media (prefers-reduced-transparency: reduce) { .space-help { background: var(--solid); -webkit-backdrop-filter: none; backdrop-filter: none; } }

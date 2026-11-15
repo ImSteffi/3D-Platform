@@ -1,0 +1,5 @@
+.empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: var(--s-7) var(--s-4); }
+.empty-icon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: var(--s-4); border-radius: 16px; background: var(--fill); color: var(--ink); }
+.empty-title { font-size: 20px; }
+.empty-text { margin-top: 6px; max-width: 44ch; font-size: 15px; color: var(--ink-2); }
+.empty-action { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: var(--s-5); }

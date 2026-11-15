@@ -1,0 +1,14 @@
+.field { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.field > label { font-size: 13px; font-weight: 500; color: var(--ink); }
+.field-optional { font-weight: 400; color: var(--ink-2); }
+.field input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']), .field textarea, .field select { width: 100%; min-width: 0; min-height: 46px; padding: 11px 14px; border: 1px solid var(--hair-strong); border-radius: var(--r-control); background: rgba(255, 255, 255, .78); color: var(--ink); font-size: 15px; line-height: 1.4; transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
+.field textarea { resize: vertical; min-height: 92px; }
+.field input:hover:not(:disabled, :focus), .field textarea:hover:not(:disabled, :focus), .field select:hover:not(:disabled, :focus) { border-color: rgba(23, 25, 27, .34); background: rgba(255, 255, 255, .9); }
+.field input:focus, .field textarea:focus, .field select:focus { outline: none; }
+.field input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']):focus-visible, .field textarea:focus-visible, .field select:focus-visible { outline: none; border-color: var(--ink); background: #fff; box-shadow: 0 0 0 1px var(--ink); }
+.field input:disabled, .field textarea:disabled, .field select:disabled { opacity: .55; cursor: not-allowed; }
+.field input[aria-invalid='true'], .field textarea[aria-invalid='true'], .field--invalid select { border-color: var(--red); }
+.field input[aria-invalid='true']:focus-visible, .field textarea[aria-invalid='true']:focus-visible { border-color: var(--red); box-shadow: 0 0 0 1px var(--red); }
+.field input:-webkit-autofill { -webkit-text-fill-color: var(--ink); box-shadow: 0 0 0 40px #fff inset; }
+.field-message { font-size: 13px; line-height: 1.4; color: var(--ink-2); }
+.field-message--error { color: var(--red-ink); font-weight: 500; }

@@ -1,113 +1,97 @@
-import Icon from '../../../../shared/ui/Icon/Icon'
-import './OrganizationProjects.css'
-import FormPanel from '../../../../shared/ui/FormPanel/FormPanel'
-import { useEffect, useId, useState, type FormEvent } from 'react'
-import Button from '../../../../shared/ui/Button/Button.tsx'
-import TextField from '../../../../shared/ui/TextField/TextField.tsx'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
-import { createProject, getProjects, type Project } from '../../api/projects.ts'
+import { Button, EmptyState, Field, Icon, InlineError, Panel, SkeletonGroup } from '../../../../shared/ui'
+import { createProject, getProjects, type Project } from '../../api/projects'
+import '../../../organizations/styles/customers.css'
+import DeskRowsSkeleton from '../../../organizations/components/DeskRowsSkeleton'
+import './OrganizationProjects.css'
 
 type OrganizationProjectsProps = { organizationId: number }
 
+/** The "Spaces" section of a customer: the customer's projects, with an inline form to create one. */
 export default function OrganizationProjects({ organizationId }: OrganizationProjectsProps) {
-  const inputId = useId()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [formOpen, setFormOpen] = useState(false)
-  const [name, setName] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState('')
-  const [saving, setSaving] = useState(false)
+ const [projects, setProjects] = useState<Project[]>([])
+ const [formOpen, setFormOpen] = useState(false)
+ const [name, setName] = useState('')
+ const [error, setError] = useState('')
+ const [loading, setLoading] = useState(true)
+ const [loadError, setLoadError] = useState('')
+ const [saving, setSaving] = useState(false)
+ const [attempt, setAttempt] = useState(0)
 
-  useEffect(() => {
-    let active = true
+ useEffect(() => {
+  let active = true
+  getProjects(organizationId).then(data => { if (active) setProjects(data) })
+   .catch(error => { if (active) setLoadError(error instanceof Error ? error.message : 'Could not load this customer’s spaces. Try again.') })
+   .finally(() => { if (active) setLoading(false) })
+  return () => { active = false }
+ }, [organizationId, attempt])
 
-    async function loadProjects() {
-      try {
-        const data = await getProjects(organizationId)
-        if (active) {
-          setProjects(data)
-        }
-      } catch (error) {
-        if (active) {
-          setLoadError(error instanceof Error ? error.message : 'Could not load projects.')
-        }
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
+ const retry = useCallback(() => { setLoading(true); setLoadError(''); setAttempt(value => value + 1) }, [])
 
-    void loadProjects()
-    return () => { active = false }
-  }, [organizationId])
+ function closeForm() {
+  setFormOpen(false)
+  setName('')
+  setError('')
+ }
 
-  function closeForm() {
-    setFormOpen(false)
-    setName('')
-    setError('')
+ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault()
+  if (saving) return
+
+  const trimmedName = name.trim()
+  if (!trimmedName || trimmedName.length > 200) {
+   setError('Enter a space name of 1 to 200 characters.')
+   return
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (saving) return
-
-    const trimmedName = name.trim()
-    if (!trimmedName || trimmedName.length > 200) {
-      setError('Enter a project name of 1–200 characters.')
-      return
-    }
-
-    setSaving(true)
-    setError('')
-    try {
-      const saved = await createProject(organizationId, trimmedName)
-      setProjects((current) => [...current, saved])
-      closeForm()
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Could not connect to the server.')
-    } finally {
-      setSaving(false)
-    }
+  setSaving(true)
+  setError('')
+  try {
+   const saved = await createProject(organizationId, trimmedName)
+   setProjects(current => [...current, saved])
+   closeForm()
+  } catch (error) {
+   setError(error instanceof Error ? error.message : 'Could not reach the server. Check your connection and try again.')
+  } finally {
+   setSaving(false)
   }
+ }
 
-  return (
-    <section className="organization-projects">
-      <div className="organizations-heading">
-        <div><h2>Projects</h2></div>
-        {!formOpen && !loading && !loadError && <Button type="button" onClick={() => setFormOpen(true)}><Icon name="plus" size={14} />Add project</Button>}
-      </div>
-      {formOpen && (
-        <FormPanel>
-          <h3>New project</h3>
-          <form className="project-form" onSubmit={handleSubmit}>
-            <fieldset disabled={saving} className="organization-form-fields">
-            <TextField id={`${inputId}-project-name`} name="projectName" label="Project name"
-              value={name} onChange={setName} error={error} />
-            <div className="organization-form-actions">
-              <Button type="submit">{saving ? 'Creating…' : 'Create project'}</Button>
-              <Button type="button" variant="ghost" onClick={closeForm}>Cancel</Button>
-            </div>
-            </fieldset>
-          </form>
-        </FormPanel>
-      )}
-      {loading ? (
-        <p>Loading projects…</p>
-      ) : loadError ? (
-        <p className="field-error" role="alert">{loadError}</p>
-      ) : projects.length === 0 ? (
-        <p className="project-empty-scans">No projects added yet.</p>
-      ) : (
-        <ul className="project-draft-list" aria-label="Projects">
-          {projects.map((project) => (
-            <li key={project.id}>
-              <Link className="project-draft-card admin-project-link" to={`/organizations/${organizationId}/projects/${project.id}`}>
-                <div className="admin-project-title"><span><Icon name="folder" size={20} /></span><h3>{project.name}</h3><Icon name="arrow" size={18} /></div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  )
+ const ready = !loading && !loadError
+
+ return <section className="desk-section customer-spaces" aria-labelledby="customer-spaces-title">
+  <div className="desk-section-head">
+   <h2 id="customer-spaces-title">Spaces{ready && <span className="desk-count">{projects.length}</span>}</h2>
+   {!formOpen && ready && <Button variant="secondary" icon="plus" onClick={() => setFormOpen(true)}>New space</Button>}
+  </div>
+
+  {formOpen && <Panel variant="well" className="desk-form">
+   <form onSubmit={handleSubmit} noValidate>
+    <h3>New space</h3>
+    <p>A space is one of this customer’s places. You upload its tours inside it.</p>
+    <fieldset className="desk-form-fields" disabled={saving}>
+     <Field name="projectName" label="Space name" value={name} onChange={setName} error={error} autoComplete="off" autoFocus maxLength={200} />
+     <div className="desk-form-actions">
+      <Button type="submit" loading={saving}>{saving ? 'Creating space' : 'Create space'}</Button>
+      <Button variant="secondary" onClick={closeForm}>Cancel</Button>
+     </div>
+    </fieldset>
+   </form>
+  </Panel>}
+
+  {loading ? <SkeletonGroup label="Loading spaces"><DeskRowsSkeleton mark="space" rows={3} /></SkeletonGroup>
+   : loadError ? <InlineError onRetry={retry}>{loadError}</InlineError>
+   : projects.length === 0 ? !formOpen && <EmptyState icon="spaces" level={3} title="No spaces yet"
+     text="Create a space, then open it to upload the tours you build for this customer." />
+   : <ul className="desk-list" aria-label="Spaces">
+     {projects.map(project => <li key={project.id}>
+      <Link className="desk-row" to={`/organizations/${organizationId}/projects/${project.id}`}>
+       <span className="desk-mark desk-mark--space" aria-hidden="true"><Icon name="spaces" size={18} /></span>
+       <span className="desk-row-text"><strong>{project.name}</strong></span>
+       <Icon name="chevron" size={18} />
+      </Link>
+     </li>)}
+    </ul>}
+ </section>
 }

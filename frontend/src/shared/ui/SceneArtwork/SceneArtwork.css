@@ -1,6 +1,0 @@
-.scene-art { position: relative; overflow: hidden; background: radial-gradient(ellipse at 55% 50%, #ff803c13, transparent 70%), #1b1d1e; color: #df8f5f; height: 190px; isolation: isolate; }
-.scene-art--1 { color: #8cafa5; background: radial-gradient(ellipse at 55% 50%, #80c4af12, transparent 70%), #1b1e1e; }
-.scene-art--2 { color: #a79dca; background: radial-gradient(ellipse at 55% 50%, #a79dca12, transparent 70%), #1c1c21; }
-.scene-art svg { height: 100%; width: 100%; transition: transform 700ms var(--ease); }
-a:hover .scene-art svg { transform: scale(1.06) translateY(-3px); }
-.scene-art-grid { position: absolute; inset: 0; background-image: linear-gradient(#ffffff03 1px, transparent 1px), linear-gradient(90deg, #ffffff03 1px, transparent 1px); background-size: 24px 24px; mask-image: radial-gradient(ellipse, black, transparent 75%); }

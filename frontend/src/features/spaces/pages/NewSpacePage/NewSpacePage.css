@@ -1,0 +1,18 @@
+/* Start a space: one calm, narrow glass panel. */
+.newspace-page { max-width: 600px; }
+.newspace-panel { animation: arrive var(--t-panel) var(--ease) both; }
+.newspace-form { display: flex; flex-direction: column; gap: var(--s-5); }
+.newspace-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: var(--s-1); }
+
+.newspace-next { margin-top: var(--s-7); padding-top: var(--s-6); border-top: 1px solid var(--hair); }
+.newspace-next h2 { font-size: 15px; letter-spacing: -.01em; }
+.newspace-next ol { display: flex; flex-direction: column; gap: var(--s-3); margin-top: var(--s-3); }
+.newspace-next li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: var(--s-3); align-items: start; }
+.newspace-next-n { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--fill); font-size: 12px; font-weight: 500; color: var(--ink); }
+.newspace-next p { padding-top: 2px; font-size: 14px; color: var(--ink-2); }
+.newspace-next b { color: var(--ink); }
+
+@media (max-width: 900px) {
+ .newspace-page { max-width: none; }
+ .newspace-actions .btn-lg:first-child { flex: 1 1 auto; }
+}

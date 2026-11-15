@@ -1,0 +1,39 @@
+/* Spatial context: controls under a floor's photos, and the result as a wide Lens-mode panel (3D viewer = Lens, DESIGN.md). */
+.spatial { margin-top: var(--s-4); display: grid; gap: 8px; }
+.spatial-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.spatial-error { margin: 0; font-size: 13px; color: var(--red); }
+.spatial-note { margin: 0; font-size: 13px; color: var(--ink-3); }
+
+.spatial-sheet { position: fixed; inset: 0; z-index: 50; display: flex; justify-content: flex-end; }
+.spatial-sheet-backdrop { position: absolute; inset: 0; background: rgba(20, 21, 22, .36); }
+.spatial-sheet-panel {
+ position: relative; display: flex; flex-direction: column; width: min(1100px, calc(100vw - 40px)); margin: 20px;
+ border-radius: var(--r-card, 20px); background: var(--lens, #141516); color: var(--on-dark, #f6f5f2); overflow: hidden;
+ box-shadow: 0 24px 48px -24px rgba(40, 30, 15, .38), 0 2px 6px rgba(40, 30, 15, .06);
+ animation: spatial-in 360ms var(--ease, cubic-bezier(.22, 1, .36, 1));
+}
+@keyframes spatial-in { from { transform: translateX(24px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .spatial-sheet-panel { animation: none; } }
+.spatial-sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 12px 20px; background: var(--lens-bar, rgba(20, 21, 22, .86)); }
+.spatial-sheet-head h2 { margin: 0; font-size: 17px; font-weight: 500; letter-spacing: -0.02em; }
+
+.spatial-viewer { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.spatial-stage { position: relative; flex: 1; min-height: 320px; }
+.spatial-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.spatial-stage .spinner, .spatial-stage-error { position: absolute; inset: 0; margin: auto; height: fit-content; text-align: center; }
+.spatial-stage-error { color: var(--on-dark-2, rgba(246, 245, 242, .7)); font-size: 14px; }
+.spatial-strip-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; padding: 12px 20px 0; font-size: 13px; color: var(--on-dark-2, rgba(246, 245, 242, .7)); }
+.spatial-strip-head .num { font-family: 'Geist Mono Variable', monospace; color: var(--on-dark, #f6f5f2); }
+.spatial-strip { list-style: none; margin: 0; padding: 12px 20px 20px; display: flex; gap: 8px; overflow-x: auto; }
+.spatial-thumb {
+ position: relative; display: block; width: 96px; aspect-ratio: 4 / 3; padding: 0; border: 2px solid transparent; border-radius: 12px;
+ overflow: hidden; background: rgba(255, 255, 255, .06); cursor: pointer; transition: border-color 180ms var(--ease, ease);
+}
+.spatial-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.spatial-thumb[aria-pressed='true'] { border-color: var(--amber, #f2a31b); }
+.spatial-thumb:focus-visible { outline: 2px solid var(--on-dark, #fff); outline-offset: 2px; }
+.spatial-thumb .frame-num { position: absolute; left: 6px; bottom: 6px; }
+
+@media (max-width: 900px) {
+ .spatial-sheet-panel { width: calc(100vw - 24px); margin: 12px; }
+}

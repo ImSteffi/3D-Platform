@@ -57,6 +57,8 @@ public class TourArea {
         this.markerDotSize = dotSize;
         this.markerLineLength = lineLength;
     }
+    public void setName(String name) { this.name = name; }
+    public void setKind(Kind kind) { this.kind = kind; }
     public void setCaptureGroup(int captureGroup) { this.captureGroup = captureGroup; }
     public void setPlanObjectKey(String planObjectKey) { this.planObjectKey = planObjectKey; }
 }

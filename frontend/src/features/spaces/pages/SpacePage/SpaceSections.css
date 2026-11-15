@@ -1,0 +1,143 @@
+/* The space before delivery: the add-plan row, then one glass section per floor plan. */
+.sections { display: flex; flex-direction: column; gap: var(--s-5); }
+
+/* Action row: add plan on the left; the request-level send on the right */
+.sections-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-3) var(--s-4); }
+.sections-actions.is-adding { align-items: flex-end; }
+.add-plan { display: flex; align-items: center; flex-wrap: wrap; gap: 10px var(--s-3); min-width: 0; }
+/* Reasons sit on the place photo, so they carry their own chip. */
+.row-reason { display: inline-flex; align-items: center; min-height: 32px; padding: 6px 13px; border-radius: 16px; background: var(--glass); border: 1px solid var(--edge); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); font-size: 13px; color: var(--ink); }
+.add-plan .btn:disabled, .sections-next .btn-secondary:disabled { background: var(--glass); opacity: 1; color: var(--ink-2); box-shadow: none; }
+.panel.add-form { flex: 1 1 420px; max-width: 620px; display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-4); border-radius: var(--r-card); }
+.add-form-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.add-form-btns { display: flex; gap: var(--s-2); margin-left: auto; }
+.sections-next { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-left: auto; }
+/* Buttons that sit straight on the photo need a solid enough ground. */
+.sections-next .btn-secondary, .add-plan .btn-secondary { background: rgba(255, 255, 255, .86); box-shadow: var(--shadow-chip); }
+.sections-next .btn-secondary:hover:not(:disabled, [aria-disabled='true']), .add-plan .btn-secondary:hover:not(:disabled) { background: #fff; }
+.sections-next .btn-quiet { background: var(--glass); }
+.sections-next .btn-quiet:hover:not(:disabled) { background: rgba(255, 255, 255, .9); }
+:root[data-backdrop='photo'] .sections-actions > div .btn:focus-visible { outline-color: #fff; }
+
+/* A floor's own to-do: one sentence, one line, its buttons, then the quiet four-step line */
+.todo { display: flex; flex-direction: column; gap: var(--s-4); margin-top: var(--s-4); padding: var(--s-4) 0; border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); }
+.todo-main { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-4) var(--s-6); }
+.todo-words { flex: 1 1 320px; min-width: 0; }
+.todo-words h3 { font-size: 20px; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.todo-words p { margin-top: 4px; max-width: 62ch; font-size: 15px; color: var(--ink-2); overflow-wrap: anywhere; }
+.todo-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+.todo-progress header { display: flex; align-items: baseline; gap: var(--s-4); font-size: 13px; color: var(--ink-2); }
+.todo-progress header b { font-size: 15px; font-weight: 500; color: var(--ink); }
+.todo-progress header em { font-style: normal; font-weight: 500; color: var(--red-ink); }
+.todo-progress .ticks { margin-top: 9px; }
+.todo-progress .tick { height: 22px; }
+/* Where things stand. Not navigation: plain text, no hover, no pointer. */
+.todo-steps { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) 0; }
+.todo-step { display: flex; align-items: center; gap: var(--s-2); font-size: 13px; color: var(--ink-3); cursor: default; }
+.todo-step:not(:last-child)::after { content: ''; width: 28px; height: 1.5px; margin: 0 var(--s-3); border-radius: 1px; background: var(--hair-strong); }
+.todo-step--done:not(:last-child)::after { background: var(--green); opacity: .55; }
+.todo-step-mark { flex: none; display: grid; place-items: center; width: 18px; height: 18px; color: var(--green); }
+.todo-step-mark:empty::before { content: ''; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--ink-3); }
+.todo-step.is-now .todo-step-mark::before { border: 0; width: 9px; height: 9px; background: var(--ink-3); }
+.todo-step.is-now.todo-step--you .todo-step-mark::before { background: var(--amber); box-shadow: 0 0 0 4px var(--amber-soft); }
+.todo-step--done { color: var(--ink-2); }
+.todo-step.is-now { color: var(--ink); }
+/* Your steps read a little heavier than ours, so the back-and-forth shows at a glance. */
+.todo-step--you .todo-step-label { font-weight: 500; }
+.todo-step--us .todo-step-label { font-weight: 400; }
+.todo-step.is-now .todo-step-label { font-weight: 500; }
+.todo-step-who { height: 18px; padding: 0 7px; border-radius: 9px; font-size: 11px; font-weight: 500; line-height: 18px; background: var(--fill); color: var(--ink-2); }
+.todo-step--later .todo-step-who { color: var(--ink-3); background: rgba(23, 25, 27, .05); }
+.todo-step--you.todo-step.is-now .todo-step-who { background: var(--amber-soft); color: var(--amber-ink); }
+.todo-step--us .todo-step-who { background: none; box-shadow: inset 0 0 0 1px var(--hair-strong); }
+.sections-none { font-size: 14px; color: var(--ink-2); }
+
+/* One floor plan section */
+.panel.area { padding: 22px; }
+.area-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-3) var(--s-4); min-height: 44px; }
+.area-name { min-width: 0; }
+.area-name h2 { font-size: 20px; overflow-wrap: anywhere; }
+.area-name p { margin-top: 2px; font-size: 13px; color: var(--ink-2); }
+.area-name .num { font-size: 13px; font-weight: 500; color: var(--ink); }
+.area-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.area-body { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--s-5); align-items: start; margin-top: var(--s-5); }
+.area-plan { display: grid; place-items: center; min-height: 220px; padding: 10px; border-radius: var(--r-card); background: var(--well); border: 1px solid var(--edge); }
+/* As wide as its slot, but never taller than most of the screen. */
+.area-plan .plan-view { width: min(100%, calc(62svh * var(--plan-ratio, 1.4))); }
+.area-mark { min-height: 32px; padding: 0 14px; font-size: 13px; }
+.area-plan .plan-view--failed { width: 100%; border: 0; background: transparent; }
+.area-plan-empty { align-self: stretch; justify-self: stretch; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s-3); padding: var(--s-6) var(--s-5); border: 1.5px dashed var(--hair-strong); border-radius: 14px; text-align: center; transition: background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
+.area-plan-empty.is-over { border-color: var(--amber); border-style: solid; background: var(--amber-soft); }
+.area-plan-empty p { max-width: 42ch; font-size: 14px; color: var(--ink-2); }
+.area-plan-empty .area-actions { justify-content: center; margin-top: var(--s-1); }
+.area-plan-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--control); color: var(--ink); }
+.area-photos { min-width: 0; }
+.area-photos h3 { font-size: 15px; }
+.area-quiet { margin-top: var(--s-2); padding: var(--s-4); border-radius: 14px; background: var(--fill); font-size: 14px; color: var(--ink-2); }
+.area-plan .area-quiet { margin: 0; background: none; }
+
+/* Numbered frames */
+.frames { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: var(--s-3) 10px; margin-top: var(--s-3); }
+.frame-cell { min-width: 0; scroll-margin: var(--s-6); }
+.frame-box { position: relative; }
+.frame { position: relative; display: block; width: 100%; aspect-ratio: 4 / 3; padding: 0; overflow: hidden; border: 1px dashed var(--hair-strong); border-radius: 12px; background: rgba(23, 25, 27, .05); color: var(--ink-2); transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease); }
+.frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.frame-num { position: absolute; left: 8px; bottom: 6px; z-index: 1; font-family: var(--mono); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.frame-wait { position: absolute; inset: 0; display: grid; place-items: center; }
+.frame--taken, .frame--retake { border: 0; background: var(--fill); color: #fff; }
+.frame--taken::after, .frame--retake::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .28), transparent 34%, transparent 50%, rgba(0, 0, 0, .6)); }
+.frame--retake { box-shadow: 0 0 0 2px var(--solid), 0 0 0 4px var(--red); }
+.frame--next { border: 1.5px solid var(--amber); background: var(--amber-soft); color: var(--amber-ink); }
+.frame--todo:hover { background: rgba(23, 25, 27, .1); border-color: rgba(23, 25, 27, .4); }
+
+.frame[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--solid), 0 0 0 4px var(--ink); }
+.frame--retake[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--solid), 0 0 0 4px var(--red), 0 0 0 6px var(--ink); }
+.frame.is-over { border: 1.5px solid var(--amber); background: var(--amber-soft); box-shadow: 0 0 0 3px var(--amber-soft); }
+.frame:focus-visible { outline-offset: 4px; }
+.frame-note { margin-top: 9px; font-size: 12px; font-weight: 500; line-height: 1.35; color: var(--red-ink); overflow-wrap: anywhere; }
+/* Delete: in the frame's corner. Shown on hover and keyboard focus; always shown on touch. */
+.frame-delete { position: absolute; bottom: 5px; right: 5px; z-index: 2; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .92); color: var(--ink); box-shadow: 0 2px 6px rgba(23, 25, 27, .28); opacity: 1; transition: opacity var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+/* A larger invisible target for fingers. */
+.frame-delete::before { content: ''; position: absolute; inset: -6px; }
+.frame-box:hover .frame-delete, .frame-box:focus-within .frame-delete { opacity: 1; }
+.frame-delete:hover:not(:disabled) { background: var(--red); color: #fff; }
+.frame-delete:active:not(:disabled) { transform: scale(.92); }
+.frame-delete:focus-visible { outline: 2px solid #fff; outline-offset: 0; box-shadow: 0 0 0 4px var(--ink); }
+@media (hover: none) { .frame-delete { opacity: 1; } }
+
+@media (max-width: 1100px) {
+ .todo-step:not(:last-child)::after { width: 14px; margin: 0 var(--s-2); }
+}
+@media (max-width: 900px) {
+ .sections { gap: var(--s-3); }
+ .todo { gap: var(--s-3); }
+ .todo-words h3 { font-size: 17px; }
+ /* The primary button is full width on a phone. */
+ .todo-btns { width: 100%; flex-direction: column-reverse; }
+ .todo-btns .btn { width: 100%; }
+ /* The four steps stack, one per line. */
+ .todo-steps { flex-direction: column; align-items: flex-start; gap: var(--s-2); }
+ .todo-step:not(:last-child)::after { display: none; }
+ .sections-actions { flex-direction: column; align-items: stretch; }
+ .panel.add-form { flex: none; max-width: none; }
+ .add-form-btns { flex: 1; }
+ .add-form-btns .btn { flex: 1; }
+ .sections-next { margin-left: 0; }
+ .panel.area { padding: var(--s-4); }
+ /* Plan above its photos. */
+ .area-body { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
+ .area-plan { min-height: 0; padding: 6px; }
+ .area-actions .btn { flex: 1 1 auto; }
+ .frames { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
+}
+@media (prefers-reduced-transparency: reduce) { .row-reason { background: var(--solid); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+
+/* The right side of a floor: where it stands (no points yet), or its photos. */
+.area-status { padding: var(--s-2) 0; }
+.area-photos .area-status h3 { font-size: 20px; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.area-status p { margin-top: 6px; max-width: 46ch; font-size: 15px; color: var(--ink-2); overflow-wrap: anywhere; }
+.area-status-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+.area-status .area-status-btns { margin-top: var(--s-4); }
+.area-photos-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px var(--s-4); }
+.area-photos-line { display: flex; align-items: center; gap: 10px; margin: 8px 0 var(--s-3); font-size: 14px; color: var(--ink-2); overflow-wrap: anywhere; }
+.area-photos-line--retake { color: var(--red); }

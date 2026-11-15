@@ -97,7 +97,7 @@ public class TourRequestController {
     }
 
     // One byte past the limit is enough for the service to reject an oversized upload.
-    private static byte[] body(HttpServletRequest request, int maxBytes) throws IOException {
+    static byte[] body(HttpServletRequest request, int maxBytes) throws IOException {
         return request.getInputStream().readNBytes(maxBytes + 1);
     }
 

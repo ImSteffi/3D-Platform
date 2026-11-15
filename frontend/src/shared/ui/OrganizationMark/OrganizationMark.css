@@ -1,3 +1,3 @@
-.organization-mark { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #ff803c24; border-radius: 11px; background: #ff803c0b; color: #dfa17b; }
-.organization-mark--1 { color: #8fb6a7; background: #8fb6a70a; border-color: #8fb6a725; }
-.organization-mark--2 { color: #b7a7cf; background: #b7a7cf0a; border-color: #b7a7cf25; }
+.organization-mark { display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 13px; background: var(--ink); color: #fff; }
+.organization-mark--1 { background: var(--fill-hover); color: var(--ink); }
+.organization-mark--2 { background: #fff; color: var(--ink); box-shadow: 0 0 0 1px var(--hair) inset; }

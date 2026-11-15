@@ -1,31 +1,53 @@
-/* Marker sizes are given for an 800px-wide plan; 0.125cqw is one such pixel at any width. */
-.plan-view { container-type: inline-size; position: relative; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: #101113; line-height: 0; user-select: none; -webkit-user-select: none; }
+/* A floor plan with its capture points. Flat and top-down by default (DESIGN.md).
+   Marker sizes are given for an 800px-wide plan; 0.125cqw is one such pixel at any width.
+   A point never gets smaller than 18px, so its number stays readable on a phone. */
+.plan-view { --plan-d: max(18px, calc(var(--plan-dot) * .125cqw)); --plan-l: max(calc(var(--plan-line) * .125cqw), calc(var(--plan-d) / 2 + 10px)); --plan-w: max(2px, .3cqw);
+ container-type: inline-size; position: relative; overflow: hidden; border: 1px solid var(--hair); border-radius: 16px; background: var(--solid); line-height: 0; user-select: none; -webkit-user-select: none; }
 .plan-view img { display: block; width: 100%; height: auto; }
 .plan-view--editable img { cursor: crosshair; }
-.plan-view--failed { display: grid; place-items: center; min-height: 160px; padding: 20px; line-height: 1.5; text-align: center; font-size: 12px; }
-/* The marker is a zero-size anchor at the point; the dot, line and number hang off it. */
+.plan-view--failed { display: grid; place-items: center; min-height: 160px; padding: var(--s-5); line-height: 1.45; text-align: center; font-size: 13px; color: var(--ink-2); }
+
+/* The marker is a zero-size anchor at the point; the disc, line and number hang off it. */
 .plan-marker { position: absolute; width: 0; height: 0; }
 .plan-marker--dot { z-index: 1; }
-.plan-marker--line { z-index: 2; }
-.plan-dot { position: absolute; left: calc(var(--plan-dot) * -.0625cqw); top: calc(var(--plan-dot) * -.0625cqw); width: calc(var(--plan-dot) * .125cqw); height: calc(var(--plan-dot) * .125cqw); padding: 0; border: 0; border-radius: 50%; background: #2fb350; touch-action: none; }
+.plan-marker--line { z-index: 2; pointer-events: none; }
+.plan-marker--next { z-index: 3; }
+
+/* To do (pending / later): hollow. White inside so it reads on any drawing. */
+.plan-dot { position: absolute; left: calc(var(--plan-d) / -2); top: calc(var(--plan-d) / -2); width: var(--plan-d); height: var(--plan-d); display: grid; place-items: center; padding: 0; border: 1.5px solid var(--ink); border-radius: 50%; background: #fff; color: var(--ink);
+ font-family: var(--mono); font-size: clamp(9px, calc(var(--plan-d) * .5), 13px); font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -.04em; line-height: 1; touch-action: none;
+ transition: box-shadow var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
 button.plan-dot { cursor: pointer; }
 button.plan-dot--movable { cursor: move; }
-.plan-dot:focus-visible { outline: 2px solid #111213; outline-offset: 2px; }
-.plan-marker--done .plan-dot { background: #7d8a80; }
-.plan-marker--retake .plan-dot { background: #e5534b; }
-.plan-marker--done .plan-line { background: #5d635f; }
-.plan-marker--later .plan-dot, .plan-marker--later .plan-line { opacity: .4; }
-.plan-marker--next { z-index: 3; }
-.plan-marker--next .plan-dot { background: #ff803c; box-shadow: 0 0 0 3px #fff, 0 0 0 5px #ff803c; animation: plan-next 1.6s ease-in-out infinite; }
-@keyframes plan-next { 50% { box-shadow: 0 0 0 3px #fff, 0 0 0 11px #ff803c55; } }
-.plan-marker.is-selected .plan-dot { box-shadow: 0 0 0 3px #fff, 0 0 0 5px #ff803c; }
-.plan-marker.is-selected .plan-line { background: #ff803c; box-shadow: 0 0 0 1px #000; }
-/* The line starts at the centre of the dot and points the way the camera faces. */
-.plan-line { position: absolute; left: -.1875cqw; bottom: 0; width: .375cqw; height: calc(var(--plan-line) * .125cqw); border-radius: 2px; background: #000; transform-origin: 50% 100%; pointer-events: none; touch-action: none; }
+button.plan-dot:hover { box-shadow: 0 0 0 3px rgba(23, 25, 27, .16); }
+button.plan-dot:active { transform: scale(.94); }
+.plan-dot:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.plan-marker--later .plan-dot { border-color: rgba(23, 25, 27, .55); color: var(--ink-2); }
+/* Taken: ink disc, white number. */
+.plan-marker--done .plan-dot, .plan-marker--retake .plan-dot { border-color: var(--ink); background: var(--ink); color: #fff; }
+/* Retake: the taken disc inside a red ring. */
+.plan-marker--retake .plan-dot { box-shadow: 0 0 0 2px #fff, 0 0 0 4.5px var(--red); }
+/* Next: amber. */
+.plan-marker--next .plan-dot { border-color: var(--amber); background: var(--amber); color: var(--ink); box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--amber); animation: plan-next 1.8s var(--ease) infinite; }
+@keyframes plan-next { 50% { box-shadow: 0 0 0 3px #fff, 0 0 0 10px rgba(242, 163, 27, .3); } }
+.plan-marker.is-selected .plan-dot { box-shadow: 0 0 0 2px #fff, 0 0 0 4.5px var(--ink); }
+.plan-marker--retake.is-selected .plan-dot { box-shadow: 0 0 0 2px #fff, 0 0 0 4.5px var(--red), 0 0 0 6.5px #fff, 0 0 0 8.5px var(--ink); }
+.plan-marker--next.is-selected .plan-dot { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--amber); }
+
+/* The line runs from the centre of the point the way the camera faces; it is only painted outside the disc,
+   so it never crosses the number. */
+.plan-line { position: absolute; left: calc(var(--plan-w) / -2); bottom: 0; width: var(--plan-w); height: var(--plan-l); border-radius: 2px;
+ background: linear-gradient(to top, transparent calc(var(--plan-d) / 2 + 1px), var(--ink) calc(var(--plan-d) / 2 + 1px)); transform-origin: 50% 100%; pointer-events: none; touch-action: none; }
+/* Arrow head at the far end. */
+.plan-line::after { content: ''; position: absolute; left: 50%; top: 0; width: max(7px, 1cqw); height: max(7px, 1cqw); border-top: var(--plan-w) solid var(--ink); border-left: var(--plan-w) solid var(--ink); border-radius: 1px; transform: translate(-50%, 0) rotate(45deg); transform-origin: 50% 50%; margin-top: calc(var(--plan-w) / 2); }
+.plan-marker--later .plan-line { opacity: .5; }
 .plan-line--turnable { pointer-events: auto; cursor: grab; }
-/* A wider invisible strip makes the thin line easy to grab; it stops short of the dot,
+.plan-line--turnable:active { cursor: grabbing; }
+/* A wider invisible strip makes the thin line easy to grab; it stops short of the disc,
    which stays free for moving the point. */
-.plan-line--turnable::before { content: ''; position: absolute; inset: -6px -9px calc(var(--plan-dot) * .0625cqw); }
-.plan-line-handle { position: absolute; left: 50%; top: -6px; width: 12px; height: 12px; margin-left: -6px; border: 2px solid #fff; border-radius: 50%; background: #000; }
-.plan-number { position: absolute; display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: #000; color: #fff; font-size: 11px; font-weight: 700; line-height: 1; transform: translate(-50%, -50%); pointer-events: none; }
-.plan-marker--retake .plan-number { background: #e5534b; }
+.plan-line--turnable::before { content: ''; position: absolute; inset: -6px -9px calc(var(--plan-d) / 2); }
+.plan-line-handle { position: absolute; z-index: 1; left: 50%; top: -7px; width: 14px; height: 14px; margin-left: -7px; border: 2px solid #fff; border-radius: 50%; background: var(--ink); box-shadow: 0 1px 3px rgba(23, 25, 27, .3); }
+.plan-number { position: absolute; display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--ink); color: #fff; font-family: var(--mono); font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 0 1.5px #fff; }
+.plan-marker--retake .plan-number { background: var(--red); }
+.plan-marker--next .plan-number { background: var(--amber); color: var(--ink); }
+

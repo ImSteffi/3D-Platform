@@ -1,0 +1,18 @@
+.panel { position: relative; min-width: 0; border-radius: var(--r-panel); color: var(--ink); }
+.panel--glass { background: var(--glass); border: 1px solid var(--edge); box-shadow: var(--shadow-panel); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
+.panel--solid { background: var(--solid); border: 1px solid var(--hair); box-shadow: var(--shadow); }
+.panel--well { background: var(--well); border: 1px solid var(--edge); border-radius: var(--r-card); }
+.panel--pad-none { padding: 0; }
+.panel--pad-sm { padding: var(--s-4); }
+.panel--pad-md { padding: var(--s-6); }
+.panel--pad-lg { padding: 28px; }
+/* A panel inside a panel never frosts twice. */
+.panel .panel--glass { -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; background: var(--well); border-radius: var(--r-card); }
+@media (max-width: 900px) {
+ .panel { border-radius: 22px; }
+ .panel--well, .panel .panel--glass { border-radius: 16px; }
+ .panel--pad-md, .panel--pad-lg { padding: var(--s-5) var(--s-4); }
+}
+@media (prefers-reduced-transparency: reduce) {
+ .panel--glass { background: var(--solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

@@ -1,0 +1,61 @@
+/* Learn: one glass panel per lesson, an authored line diagram beside plain words. */
+.learn-page { max-width: 980px; }
+.learn-lesson { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-7); align-items: center; animation: arrive var(--t-panel) var(--ease) both; }
+.learn-figure { display: grid; place-items: center; padding: var(--s-4); border-radius: var(--r-card); background: var(--solid); border: 1px solid var(--hair); }
+
+.learn-text { min-width: 0; }
+.learn-n { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--solid); font-size: 13px; font-weight: 500; }
+.learn-text h2 { margin-top: var(--s-4); font-size: 26px; line-height: 1.15; }
+.learn-lead { margin-top: 6px; font-size: 17px; font-weight: 500; letter-spacing: -.01em; color: var(--ink); max-width: 34ch; }
+.learn-text ul { display: flex; flex-direction: column; gap: 10px; margin-top: var(--s-4); max-width: 70ch; }
+.learn-text li { position: relative; padding-left: var(--s-5); font-size: 15px; color: var(--ink-2); text-wrap: pretty; }
+.learn-text li::before { content: ''; position: absolute; left: 4px; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: var(--ink-3); }
+
+/* Diagrams: ink line drawings, amber for the thing to notice, red only for the retake ring. */
+.dg { width: 100%; max-width: 460px; height: auto; fill: none; }
+.dg-ink { stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.dg-wall { stroke: var(--ink); stroke-width: 3; stroke-linecap: square; }
+.dg-faint { stroke: var(--ink-3); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.dg-dash { stroke-dasharray: 3 4; }
+.dg-floor { fill: var(--control-hover); }
+.dg-fill-paper { fill: var(--solid); }
+.dg-fill-amber { fill: var(--amber); fill-opacity: .45; }
+.dg-fill-amber-solid { fill: var(--amber); }
+.dg-amber-line { stroke: var(--amber); stroke-width: 2.5; stroke-linecap: round; }
+.dg-dot { fill: var(--ink); }
+.dg-red-ring { stroke: var(--red); stroke-width: 2.5; }
+.dg-note { fill: var(--control-hover); stroke: var(--hair-strong); stroke-width: 1; }
+.dg-call path { stroke: var(--ink-2); stroke-width: 1; }
+.dg-call circle { fill: var(--ink); }
+.dg-call--red path { stroke: var(--red); }
+.dg-call--red circle { fill: var(--red); }
+path.dg-call { stroke: var(--ink-2); stroke-width: 1; }
+.dg-point--taken { fill: var(--ink); }
+.dg-point--next { fill: var(--amber); }
+.dg-point--todo { fill: var(--solid); stroke: var(--ink-3); stroke-width: 1.5; }
+.dg-num { font: 500 11px var(--mono); text-anchor: middle; fill: var(--solid); }
+.dg-num--next { fill: var(--ink); font-size: 12px; }
+.dg-num--todo { fill: var(--ink-2); }
+.dg-label { font: 500 14px var(--sans); fill: var(--ink); }
+.dg-sub { font: 400 12px var(--sans); fill: var(--ink-2); }
+
+/* Checklist and the way on */
+.learn-check { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--s-7); align-items: end; }
+.learn-check h2 { font-size: 20px; }
+.learn-check ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3) var(--s-5); margin-top: var(--s-4); }
+.learn-check li { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; color: var(--ink); }
+.learn-check-mark { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--fill); color: var(--ink); }
+.learn-check-go { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-4); }
+.learn-check-go p { font-size: 15px; color: var(--ink-2); max-width: 32ch; }
+
+@media (max-width: 900px) {
+ .learn-page { max-width: none; }
+ .learn-lesson { grid-template-columns: minmax(0, 1fr); gap: var(--s-5); }
+ .learn-figure { padding: var(--s-2); border-radius: 16px; }
+ .dg-label { font-size: 15px; }
+ .dg-sub { font-size: 13.5px; }
+ .learn-text h2 { margin-top: var(--s-3); font-size: 24px; }
+ .learn-check { grid-template-columns: minmax(0, 1fr); gap: var(--s-6); align-items: start; }
+ .learn-check ul { grid-template-columns: minmax(0, 1fr); }
+ .learn-check-go .btn { width: 100%; }
+}

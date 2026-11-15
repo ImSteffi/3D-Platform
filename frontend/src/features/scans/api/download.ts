@@ -13,7 +13,7 @@ function check(response: Response) {
  if (!response.ok) throw new Error(response.status === 401
   ? 'Your session expired. Please sign in again.'
   : response.status === 403 || response.status === 404
-   ? 'This scan or export is unavailable. Please refresh and try again.'
+   ? 'This tour is unavailable. Refresh the page and try again.'
    : response.status === 429 ? 'Downloads are busy. Please try again shortly.'
    : 'Could not prepare the download. Please try again.')
 }

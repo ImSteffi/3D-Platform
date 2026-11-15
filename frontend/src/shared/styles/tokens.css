@@ -1,11 +1,81 @@
+/* Design tokens. The contract is DESIGN.md; the reference render is .impeccable/mocks/space-light.html. */
 :root {
- color-scheme: dark;
- --bg: #111213; --surface: #1a1b1d; --surface-raised: #212225; --surface-hover: #26272a;
- --text: #95979c; --text-h: #f3f3f1; --border: #2d2e31;
- --accent: #ff803c; --accent-bg: #ff803c12; --accent-border: #ff803c60;
- --social-bg: #202124; --success: #91d9ad; --danger: #ffa29d;
- --radius: 20px; --ease: cubic-bezier(.22, 1, .36, 1);
- font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; font-size: 14px;
- color: var(--text); background: var(--bg); font-synthesis: none;
- text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
+ color-scheme: light;
+
+ /* Ink */
+ --ink: #17191b;
+ --ink-2: rgba(23, 25, 27, .66);
+ --ink-3: rgba(23, 25, 27, .46);
+ --on-dark: #f6f5f2;
+ --on-dark-2: rgba(246, 245, 242, .7);
+
+ /* Glass */
+ --glass: rgba(255, 255, 255, .68);
+ --glass-chrome: rgba(255, 255, 255, .56);
+ --well: rgba(255, 255, 255, .5);
+ --solid: #fbfaf7;
+ --edge: rgba(255, 255, 255, .78);
+ --hair: rgba(23, 25, 27, .09);
+ --hair-strong: rgba(23, 25, 27, .2);
+ --fill: rgba(23, 25, 27, .07);
+ --fill-hover: rgba(23, 25, 27, .11);
+ --control: rgba(255, 255, 255, .7);
+ --control-hover: rgba(255, 255, 255, .92);
+ --blur: blur(34px) saturate(170%);
+
+ /* Ground and Lens */
+ --ground-a: #d9d3c8;
+ --ground-b: #c9c2b6;
+ --ground: linear-gradient(160deg, var(--ground-a), var(--ground-b));
+ --lens: #141516;
+ --lens-bar: rgba(20, 21, 22, .86);
+
+ /* Meaning: amber = your move / next, red = retake / error, green = done / approved */
+ --amber: #f2a31b;
+ --amber-soft: rgba(242, 163, 27, .18);
+ --amber-ink: #7a4a00;
+ --red: #d9423a;
+ --red-soft: rgba(217, 66, 58, .12);
+ --red-ink: #a62a23;
+ --green: #23855a;
+ --green-soft: rgba(35, 133, 90, .13);
+ --green-ink: #17633f;
+
+ /* Shape */
+ --r-panel: 28px;
+ --r-card: 20px;
+ --r-control: 14px;
+ --r-pill: 999px;
+ --shadow: 0 24px 48px -24px rgba(40, 30, 15, .38), 0 2px 6px rgba(40, 30, 15, .06);
+ --shadow-panel: 0 1px 0 rgba(255, 255, 255, .7) inset, var(--shadow);
+ --shadow-chip: 0 10px 24px -12px rgba(40, 30, 15, .5);
+
+ /* Spacing scale */
+ --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-7: 32px; --s-8: 48px;
+ --margin: 20px;
+
+ /* Motion */
+ --ease: cubic-bezier(.22, 1, .36, 1);
+ --t-fast: 180ms;
+ --t-panel: 360ms;
+
+ /* Type */
+ --sans: 'Geist Variable', 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+ --mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+ /* Legacy aliases: pages not rebuilt yet still read these names. Do not use them in new code. */
+ --bg: var(--ground-a);
+ --surface: var(--glass);
+ --surface-raised: rgba(255, 255, 255, .8);
+ --surface-hover: var(--control-hover);
+ --text: var(--ink-2);
+ --text-h: var(--ink);
+ --border: var(--hair-strong);
+ --accent: var(--ink);
+ --accent-bg: var(--fill);
+ --accent-border: var(--hair-strong);
+ --social-bg: var(--control);
+ --success: var(--green-ink);
+ --danger: var(--red-ink);
+ --radius: var(--r-card);
 }

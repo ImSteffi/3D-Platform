@@ -1,6 +1,35 @@
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 40px; padding: 10px 17px; border: 1px solid transparent; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 600; line-height: 1.3; transition: background 180ms, border-color 180ms, transform 220ms var(--ease), box-shadow 220ms; }
-.btn-primary { color: #211309; background: linear-gradient(135deg, #ff9b56, #ff7738); box-shadow: inset 0 1px 0 #ffffff45, 0 3px 12px #ff803c0d; }
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 5px 20px #ff803c25; }
-.btn-primary:active { transform: translateY(0); }
-.btn-ghost { background: #ffffff03; border-color: var(--border); color: var(--text-h); }
-.btn-ghost:hover { background: var(--surface-hover); border-color: #4a4b4f; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: 44px; padding: 0 20px; border: 1px solid transparent; border-radius: 22px; cursor: pointer; font-family: var(--sans); font-size: 14px; font-weight: 500; line-height: 1; white-space: nowrap; text-decoration: none; user-select: none; transition: background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
+.btn:active:not(:disabled, [aria-disabled='true']) { transform: scale(.975); }
+.btn-lg { height: 50px; padding: 0 22px; border-radius: 25px; font-size: 15px; }
+.btn-block { display: flex; width: 100%; }
+.btn-icon-only { width: 44px; padding: 0; }
+.btn-icon-only.btn-lg { width: 50px; }
+
+.btn-primary { background: var(--ink); color: #fff; }
+.btn-primary:hover:not(:disabled, [aria-disabled='true']) { background: #2c2f33; }
+.btn-primary:active:not(:disabled, [aria-disabled='true']) { background: #000; }
+
+.btn-secondary, .btn-ghost { background: var(--control); border-color: var(--hair); color: var(--ink); }
+.btn-secondary:hover:not(:disabled, [aria-disabled='true']), .btn-ghost:hover:not(:disabled, [aria-disabled='true']) { background: var(--control-hover); border-color: var(--hair-strong); }
+.btn-secondary:active:not(:disabled, [aria-disabled='true']), .btn-ghost:active:not(:disabled, [aria-disabled='true']) { background: #fff; }
+
+.btn-quiet { background: transparent; color: var(--ink); padding: 0 14px; }
+.btn-quiet:hover:not(:disabled, [aria-disabled='true']) { background: var(--fill); }
+.btn-quiet:active:not(:disabled, [aria-disabled='true']) { background: var(--fill-hover); }
+
+.btn-danger { background: var(--red); color: #fff; }
+.btn-danger:hover:not(:disabled, [aria-disabled='true']) { background: #c2362f; }
+.btn-danger:active:not(:disabled, [aria-disabled='true']) { background: var(--red-ink); }
+
+.btn:disabled, .btn[aria-disabled='true'] { cursor: not-allowed; opacity: .5; }
+.btn-loading[aria-disabled='true'] { cursor: progress; opacity: .8; }
+.btn-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: btn-spin 700ms linear infinite; }
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+
+/* On dark (Lens) surfaces */
+.on-dark .btn-primary, :root[data-mode='lens'] .btn-primary { background: var(--on-dark); color: var(--ink); }
+.on-dark .btn-primary:hover:not(:disabled, [aria-disabled='true']), :root[data-mode='lens'] .btn-primary:hover:not(:disabled, [aria-disabled='true']) { background: #fff; }
+.on-dark .btn-secondary, .on-dark .btn-ghost, :root[data-mode='lens'] .btn-secondary, :root[data-mode='lens'] .btn-ghost { background: rgba(246, 245, 242, .12); border-color: rgba(246, 245, 242, .2); color: var(--on-dark); }
+.on-dark .btn-secondary:hover:not(:disabled, [aria-disabled='true']), .on-dark .btn-ghost:hover:not(:disabled, [aria-disabled='true']), :root[data-mode='lens'] .btn-secondary:hover:not(:disabled, [aria-disabled='true']), :root[data-mode='lens'] .btn-ghost:hover:not(:disabled, [aria-disabled='true']) { background: rgba(246, 245, 242, .2); border-color: rgba(246, 245, 242, .34); }
+.on-dark .btn-quiet, :root[data-mode='lens'] .btn-quiet { color: var(--on-dark); }
+.on-dark .btn-quiet:hover:not(:disabled, [aria-disabled='true']), :root[data-mode='lens'] .btn-quiet:hover:not(:disabled, [aria-disabled='true']) { background: rgba(246, 245, 242, .12); }

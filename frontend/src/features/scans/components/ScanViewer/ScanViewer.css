@@ -1,5 +1,8 @@
-.scan-viewer { position: fixed; border: 1px solid var(--border); border-radius: var(--radius); z-index: 25; background: #111213; transform-origin: top left; overflow: hidden; }
-.scan-viewer-close { z-index: 100; position: absolute; top: 22px; left: 22px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--text-h); background: #202123; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; }
-.scan-viewer-close:hover { color: var(--accent); border-color: var(--accent); }
-.scan-viewer-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
-.scan-viewer-placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0; color: var(--text); text-align: center; }
+/* Lens: the tour is the page. A full-viewport dark layer with solid dark chrome and light ink. */
+.scan-viewer { position: fixed; inset: 0; z-index: 60; background: var(--lens); color: var(--on-dark); transform-origin: top left; overflow: hidden; }
+.scan-viewer-close { z-index: 110; position: absolute; top: max(16px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--on-dark); background: var(--lens-bar); border: 1px solid rgba(246, 245, 242, .18); border-radius: 22px; cursor: pointer; transition: background-color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.scan-viewer-close:hover:not(:disabled) { background: #2a2c2e; border-color: rgba(246, 245, 242, .4); }
+.scan-viewer-close:active:not(:disabled) { transform: scale(.94); }
+.scan-viewer-close:focus-visible { outline: 2px solid var(--on-dark); outline-offset: 2px; }
+/* Leave room for the close button beside the tour name. */
+.scan-viewer .lens-top { padding-left: 52px; }

@@ -1,5 +1,26 @@
-.scan-form-panel { background: #18191b; margin-bottom: 24px; }
-.file-dropzone { display: flex; flex-direction: column; align-items: flex-start; gap: 13px; padding: 30px; border: 1px dashed #5b4435; border-radius: 14px; background: radial-gradient(ellipse at 0 0,#ff803c07,transparent),#1c1c1e; transition: border-color 200ms, background 200ms; }
-.file-dropzone:hover, .file-dropzone:focus-within { border-color: var(--accent); background-color: #24201c; }.file-dropzone > svg { color: var(--accent); }.file-dropzone label { font-size: 14px; color: #e4e3df; font-weight: 500; }.file-dropzone p { font-size: 11px; max-width: 450px; }
-.file-dropzone input { max-width: 100%; font-size: 11px; color: #999; }.file-dropzone input::file-selector-button { padding: 8px 12px; margin-right: 12px; border-radius: 7px; border: 1px solid #4a4037; background: #2d2721; color: #e6bba0; cursor: pointer; }
-.scene-file-selection { display: flex; flex-direction: column; gap: 15px; }.selected-project-file { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; border: 1px solid var(--border); padding: 18px; border-radius: 10px; }.selected-project-file strong { font-size: 12px; color: #ddd; }.selected-project-file p { font-size: 10px; margin-top: 6px; }
+.tour-form { animation: arrive 280ms var(--ease) both; }
+.tour-form form, .tour-form-fields { display: flex; flex-direction: column; gap: var(--s-4); }
+.tour-form-name { max-width: 520px; }
+.tour-form-note { font-size: 13px; color: var(--ink-2); }
+.tour-form-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: var(--s-1); }
+
+/* Where the folder goes. Dashed = "put something here", the same language as an empty photo frame. */
+.tour-drop { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-4); padding: var(--s-5); border: 1.5px dashed var(--hair-strong); border-radius: var(--r-card); background: rgba(255, 255, 255, .4); transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
+.tour-drop:hover, .tour-drop:focus-within { border-color: rgba(23, 25, 27, .4); background: rgba(255, 255, 255, .6); }
+.tour-drop--over, .tour-drop--over:hover { border-color: var(--ink); border-style: solid; background: #fff; }
+.tour-drop-icon { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: var(--r-control); background: var(--fill); color: var(--ink); }
+.tour-drop-text { flex: 1; min-width: min(100%, 240px); }
+.tour-drop-text p { font-size: 14px; color: var(--ink-2); }
+.tour-drop-text .tour-drop-title { font-size: 15px; font-weight: 500; color: var(--ink); }
+fieldset:disabled .tour-drop { opacity: .6; }
+
+.tour-selection { display: flex; flex-direction: column; gap: var(--s-3); }
+.tour-selection-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-3) 14px; }
+.tour-selection-text { flex: 1; min-width: min(100%, 200px); display: flex; flex-direction: column; gap: 2px; }
+.tour-selection-text strong { font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
+.tour-selection-meta { font-family: var(--mono); font-size: 13px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+
+@media (max-width: 520px) {
+ .tour-drop { padding: var(--s-4); }
+ .tour-form-actions .btn, .tour-drop .btn { flex: 1; }
+}

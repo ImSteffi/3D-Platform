@@ -1,0 +1,18 @@
+.ticks { display: grid; grid-template-columns: repeat(var(--ticks), minmax(0, 1fr)); gap: 4px; width: 100%; }
+.ticks--dense { gap: 2px; }
+.tick { display: block; height: 26px; min-width: 0; padding: 0; border: 0; border-radius: 4px; background: rgba(23, 25, 27, .1); }
+.ticks--dense .tick { border-radius: 2px; }
+.tick--taken { background: var(--ink); }
+.tick--next { background: var(--amber); }
+.tick--retake { background: var(--red); }
+button.tick { cursor: pointer; transition: transform var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
+button.tick:hover { transform: scaleY(1.18); }
+button.tick--todo:hover { background: rgba(23, 25, 27, .22); }
+button.tick:active { transform: scaleY(.92); }
+button.tick[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--solid), 0 0 0 4px var(--ink); }
+button.tick:focus-visible { outline-offset: 2px; }
+.on-dark .tick, :root[data-mode='lens'] .tick { background: rgba(246, 245, 242, .2); }
+.on-dark .tick--taken, :root[data-mode='lens'] .tick--taken { background: var(--on-dark); }
+.on-dark .tick--next, :root[data-mode='lens'] .tick--next { background: var(--amber); }
+.on-dark .tick--retake, :root[data-mode='lens'] .tick--retake { background: var(--red); }
+.on-dark button.tick[aria-pressed='true'], :root[data-mode='lens'] button.tick[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--lens), 0 0 0 4px var(--on-dark); }

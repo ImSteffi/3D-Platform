@@ -1,9 +1,43 @@
-.splat-scene { position: absolute; inset: 0; }
-.splat-scene .sse-viewer { --sse-accent: #ff803c; }
-.splat-scene-notice { position: absolute; top: 20px; left: 85px; right: 20px; margin: 0; color: #ddd; font-size: 13px; pointer-events: none; }
-
-.scan-starting-view-controls { position: absolute; top: 22px; right: 22px; z-index: 100; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; max-width: calc(100% - 110px); }
-.scan-starting-view-controls .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
-.scan-starting-view-message { margin: 0; padding: 8px 12px; border-radius: 8px; background: #17181aeb; color: var(--success); font-size: 13px; }
-.scan-starting-view-message--error { color: var(--danger); }
+/* Lens: the tour fills its stage; chrome is solid dark chips and bars, nothing frosted. */
+.splat-scene { position: absolute; inset: 0; background: var(--lens); }
+.splat-scene .sse-viewer { --sse-accent: var(--amber); --sse-bkg: var(--lens); --sse-text-light: var(--on-dark); font-family: var(--sans); }
 .splat-scene .sse-viewer .sse-viewerBranding { display: none; }
+/* One loading indicator: ours, centred. */
+.splat-scene .sse-viewer .sse-loadingWrap { display: none; }
+.splat-scene .sse-viewer .sse-controlsWrap > .sse-buttonsContainer .sse-buttonGroup { background-color: var(--lens-bar); }
+
+/* Shared tour page: the stage is the whole page. */
+.shared-tour { position: fixed; inset: 0; background: var(--lens); color: var(--on-dark); }
+
+.lens-chip { margin: 0; max-width: 100%; padding: 8px 14px; border: 1px solid rgba(246, 245, 242, .14); border-radius: 18px; background: var(--lens-bar); color: var(--on-dark); font-size: 13px; line-height: 1.4; }
+
+/* Top row: tour name (and the walk notice) on the left, team tools on the right. */
+.lens-top { position: absolute; z-index: 100; top: max(16px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right)); display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 12px; pointer-events: none; }
+.lens-top-info { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; max-width: min(100%, 420px); }
+.lens-name { height: 44px; padding: 0 16px; border-radius: 22px; font-size: 14px; font-weight: 500; line-height: 42px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.lens-notice { color: var(--on-dark-2); }
+
+.lens-tools { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-left: auto; max-width: 100%; pointer-events: auto; }
+.lens-tools-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; min-height: 44px; padding: 3px 4px 3px 14px; border: 1px solid rgba(246, 245, 242, .14); border-radius: 22px; background: var(--lens-bar); }
+.lens-tools-label { margin-right: 6px; color: var(--on-dark-2); font-size: 12px; white-space: nowrap; }
+.lens-tool { height: 36px; padding: 0 14px; border: 1px solid transparent; border-radius: 18px; background: rgba(246, 245, 242, .12); color: var(--on-dark); font-size: 13px; font-weight: 500; white-space: nowrap; transition: background-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.lens-tool:hover:not(:disabled) { background: rgba(246, 245, 242, .22); }
+.lens-tool:active:not(:disabled) { transform: scale(.97); }
+.lens-tool:focus-visible { outline: 2px solid var(--on-dark); outline-offset: 2px; }
+.lens-feedback { display: flex; align-items: center; gap: 8px; animation: fade-in var(--t-fast) var(--ease) both; }
+.lens-feedback::before { content: ''; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 1px rgba(246, 245, 242, .5); }
+.lens-feedback--error::before { background: var(--red); }
+
+/* Loading and error: centred on the dark stage. */
+.lens-stage-message { position: absolute; inset: 0; z-index: 90; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; color: var(--on-dark); text-align: center; pointer-events: none; }
+.lens-stage-message--solid { background: var(--lens); pointer-events: auto; }
+.lens-stage-message p { max-width: 36ch; font-size: 15px; line-height: 1.45; color: var(--on-dark); }
+
+/* The one hint: leaves on the first interaction and stays gone. */
+.lens-hint { position: absolute; z-index: 95; left: 50%; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 54px); transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); text-align: center; text-wrap: balance; pointer-events: none; opacity: 1; transition: opacity var(--t-panel) var(--ease), visibility 0s linear 0s; }
+.lens-hint--gone { opacity: 0; visibility: hidden; transition: opacity var(--t-panel) var(--ease), visibility 0s linear var(--t-panel); }
+
+@media (max-width: 600px) {
+ .lens-tools { align-items: stretch; width: 100%; }
+ .lens-tools-bar { justify-content: flex-start; }
+}

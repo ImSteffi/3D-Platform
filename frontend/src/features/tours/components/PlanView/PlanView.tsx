@@ -34,7 +34,10 @@ export const DEFAULT_LINE_LENGTH = 26
 const clamp = (value: number) => Math.min(1, Math.max(0, value))
 
 export default function PlanView({ src, alt, markers = [], selected, numbered, dotSize = DEFAULT_DOT_SIZE, lineLength = DEFAULT_LINE_LENGTH, onSelect, onPlanClick, onMove, onRotate }: Props) {
+ const [ratio, setRatio] = useState(0)
  const [failedSrc, setFailedSrc] = useState('')
+ // The shimmer runs only until this plan has loaded, so it never shows around a transparent plan.
+ const [loadedSrc, setLoadedSrc] = useState('')
  const frame = useRef<HTMLDivElement>(null)
  const drag = useRef<{ key: string | number; mode: 'move' | 'rotate' } | null>(null)
  function click(event: MouseEvent<HTMLImageElement>) {
@@ -65,22 +68,25 @@ export default function PlanView({ src, alt, markers = [], selected, numbered, d
  }
  const stop = () => { drag.current = null }
  if (failedSrc === src) return <div className="plan-view plan-view--failed"><p>Could not load this floor plan. Refresh to try again.</p></div>
- const sizes = { '--plan-dot': String(dotSize), '--plan-line': String(lineLength) } as CSSProperties
+ // --plan-ratio (width / height) lets a parent fit the plan into a fixed box.
+ const sizes = { '--plan-dot': String(dotSize), '--plan-line': String(lineLength), ...(ratio ? { '--plan-ratio': String(ratio) } : {}) } as CSSProperties
+ const pick = onSelect
  const anchor = (marker: PlanMarker, layer: string) => ({
   className: 'plan-marker plan-marker--' + layer + ' plan-marker--' + (marker.state ?? 'pending') + (selected === marker.key ? ' is-selected' : ''),
   style: { left: marker.x * 100 + '%', top: marker.y * 100 + '%' },
  })
  // Two passes: every dot first, then every line, so a line is never hidden under another point's dot.
- return <div ref={frame} className={'plan-view' + (onPlanClick ? ' plan-view--editable' : '')} style={sizes}>
-  <img src={src} alt={alt} draggable={false} onClick={click} onError={() => setFailedSrc(src)} />
+ return <div ref={frame} className={'plan-view' + (onPlanClick ? ' plan-view--editable' : '') + (loadedSrc === src ? '' : ' skeleton-bg')} style={sizes}>
+  <img src={src} alt={alt} draggable={false} onClick={click} onError={() => setFailedSrc(src)}
+   onLoad={event => { const image = event.currentTarget; setLoadedSrc(src); if (image.naturalWidth && image.naturalHeight) setRatio(image.naturalWidth / image.naturalHeight) }} />
   {markers.map(marker => {
    const dot = 'plan-dot' + (onMove ? ' plan-dot--movable' : '')
    return <div key={marker.key} {...anchor(marker, 'dot')}>
-    {onSelect
+    {pick
      ? <button type="button" className={dot} aria-label={'Point ' + marker.label} aria-pressed={selected === marker.key}
-      onClick={() => onSelect(marker.key)} onPointerDown={event => start(event, marker, 'move')}
-      onPointerMove={event => track(event, marker)} onPointerUp={stop} onPointerCancel={stop} />
-     : <span className={dot} />}
+      onClick={() => pick(marker.key)} onPointerDown={event => start(event, marker, 'move')}
+      onPointerMove={event => track(event, marker)} onPointerUp={stop} onPointerCancel={stop}>{!numbered && marker.label}</button>
+     : <span className={dot}>{!numbered && marker.label}</span>}
    </div>
   })}
   {markers.map(marker => {
@@ -88,7 +94,7 @@ export default function PlanView({ src, alt, markers = [], selected, numbered, d
    const distance = lineLength + 14
    return <div key={marker.key} {...anchor(marker, 'line')}>
     <span className={'plan-line' + (onRotate ? ' plan-line--turnable' : '')} style={{ transform: `rotate(${marker.direction}deg)` }}
-     onPointerDown={onSelect ? event => start(event, marker, 'rotate') : undefined}
+     onPointerDown={pick ? event => start(event, marker, 'rotate') : undefined}
      onPointerMove={event => track(event, marker)} onPointerUp={stop} onPointerCancel={stop}>
      {selected === marker.key && onRotate && <span className="plan-line-handle" />}
     </span>

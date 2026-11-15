@@ -1,0 +1,29 @@
+/* Delivered: the tour's preview is the page; one panel sits low on it, sharing and the plans follow beneath. */
+.delivered { display: flex; flex-direction: column; gap: var(--s-5); }
+.tour-stage { display: flex; align-items: flex-end; min-height: calc(100svh - 2 * var(--margin) - 56px - 2 * var(--s-5)); }
+.tour-ready { display: flex; flex-direction: column; align-items: flex-start; width: min(100%, 440px); }
+.tour-ready h2 { margin-top: var(--s-4); font-size: 34px; letter-spacing: -.025em; line-height: 1.1; }
+.tour-ready-name { margin-top: var(--s-2); font-size: 17px; font-weight: 500; overflow-wrap: anywhere; }
+.tour-ready-text { margin-top: 6px; max-width: 40ch; font-size: 15px; color: var(--ink-2); }
+.tour-ready-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: var(--s-6); }
+.delivered-share { display: flex; flex-direction: column; gap: var(--s-3); scroll-margin-top: var(--margin); }
+
+/* Collapsed by default: the plans and photos the tour was made from */
+.delivered-plans > summary { display: inline-flex; align-items: center; gap: var(--s-2); height: 44px; padding: 0 18px 0 14px; border-radius: 22px; background: var(--glass); border: 1px solid var(--edge); box-shadow: var(--shadow-panel); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); font-size: 14px; font-weight: 500; cursor: pointer; list-style: none; user-select: none; transition: background-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.delivered-plans > summary::-webkit-details-marker { display: none; }
+.delivered-plans > summary:hover { background: rgba(255, 255, 255, .86); }
+.delivered-plans > summary:active { transform: scale(.975); }
+:root[data-backdrop='photo'] .delivered-plans > summary:focus-visible { outline-color: #fff; }
+.delivered-plans > summary svg { transition: transform var(--t-fast) var(--ease); }
+.delivered-plans[open] > summary svg { transform: rotate(90deg); }
+.delivered-plans[open] > summary { margin-bottom: var(--s-5); }
+
+@media (max-width: 900px) {
+ .delivered { gap: var(--s-3); }
+ .tour-stage { min-height: 56svh; }
+ .tour-ready h2 { font-size: 26px; }
+ .tour-ready-actions { align-self: stretch; }
+ .tour-ready-actions .btn { flex: 1; }
+ .delivered-plans[open] > summary { margin-bottom: var(--s-3); }
+}
+@media (prefers-reduced-transparency: reduce) { .delivered-plans > summary { background: var(--solid); -webkit-backdrop-filter: none; backdrop-filter: none; } }

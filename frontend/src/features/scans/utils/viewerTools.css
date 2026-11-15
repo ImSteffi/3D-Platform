@@ -1,20 +1,25 @@
+/* Also bundled into the standalone viewer customers download, which does not load the app's tokens: every token has a fallback. */
 .sse-viewer .sse-info, .sse-viewer .sse-infoPanel { display: none !important; }
 .sse-viewer.platform-measuring canvas { cursor: crosshair; touch-action: none; }
-.sse-viewer .platform-measure-panel { position: absolute; left: 50%; bottom: 70px; transform: translateX(-50%); max-width: calc(100% - 32px); padding: 10px 14px; border-radius: 8px; background: #202123ed; color: #fff; font: 13px/1.5 sans-serif; text-align: center; pointer-events: none; z-index: 5; }
-.sse-viewer .platform-measure-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 4; display: none; }
-.platform-measure-overlay line { stroke: #ff803c; stroke-width: 2; vector-effect: non-scaling-stroke; }
-.platform-measure-overlay circle { fill: #fff; stroke: #ff803c; stroke-width: 2; vector-effect: non-scaling-stroke; }
 
 .sse-viewer .sse-showCollisionRow,
 .sse-viewer .sse-settingsGroup:has(.sse-frame, .sse-reset),
 .sse-viewer .sse-settingsGroup:not(:has(> :not(.sse-hidden, .sse-showCollisionRow))) { display: none !important; }
 .sse-viewer .sse-settingsPanel > .sse-settingsGroup:has(+ .sse-settingsGroup .sse-frame) { border-bottom: 0; padding-bottom: 0; margin-bottom: 0; }
 
+/* Measure button: sits at the end of the walk / fly group and fills with the viewer's accent while measuring. */
 .sse-viewer .platform-measure { border-radius: 0 6px 6px 0; }
-.sse-viewer .platform-measure[aria-pressed="true"] { background: var(--sse-accent); color: #fff; }
-.platform-measure-overlay line { stroke: #42e58b; stroke-width: 3; }
-.platform-measure-overlay circle { fill: #16332a; stroke: #42e58b; stroke-width: 3; }
-.platform-measure-overlay rect { fill: #172724; fill-opacity: .95; stroke: #42e58b; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-.platform-measure-overlay text { fill: #dcffe9; font: 600 17px sans-serif; }
-
+.sse-viewer .sse-controlsWrap > .sse-buttonsContainer .sse-controlButton.platform-measure.sse-active[aria-pressed="true"] { background: var(--sse-accent, #f2a31b); color: #141516; }
+.sse-viewer .platform-measure:focus-visible { outline: 2px solid #f6f5f2; outline-offset: -2px; }
 .sse-viewer .sse-fpsCamera:has(+ .platform-measure) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
+/* Instruction chip while measuring: solid dark, above the control bar. */
+.sse-viewer .platform-measure-panel { position: absolute; left: 50%; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 54px + var(--sse-lift, 0px)); transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); padding: 8px 14px; border: 1px solid rgba(246, 245, 242, .14); border-radius: 18px; background: var(--lens-bar, rgba(20, 21, 22, .86)); color: var(--on-dark, #f6f5f2); font: 13px/1.4 var(--sans, system-ui, -apple-system, 'Segoe UI', sans-serif); text-align: center; pointer-events: none; z-index: 5; }
+.sse-viewer .platform-measure-panel[hidden] { display: none; }
+
+/* Points and lines in the accent (amber in the app); each length in a dark chip with tabular numerals. */
+.sse-viewer .platform-measure-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 4; display: none; }
+.platform-measure-overlay line { stroke: var(--sse-accent, #f2a31b); stroke-width: 2; stroke-linecap: round; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 1.5px rgba(20, 21, 22, .7)); }
+.platform-measure-overlay circle { fill: var(--sse-accent, #f2a31b); stroke: #141516; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.platform-measure-overlay rect { fill: var(--lens, #141516); fill-opacity: .92; stroke: rgba(246, 245, 242, .18); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.platform-measure-overlay text { fill: var(--on-dark, #f6f5f2); font: 500 13px var(--mono, ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace); font-variant-numeric: tabular-nums; }

@@ -29,7 +29,9 @@ export function installViewerTools(viewer: ViewerHandle, container: HTMLElement,
  svg.classList.add('platform-measure-overlay')
 
  root.append(svg)
-
+ const instruction = window.matchMedia('(pointer: coarse)').matches
+  ? 'Tap to add points · tap the ruler again to finish'
+  : 'Click to add points · Backspace removes the last · Esc to finish'
 
  let picker: SurfacePicker | undefined
  const abort = new AbortController()
@@ -67,9 +69,9 @@ export function installViewerTools(viewer: ViewerHandle, container: HTMLElement,
     element('line', { x1: from.x, y1: from.y, x2: p.x, y2: p.y })
     const x = (from.x + p.x) / 2
     const y = (from.y + p.y) / 2
-    const text = new Intl.NumberFormat('et-EE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(points[i - 1].distance(points[i])) + ' m'
-    const labelWidth = Math.max(72, text.length * 9 + 20)
-    element('rect', { x: x - labelWidth / 2, y: y - 17, width: labelWidth, height: 34, rx: 9 })
+    const text = new Intl.NumberFormat('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(points[i - 1].distance(points[i])) + ' m'
+    const labelWidth = Math.max(60, text.length * 8 + 22)
+    element('rect', { x: x - labelWidth / 2, y: y - 13, width: labelWidth, height: 26, rx: 13 })
     element('text', { x, y, 'text-anchor': 'middle', 'dominant-baseline': 'central' }).textContent = text
    }
   })
@@ -83,7 +85,7 @@ export function installViewerTools(viewer: ViewerHandle, container: HTMLElement,
    viewer.state.inputEnabled = false
    if (document.pointerLockElement === canvas) void document.exitPointerLock()
    points = []
-   panel.textContent = 'Click surfaces to add measurement points. Backspace removes the last point. Esc to exit.'
+   panel.textContent = instruction
   } else {
    viewer.state.inputEnabled = previousInput
    points = []
@@ -121,12 +123,12 @@ export function installViewerTools(viewer: ViewerHandle, container: HTMLElement,
    const direction = far.clone().sub(near).normalize()
    const point = collider ? collider.pick(near, direction, camera.farClip) : await picker.pick(x, y)
    if (disposed || current !== generation) return
-   if (!point) { panel.textContent = 'No surface found. Select a point on the scan.'; return }
+   if (!point) { panel.textContent = 'No surface there. Try another spot.'; return }
    points.push(point.clone())
-   panel.textContent = 'Click to add another point. Backspace removes the last point. Esc to exit.'
+   panel.textContent = instruction
    render()
   } catch {
-   if (!disposed && current === generation) panel.textContent = 'Could not measure this surface. Try another point.'
+   if (!disposed && current === generation) panel.textContent = "That spot can't be measured. Try another."
   } finally { busy = false }
  }
  const key = (event: KeyboardEvent) => {

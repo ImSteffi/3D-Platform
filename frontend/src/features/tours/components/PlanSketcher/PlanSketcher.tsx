@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import { loadSketch, saveSketch } from './sketchStorage'
+import { Button, InlineError } from '../../../../shared/ui'
 import './PlanSketcher.css'
 
 const W = 1200
 const H = 800
 const GRID = 20
-const INK = '#1d1f23'
-const MARK = '#c2571a'
+const INK = '#17191b'
+const MARK = '#7a4a00'
 const FONT = 'Arial, Helvetica, sans-serif'
 
 type Tool = 'select' | 'room' | 'wall' | 'pen' | 'door' | 'stairs' | 'text'
@@ -241,10 +242,10 @@ export default function PlanSketcher({ title, storageKey, onSave, onClose }: Pro
  const box = current ? bounds(current) : null
  return <dialog ref={dialog} className="sketcher" aria-label={'Draw the floor plan of ' + title} onCancel={event => event.preventDefault()}>
   <header className="sketcher-head">
-   <h2>Draw “{title}”</h2>
+   <h2>Draw {title}</h2>
    <div className="sketcher-head-actions">
-    <button type="button" className="btn btn-ghost" disabled={saving} onClick={onClose}>Cancel</button>
-    <button type="button" className="btn btn-primary" disabled={saving || !shapes.length} onClick={() => { void save() }}>{saving ? 'Saving…' : 'Save floor plan'}</button>
+    <Button variant="secondary" disabled={saving} onClick={onClose}>Cancel</Button>
+    <Button loading={saving} disabled={!shapes.length} onClick={() => { void save() }}>Save floor plan</Button>
    </div>
   </header>
   <div className="sketcher-tools" role="toolbar" aria-label="Drawing tools">
@@ -259,17 +260,17 @@ export default function PlanSketcher({ title, storageKey, onSave, onClose }: Pro
     <input ref={labelInput} value={labelled.label} maxLength={40} placeholder="e.g. Kitchen" onChange={event => relabel(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur() }} />
    </label> : <p>{tools.find(item => item.tool === tool)?.hint}</p>}
   </div>
-  {error && <p className="sketcher-error" role="alert">{error}</p>}
+  <InlineError className="sketcher-error">{error}</InlineError>
   <div className="sketcher-stage">
    <svg ref={svg} className={'sketcher-canvas sketcher-canvas--' + tool} viewBox={`0 0 ${W} ${H}`} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
-    <rect width={W} height={H} fill="#f6f5f1" />
+    <rect width={W} height={H} fill="#fbfaf7" />
     <g data-ui>
-     {Array.from({ length: W / 40 - 1 }, (_, index) => <line key={'v' + index} x1={(index + 1) * 40} x2={(index + 1) * 40} y1={0} y2={H} stroke="#dedcd4" strokeWidth={1} />)}
-     {Array.from({ length: H / 40 - 1 }, (_, index) => <line key={'h' + index} y1={(index + 1) * 40} y2={(index + 1) * 40} x1={0} x2={W} stroke="#dedcd4" strokeWidth={1} />)}
+     {Array.from({ length: W / 40 - 1 }, (_, index) => <line key={'v' + index} x1={(index + 1) * 40} x2={(index + 1) * 40} y1={0} y2={H} stroke="#e6e2d9" strokeWidth={1} />)}
+     {Array.from({ length: H / 40 - 1 }, (_, index) => <line key={'h' + index} y1={(index + 1) * 40} y2={(index + 1) * 40} x1={0} x2={W} stroke="#e6e2d9" strokeWidth={1} />)}
     </g>
     {shapes.map(shape => <g key={shape.id} data-id={shape.id}>{draw(shape)}</g>)}
     {draft && <g opacity={0.6}>{draw(draft)}</g>}
-    {box && <rect data-ui x={box[0] - 8} y={box[1] - 8} width={box[2] + 16} height={box[3] + 16} fill="none" stroke="#ff803c" strokeWidth={2} strokeDasharray="8 6" pointerEvents="none" />}
+    {box && <rect data-ui x={box[0] - 8} y={box[1] - 8} width={box[2] + 16} height={box[3] + 16} fill="none" stroke="#f2a31b" strokeWidth={3} strokeDasharray="10 7" pointerEvents="none" />}
    </svg>
   </div>
  </dialog>

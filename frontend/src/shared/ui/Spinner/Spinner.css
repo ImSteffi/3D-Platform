@@ -1,0 +1,7 @@
+.spinner { display: inline-flex; align-items: center; gap: 10px; color: var(--ink-2); font-size: 14px; }
+.spinner--block { display: flex; justify-content: center; min-height: 160px; }
+.spinner i { display: block; flex: none; border-radius: 50%; border: 2px solid var(--hair-strong); border-top-color: var(--ink); animation: spinner-turn 800ms linear infinite; }
+.on-dark .spinner, :root[data-mode='lens'] .spinner { color: var(--on-dark-2); }
+.on-dark .spinner i, :root[data-mode='lens'] .spinner i { border-color: rgba(246, 245, 242, .24); border-top-color: var(--on-dark); }
+@keyframes spinner-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner i { animation-duration: 2.4s !important; animation-iteration-count: infinite !important; } }

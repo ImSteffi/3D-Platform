@@ -1,0 +1,7 @@
+.inline-error { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border-radius: var(--r-control); background: #fbe9e7; border: 1px solid rgba(217, 66, 58, .28); color: var(--red-ink); font-size: 14px; }
+.inline-error svg { margin-top: 1px; color: var(--red); }
+.inline-error p { flex: 1; min-width: 0; font-weight: 500; overflow-wrap: anywhere; }
+.inline-error-retry { flex: none; margin: -4px -6px -4px 0; height: 28px; padding: 0 10px; border: 0; border-radius: 14px; background: transparent; color: var(--red-ink); font-size: 13px; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; transition: background-color var(--t-fast) var(--ease); }
+.inline-error-retry:hover { background: rgba(217, 66, 58, .12); }
+.inline-error-retry:active { background: rgba(217, 66, 58, .2); }
+.inline-error-retry:focus-visible { outline-color: var(--red-ink); }

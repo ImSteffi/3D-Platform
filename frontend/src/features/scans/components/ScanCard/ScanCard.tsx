@@ -1,17 +1,19 @@
-import ScanPreview from './ScanPreview'
-import ConfirmDialog from '../../../../shared/ui/ConfirmDialog/ConfirmDialog'
 import { useContext, useEffect, useRef, useState } from 'react'
-import Icon from '../../../../shared/ui/Icon/Icon'
-import SceneFileList from '../SceneFileList/SceneFileList'
-import { ScanViewerContext } from '../ScanViewer/ScanViewerContext'
+import { Button, ConfirmDialog, Icon, InlineError, Panel, StatusPill } from '../../../../shared/ui'
+import { useWorkspaceUser } from '../../../../shared/layout/WorkspaceLayout/WorkspaceContext'
 import { getSharingStatus, setShareable, sharingUrl, type SharingStatus } from '../../api/share'
 import { deleteScan } from '../../api/delete'
 import { downloadScan } from '../../api/download'
-import { useWorkspaceUser } from '../../../../shared/layout/WorkspaceLayout/WorkspaceContext'
+import { formatFileSize } from '../../utils/sceneFiles'
+import SceneFileList from '../SceneFileList/SceneFileList'
+import { ScanViewerContext } from '../ScanViewer/ScanViewerContext'
+import ScanPreview from './ScanPreview'
 import './ScanCard.css'
 
 type ScanCardProps = {
  onDeleted?: (scanId: number) => void
+ /** Only the preview, the name and the status. Sharing, downloading and deleting stay on the space's own page. */
+ compact?: boolean
  scan: {
   id: number
   name: string
@@ -22,7 +24,11 @@ type ScanCardProps = {
  }
 }
 
-export default function ScanCard({ scan, onDeleted }: ScanCardProps) {
+const statusLabel = { READY: 'Ready', UPLOADING: 'Upload incomplete', FAILED: 'Failed' } as const
+const statusTone = { READY: 'green', UPLOADING: 'amber', FAILED: 'red' } as const
+
+/** One tour: preview, name, one primary action ("Walk through") and a quiet row for sharing, downloading and deleting. */
+export default function ScanCard({ scan, onDeleted, compact = false }: ScanCardProps) {
  const user = useWorkspaceUser()
  const openViewer = useContext(ScanViewerContext)
  const [confirmDelete, setConfirmDelete] = useState(false)
@@ -32,20 +38,23 @@ export default function ScanCard({ scan, onDeleted }: ScanCardProps) {
  const [shareSettings, setShareSettings] = useState<SharingStatus | null>(null)
  const [updatingShare, setUpdatingShare] = useState(false)
  const [sharing, setSharing] = useState(false)
- const [shareOpen, setShareOpen] = useState(false)
  const [copied, setCopied] = useState<'URL' | 'IFRAME' | null>(null)
  const [actionError, setActionError] = useState('')
+ const [downloading, setDownloading] = useState(false)
  const downloadRequest = useRef<AbortController | null>(null)
  useEffect(() => () => downloadRequest.current?.abort(), [])
  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
  useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current) }, [])
+
+ const ready = scan.status === 'READY'
+
  useEffect(() => {
-  if (scan.status !== 'READY') return
+  if (scan.status !== 'READY' || compact) return
   const request = new AbortController()
   getSharingStatus(scan.id, request.signal).then(setShareSettings)
-   .catch(error => { if (!request.signal.aborted) setActionError(error instanceof Error ? error.message : 'Could not load sharing settings.') })
+   .catch(error => { if (!request.signal.aborted) setActionError(error instanceof Error ? error.message : 'Could not load the sharing settings. Refresh the page to try again.') })
   return () => request.abort()
- }, [scan.id, scan.status])
+ }, [scan.id, scan.status, compact])
 
  async function removeScan() {
   if (deleting || !user.platformAdmin) return
@@ -56,10 +65,11 @@ export default function ScanCard({ scan, onDeleted }: ScanCardProps) {
    setDeleted(true)
    onDeleted?.(scan.id)
   } catch (error) {
+   // A failed delete may have removed some of the tour already: everything but another delete stays off.
    setDeleteFailed(true)
    setShareSettings(current => current ? { ...current, enabled: false } : current)
-   setShareOpen(false)
-   setActionError(error instanceof Error ? error.message : 'Could not delete this scan. Please try again.')
+   setCopied(null)
+   setActionError(error instanceof Error ? error.message : 'Could not delete this tour. Try again.')
   } finally { setDeleting(false) }
  }
 
@@ -70,8 +80,8 @@ export default function ScanCard({ scan, onDeleted }: ScanCardProps) {
   try {
    const settings = await setShareable(scan.id, !shareSettings.enabled)
    setShareSettings(settings)
-   if (!settings.enabled) { setShareOpen(false); setCopied(null) }
-  } catch (error) { setActionError(error instanceof Error ? error.message : 'Could not update sharing.') }
+   if (!settings.enabled) setCopied(null)
+  } catch (error) { setActionError(error instanceof Error ? error.message : 'Could not change sharing. Try again.') }
   finally { setUpdatingShare(false) }
  }
 
@@ -81,7 +91,7 @@ export default function ScanCard({ scan, onDeleted }: ScanCardProps) {
   try {
    const current = await getSharingStatus(scan.id)
    setShareSettings(current)
-   if (!current.enabled || !current.hostingEnabled) throw new Error('Sharing is currently disabled for this scan.')
+   if (!current.enabled || !current.hostingEnabled) throw new Error('Sharing is turned off for this tour. Turn it on to copy a link.')
    const url = sharingUrl(current)
    const text = kind === 'URL' ? url : '<iframe src="' + url + '" title="3D viewer" style="width:100%;height:600px;border:0;border-radius:16px" loading="lazy" allow="fullscreen; xr-spatial-tracking" allowfullscreen></iframe>'
    await navigator.clipboard.writeText(text)
@@ -89,10 +99,10 @@ export default function ScanCard({ scan, onDeleted }: ScanCardProps) {
    if (copyTimer.current) clearTimeout(copyTimer.current)
    setCopied(kind)
    copyTimer.current = setTimeout(() => setCopied(null), 1600)
-  } catch (error) { setActionError(error instanceof Error ? error.message : 'Could not copy. Please try again.') }
+  } catch (error) { setActionError(error instanceof Error ? error.message : 'Could not copy. Try again.') }
   finally { setSharing(false) }
  }
- const [downloading, setDownloading] = useState(false)
+
  async function download() {
   if (deleting || deleteFailed || downloading || scan.status !== 'READY') return
   setDownloading(true)
@@ -100,61 +110,83 @@ export default function ScanCard({ scan, onDeleted }: ScanCardProps) {
   const request = new AbortController()
   downloadRequest.current = request
   try { await downloadScan(scan.id, request.signal) }
-  catch (error) { if (!request.signal.aborted) setActionError(error instanceof Error ? error.message : 'Could not download this scan.') }
+  catch (error) { if (!request.signal.aborted) setActionError(error instanceof Error ? error.message : 'Could not prepare the download. Try again.') }
   finally { if (!request.signal.aborted) { downloadRequest.current = null; setDownloading(false) } }
  }
+
  if (deleted) return null
+
+ const blocked = deleting || deleteFailed
+ const canWalk = ready && !blocked
+ const fileCount = scan.fileCount ?? scan.files.length
+ const sizeBytes = scan.sizeBytes ?? scan.files.reduce((sum, file) => sum + file.sizeBytes, 0)
+ const shareOn = !!shareSettings?.enabled
+ const canCopy = shareOn && !!shareSettings?.hostingEnabled && !blocked
+ const shareId = 'tour-share-' + scan.id
+
  return <>
- <article className="saved-scan-card">
-  <div className="saved-scan-preview">
-   {scan.status === 'READY' && <ScanPreview scanId={scan.id} />}
-   <button type="button" className="scan-play-button" aria-label={`Open scan ${scan.name}`} disabled={deleting || deleteFailed || scan.status !== 'READY'} onClick={event => openViewer?.(scan, event.currentTarget)}>
-    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+  <Panel as="article" padding="none" className={compact ? 'tour-card tour-card--compact' : 'tour-card'}>
+   <button type="button" className="tour-card-media" tabIndex={compact ? undefined : -1} aria-label={`Walk through ${scan.name}`} disabled={!canWalk}
+    onClick={event => openViewer?.(scan, event.currentTarget)}>
+    <span className="tour-card-placeholder" aria-hidden="true"><Icon name="cube" size={28} /></span>
+    {ready && <ScanPreview scanId={scan.id} />}
+    {canWalk && <span className="tour-card-play" aria-hidden="true"><Icon name="play" size={20} /></span>}
    </button>
-  </div>
-  <div className="saved-scan-content">
-   <div className="saved-scan-summary">
-    <div className="saved-scan-heading"><span className="saved-scan-icon"><Icon name="scan" size={21} /></span><h3>{scan.name}</h3></div>
-    {scan.status === 'UPLOADING' && <p>This upload was interrupted. Its files may only be partially uploaded.</p>}
-    <div className="saved-scan-sharing-status">
-   {scan.status === 'READY' && <button type="button" role="switch" aria-checked={shareSettings?.enabled ?? false}
-    aria-label={'Shareable: ' + scan.name} aria-busy={updatingShare}
-    className="scan-shareable" disabled={deleting || deleteFailed || !shareSettings || updatingShare || sharing || (!shareSettings.hostingEnabled && !shareSettings.enabled)}
-    onClick={() => { void toggleShareable() }}>
-    <span className="scan-shareable-track" aria-hidden="true"><span /></span><span>Shareable</span>
-   </button>}
-  <div className="saved-scan-status"><span className={`status-pill ${scan.status === 'READY' ? 'status-pill--ready' : ''}`}>{scan.status === 'READY' ? 'Published' : scan.status === 'UPLOADING' ? 'Incomplete' : 'Failed'}</span>
 
-  </div>
+   <div className="tour-card-body">
+    <div className="tour-card-head">
+     <h3>{scan.name}</h3>
+     {(user.platformAdmin || !ready) && <StatusPill tone={statusTone[scan.status]}>{statusLabel[scan.status]}</StatusPill>}
     </div>
-    <div className="saved-scan-actions">
-     <div className="scan-share-actions">
-      <button type="button" className={'btn btn-ghost scan-share-toggle' + (shareOpen ? ' is-open' : '')}
-       aria-expanded={shareOpen} aria-controls={'scan-share-' + scan.id} disabled={deleting || deleteFailed || scan.status !== 'READY' || !shareSettings?.enabled || !shareSettings.hostingEnabled || updatingShare}
-       onClick={() => setShareOpen(value => !value)}><span>Share</span></button>
-      <div id={'scan-share-' + scan.id} className={'scan-share-options' + (shareOpen ? ' is-open' : '')} inert={!shareOpen} aria-hidden={!shareOpen}>
-       <div className="scan-share-options-inner">
-        {(['URL', 'IFRAME'] as const).map(kind => <button key={kind} type="button" disabled={sharing || updatingShare || !shareSettings?.enabled}
-         className={'btn btn-ghost scan-copy-button' + (copied === kind ? ' is-copied' : '')}
-         aria-label={copied === kind ? kind + ' copied' : 'Copy ' + kind} onClick={() => { void copyShare(kind) }}>
-         {copied === kind ? 'copied to clipboard' : kind}
-        </button>)}
-       </div>
-      </div>
+    <p className="tour-card-meta">{fileCount} {fileCount === 1 ? 'file' : 'files'} · {formatFileSize(sizeBytes)}</p>
+    {scan.status === 'UPLOADING' && <p className="tour-card-note">This upload stopped before it finished, so some files may be missing. Delete it and add the tour again.</p>}
+    {scan.status === 'FAILED' && <p className="tour-card-note">This upload failed and the tour cannot be opened. Delete it and add the tour again.</p>}
+
+    {!compact && <><Button icon="play" block disabled={!canWalk}
+     onClick={event => openViewer?.(scan, event.currentTarget as HTMLButtonElement)}>Walk through</Button>
+
+    {ready && <div className="tour-card-share">
+     <button type="button" role="switch" className="tour-switch" aria-checked={shareOn} aria-busy={updatingShare}
+      aria-label={`Share ${scan.name} with a link`} aria-controls={shareId}
+      disabled={blocked || !shareSettings || updatingShare || sharing || (!shareSettings.hostingEnabled && !shareSettings.enabled)}
+      onClick={() => { void toggleShareable() }}>
+      <span className="tour-switch-track" aria-hidden="true"><span /></span>
+      <span className="tour-switch-text">
+       <strong>Share with a link</strong>
+       <span>{!shareSettings ? 'Checking sharing' : shareOn ? 'On: anyone with the link can walk through.' : !shareSettings.hostingEnabled ? 'Not available for this tour.' : 'Off: only people who sign in can open it.'}</span>
+      </span>
+     </button>
+     <div id={shareId} className="tour-card-copy">
+      {canCopy && <>
+       <Button variant="secondary" icon={copied === 'URL' ? 'check' : 'link'} disabled={sharing || updatingShare}
+        onClick={() => { void copyShare('URL') }}>{copied === 'URL' ? 'Link copied' : 'Copy link'}</Button>
+       <Button variant="secondary" icon={copied === 'IFRAME' ? 'check' : 'code'} disabled={sharing || updatingShare}
+        onClick={() => { void copyShare('IFRAME') }}>{copied === 'IFRAME' ? 'Embed code copied' : 'Copy embed code'}</Button>
+      </>}
      </div>
-     <button type="button" className="btn btn-ghost" disabled={deleting || deleteFailed || downloading || scan.status !== 'READY'}
-      onClick={() => { void download() }}>{downloading ? 'Preparing…' : 'Download'}</button>
-     {user.platformAdmin && <span className="scan-delete-action"><button type="button" className="btn btn-ghost" disabled={deleting || updatingShare || sharing || downloading} onClick={() => { setActionError(''); setConfirmDelete(true) }}>{deleting ? 'Deleting…' : 'Delete'}</button></span>}
-    </div>
-    {actionError && <span className="scan-action-error" role="alert">{actionError}</span>}<span className="sr-only" role="status">{copied ? copied + ' copied to clipboard' : ''}</span>
-   </div>
-   <div className="saved-scan-files"><SceneFileList files={scan.files} /></div>
-  </div>
+    </div>}
 
- </article>
- {confirmDelete && <ConfirmDialog title="Delete scan?" confirmLabel="Delete scan" busy={deleting}
-  error={actionError} onCancel={() => setConfirmDelete(false)} onConfirm={() => { void removeScan() }}>
-  <p>Delete <strong>{scan.name}</strong> and all its files permanently? Its shared URL and iframe will stop working. This cannot be undone.</p>
- </ConfirmDialog>}
+    <div className="tour-card-quiet">
+     {ready && <Button variant="quiet" icon="download" loading={downloading} disabled={blocked}
+      onClick={() => { void download() }}>{downloading ? 'Preparing your copy' : 'Download a copy'}</Button>}
+     {user.platformAdmin && <Button variant="quiet" icon="trash" className="tour-card-delete" disabled={deleting || updatingShare || sharing || downloading}
+      onClick={() => { setActionError(''); setConfirmDelete(true) }}>{deleting ? 'Deleting' : 'Delete tour'}</Button>}
+    </div>
+    {downloading && <p className="tour-card-note" role="status">Packing the files into one download. It starts by itself when it is ready, and large tours take a while.</p>}
+
+    {!confirmDelete && <InlineError>{actionError}</InlineError>}
+    <span className="visually-hidden" role="status">{copied === 'URL' ? 'Link copied' : copied === 'IFRAME' ? 'Embed code copied' : ''}</span>
+
+    {scan.files.length > 0 && <details className="tour-card-files">
+     <summary><Icon name="chevron" size={14} />Files in this tour</summary>
+     <SceneFileList files={scan.files} />
+    </details>}</>}
+   </div>
+  </Panel>
+
+  {confirmDelete && <ConfirmDialog title="Delete this tour?" confirmLabel="Delete tour" busy={deleting}
+   error={actionError} onCancel={() => setConfirmDelete(false)} onConfirm={() => { void removeScan() }}>
+   <p>This deletes <strong>{scan.name}</strong> and all its files for good. Its link and embed stop working. You cannot undo this.</p>
+  </ConfirmDialog>}
  </>
 }

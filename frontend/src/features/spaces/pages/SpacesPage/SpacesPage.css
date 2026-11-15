@@ -1,0 +1,64 @@
+/* Spaces: a grid of glass cards on the place, then tours delivered outside a capture. */
+.spaces-tools { display: flex; align-items: center; gap: var(--s-3); }
+.spaces-search { width: 240px; }
+/* The search box sits on the photo, so its label is kept for screen readers only and the box gets its own frost. */
+.spaces-search > label { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.spaces-search input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']) { min-height: 44px; padding: 9px 16px; border-radius: 22px; border-color: var(--edge); background: var(--glass); box-shadow: var(--shadow-panel); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
+.spaces-search input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']):hover:not(:focus) { background: var(--control-hover); border-color: var(--edge); }
+
+.spaces-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--s-5); }
+.spaces-grid > li { display: flex; min-width: 0; }
+
+.spaces-card { display: flex; flex-direction: column; width: 100%; min-width: 0; padding: var(--s-2); border-radius: var(--r-panel); background: var(--glass); border: 1px solid var(--edge); box-shadow: var(--shadow-panel); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); color: var(--ink); animation: arrive var(--t-panel) var(--ease) both; transition: transform var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease); }
+.spaces-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-panel), var(--shadow-chip); }
+.spaces-card:active { transform: translateY(0) scale(.99); }
+.spaces-card:focus-visible { outline-offset: 3px; }
+
+.spaces-card-visual { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 10; border-radius: var(--r-card); overflow: hidden; background: var(--well); border: 1px solid var(--hair); }
+.spaces-card-visual img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--t-panel) var(--ease); }
+.spaces-card:hover .spaces-card-visual img { transform: scale(1.03); }
+/* A plan is a drawing: show all of it on an opaque sheet. */
+.spaces-card-visual--plan { background: var(--solid); }
+.spaces-card-visual--plan img { object-fit: contain; padding: var(--s-3); }
+.spaces-placeholder { width: 62%; height: auto; }
+.spaces-placeholder-floor { fill: var(--well); }
+.spaces-placeholder-wall { stroke: var(--ink-3); stroke-width: 2; stroke-linecap: square; }
+.spaces-placeholder-point { stroke: var(--ink-3); stroke-width: 1.5; }
+
+/* Loading shape: same card, but nothing to hover or press. */
+.spaces-card--skeleton, .spaces-card--skeleton:hover { transform: none; box-shadow: var(--shadow-panel); }
+.spaces-card--skeleton .spaces-card-visual { width: 100%; }
+.spaces-card-body { display: flex; flex-direction: column; gap: 6px; padding: var(--s-4) var(--s-3) var(--s-3); }
+.spaces-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-3); }
+.spaces-card-name { min-width: 0; font-size: 17px; line-height: 1.25; letter-spacing: -.01em; overflow-wrap: anywhere; text-wrap: pretty; }
+.spaces-card-top .pill { flex: none; }
+.spaces-card-line { font-size: 14px; color: var(--ink-2); }
+.spaces-card-date { margin-top: 2px; font-size: 13px; color: var(--ink-2); }
+.spaces-card-date .num { font-size: 12px; }
+
+/* More tours from the team */
+.spaces-more-head { padding: 6px var(--s-2) var(--s-3); }
+.spaces-more-head h2 { font-size: 17px; letter-spacing: -.01em; }
+.spaces-more-head p { margin-top: 3px; font-size: 13px; color: var(--ink-2); }
+.spaces-more-row { display: flex; align-items: center; gap: var(--s-3); min-height: 60px; padding: 9px var(--s-2); border-radius: var(--r-control); transition: background-color var(--t-fast) var(--ease); }
+.spaces-more-row:hover { background: var(--control); }
+.spaces-more-row:active { background: var(--control-hover); }
+.spaces-more-row > svg { color: var(--ink-3); transition: transform var(--t-fast) var(--ease), color var(--t-fast) var(--ease); }
+.spaces-more-row:hover > svg { color: var(--ink); transform: translateX(2px); }
+.spaces-more-icon { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 12px; background: var(--fill); color: var(--ink); }
+.spaces-more-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.spaces-more-name { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spaces-more-org { font-size: 13px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spaces-more-count { flex: none; font-size: 13px; color: var(--ink-2); }
+.spaces-more-count .num { color: var(--ink); font-weight: 500; }
+
+@media (max-width: 900px) {
+ .spaces-tools { width: 100%; }
+ .spaces-search { flex: 1; width: auto; min-width: 0; }
+ .spaces-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--s-3); }
+ .spaces-card { border-radius: 22px; padding: 6px; }
+ .spaces-card-visual { border-radius: 16px; }
+}
+@media (prefers-reduced-transparency: reduce) {
+ .spaces-card, .spaces-search input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']) { background: var(--solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

@@ -7,19 +7,19 @@ export type Project = {
 function checkResponse(response: Response) {
   if (response.status === 401) {
     window.location.replace('/login')
-    throw new Error('Session expired.')
+    throw new Error('Your session expired. Sign in again.')
   }
   if (response.status === 403) {
-    throw new Error('You do not have permission for this action.')
+    throw new Error('You do not have permission to do this.')
   }
   if (response.status === 404) {
-    throw new Error('Organization not found.')
+    throw new Error('This customer could not be found.')
   }
   if (response.status === 400) {
-    throw new Error('Enter a project name of 1–200 characters.')
+    throw new Error('Enter a space name of 1 to 200 characters.')
   }
   if (!response.ok) {
-    throw new Error('The request failed. Please try again.')
+    throw new Error('That did not go through. Try again.')
   }
 }
 

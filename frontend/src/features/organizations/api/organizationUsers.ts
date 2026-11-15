@@ -9,29 +9,29 @@ export type OrganizationUser = {
 function checkResponse(response: Response) {
   if (response.status === 401) {
     window.location.replace("/login");
-    throw new Error("Session expired.");
+    throw new Error("Your session expired. Sign in again.");
   }
 
   if (response.status === 403) {
-    throw new Error("You do not have permission for this action.");
+    throw new Error("You do not have permission to do this.");
   }
 
   if (response.status === 404) {
-    throw new Error("Organization not found.");
+    throw new Error("This customer could not be found.");
   }
 
   if (response.status === 409) {
-    throw new Error("Email is already in use or user data conflicts.");
+    throw new Error("That email is already in use. Use a different email for this person.");
   }
 
   if (response.status === 400) {
     throw new Error(
-      "Check the name, email and password. Password must not exceed 72 bytes.",
+      "Check the name, email and password. The password must be 72 bytes or shorter.",
     );
   }
 
   if (!response.ok) {
-    throw new Error("The request failed. Please try again.");
+    throw new Error("That did not go through. Try again.");
   }
 }
 

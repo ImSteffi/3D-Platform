@@ -1,3 +1,2 @@
-.admin-project-page h1 { overflow-wrap: anywhere; margin: 4px 0 30px; }
-.admin-project-scans { padding: 26px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); }
-@media(max-width:600px) { .admin-project-scans { padding: 18px; } }
+/* Layout comes from features/organizations/styles/customers.css and the tour components. */
+.admin-space-page .tour-list .empty { padding-block: var(--s-7); }
