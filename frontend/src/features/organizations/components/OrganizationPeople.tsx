@@ -34,6 +34,7 @@ export default function OrganizationPeople({ organizationId, title }: { organiza
   const normalizedEmail = email.trim().toLowerCase()
   if (!trimmedName || !normalizedEmail || !password.trim()) { setFormError('Enter a name, an email and a first password.'); return }
   if (trimmedName.length > 200 || normalizedEmail.length > 254) { setFormError('The name or the email is too long. Shorten it and try again.'); return }
+  if (password.length < 8) { setFormError('The password needs at least 8 characters.'); return }
   if (new TextEncoder().encode(password).length > 72) { setFormError('The password is too long. Use 72 bytes or fewer.'); return }
   setSaving(true)
   setFormError('')
@@ -62,7 +63,7 @@ export default function OrganizationPeople({ organizationId, title }: { organiza
     <fieldset className="desk-form-fields" disabled={saving}>
      <Field name="displayName" label="Name" value={displayName} onChange={setDisplayName} autoComplete="off" autoFocus maxLength={200} />
      <Field name="email" label="Email" type="email" inputMode="email" value={email} onChange={setEmail} autoComplete="off" />
-     <Field name="password" label="First password" type="password" value={password} onChange={setPassword} autoComplete="new-password" />
+     <Field name="password" label="First password" type="password" value={password} onChange={setPassword} autoComplete="new-password" hint="At least 8 characters." />
      <InlineError>{formError}</InlineError>
      <div className="desk-form-actions">
       <Button type="submit" loading={saving}>{saving ? 'Adding person' : 'Add person'}</Button>

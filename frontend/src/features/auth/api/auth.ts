@@ -2,6 +2,8 @@ export type CurrentUser = {
   displayName: string;
   email: string;
   platformAdmin: boolean;
+  /** The one admin who adds and removes the other admins. */
+  owner: boolean;
   organizationNames: string[];
 };
 
@@ -33,6 +35,10 @@ export async function login(email: string, password: string): Promise<void> {
       password,
     }),
   });
+
+  if (response.status === 429) {
+    throw new Error("Too many sign-in attempts. Wait 15 minutes and try again.");
+  }
 
   if (response.status === 401) {
     throw new Error("Wrong email or password.");

@@ -1,5 +1,5 @@
 /* Learn: one glass panel per lesson, an authored line diagram beside plain words. */
-.learn-page { max-width: 980px; }
+
 .learn-lesson { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-7); align-items: center; animation: arrive var(--t-panel) var(--ease) both; }
 .learn-figure { display: grid; place-items: center; padding: var(--s-4); border-radius: var(--r-card); background: var(--solid); border: 1px solid var(--hair); }
 

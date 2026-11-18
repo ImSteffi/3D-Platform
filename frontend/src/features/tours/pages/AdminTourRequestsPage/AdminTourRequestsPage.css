@@ -1,5 +1,5 @@
 /* Queue (Desk): one frosted window on the ambient ground. */
-.page.q-page { max-width: 1280px; }
+
 .q-window { display: flex; flex-direction: column; gap: var(--s-6); container-type: inline-size; }
 
 /* Count cards: real counts that double as filters. */

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { useParams } from 'react-router'
 import { useShellMode } from '../../../../shared/layout/Backdrop'
-import { Button, Icon, InlineError, Panel, Skeleton, SkeletonGroup, StatusPill, WhoseMove } from '../../../../shared/ui'
+import { Button, Icon, InlineError, Panel, Skeleton, SkeletonGroup, WhoseMove } from '../../../../shared/ui'
 import { getTourRequest, photoCounts, whoseMove, type TourDetail } from '../../api/tourRequests'
+import { useLiveTour } from '../../api/useLiveTour'
 import DeliverTour from '../../components/review/DeliverTour'
 import PhotoDesk from '../../components/review/PhotoDesk'
 import PlanEditor from '../../components/review/PlanEditor'
 import PlanWaiting from '../../components/review/PlanWaiting'
-import { errorText, formatDate, operatorStatus, plural, statusTone } from '../../components/review/reviewText'
+import { errorText, formatDate } from '../../components/review/reviewText'
 import './AdminTourRequestPage.css'
 
 type Loaded = { key: string; tour?: TourDetail; error?: string }
@@ -41,6 +42,8 @@ export default function AdminTourRequestPage() {
  const state = loaded?.key === key ? loaded : null
  const tour = state?.tour
  const setTour = (updated: TourDetail) => setLoaded({ key, tour: updated })
+ // The customer's uploads and changes show up here as they happen.
+ useLiveTour(tour ? id : null, () => getTourRequest(id), setTour, tour ?? null, false)
  const back = <Button variant="quiet" to="/review" icon="back" className="rq-back">Queue</Button>
 
  if (!tour) return <main className="page rq-page">
@@ -74,8 +77,6 @@ export default function AdminTourRequestPage() {
    </SkeletonGroup>}
  </main>
 
- const areas = tour.areas.length
- const points = tour.areas.reduce((sum, area) => sum + area.points.length, 0)
  // A floor added after the plan was sent puts the next move back with the operator.
  const newFloor = tour.status === 'PLAN_READY' && tour.areas.some(area => area.hasPlan && !area.points.length)
 
@@ -87,29 +88,23 @@ export default function AdminTourRequestPage() {
     <p>
      <span>{tour.ownerName}</span>
      {tour.ownerEmail && <a href={'mailto:' + tour.ownerEmail} className="rq-mail">{tour.ownerEmail}</a>}
-     <span>{plural(areas, 'area')}{points > 0 && <>, {plural(points, 'point')}</>}</span>
+     <span className="rq-created">Created <time dateTime={tour.createdAt} className="num">{formatDate(tour.createdAt)}</time></span>
     </p>
    </div>
    <div className="rq-meta">
-    {newFloor ? <StatusPill tone="amber">New floor to plan</StatusPill> : <StatusPill tone={statusTone(tour.status)}>{operatorStatus[tour.status] ?? tour.status}</StatusPill>}
     {tour.status !== 'DELIVERED' && !newFloor && <WhoseMove who={whoseMove(tour.status)} perspective="operator" />}
-    <span className="rq-created">Created <time dateTime={tour.createdAt} className="num">{formatDate(tour.createdAt)}</time></span>
    </div>
   </header>
 
   <Panel padding="lg" className="rq-window">
    {tour.notes && <p className="rq-notes"><Icon name="info" size={16} /><span><b>Note from the customer.</b> {tour.notes}</span></p>}
-   {tour.status === 'SUBMITTED' && <PlanEditor key={tour.id} tour={tour} onTour={setTour} />}
+   {(tour.status === 'SUBMITTED' || tour.status === 'DRAFT') && <PlanEditor key={tour.id} tour={tour} onTour={setTour} />}
    {tour.status === 'PLAN_READY' && <PlanWaiting key={tour.id} tour={tour} onTour={setTour} />}
    {tour.status === 'PHOTOS_SUBMITTED' && <PhotoDesk key={tour.id} tour={tour} onTour={setTour} mode="review" editable />}
    {(tour.status === 'APPROVED' || tour.status === 'DELIVERED') && <>
     <DeliverTour key={tour.id + tour.status} tour={tour} onTour={setTour} />
     <ApprovedPhotos tour={tour} onTour={setTour} />
    </>}
-   {tour.status === 'DRAFT' && <div className="rq-draft">
-    <h2>The customer is still setting up this space</h2>
-    <p>It appears in your queue as soon as they add their floor plans and send it. <Link to="/review" className="rv-link">Back to the queue</Link></p>
-   </div>}
   </Panel>
  </main>
 }

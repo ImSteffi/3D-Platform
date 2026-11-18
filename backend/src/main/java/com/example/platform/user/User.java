@@ -27,6 +27,10 @@ public class User {
     @Column(name = "is_platform_admin", nullable = false)
     private boolean platformAdmin;
 
+    // The one admin who adds and removes the other admins. Never removable.
+    @Column(name = "is_owner", nullable = false)
+    private boolean owner;
+
     protected User() {
     }
 
@@ -55,5 +59,16 @@ public class User {
 
     public boolean isPlatformAdmin() {
         return platformAdmin;
+    }
+
+    public boolean isOwner() {
+        return owner;
+    }
+
+    /** A team member: can do all the work, but is not the owner. */
+    public static User admin(String displayName, String email, String passwordHash) {
+        var user = new User(displayName, email, passwordHash);
+        user.platformAdmin = true;
+        return user;
     }
 }

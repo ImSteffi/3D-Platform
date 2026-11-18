@@ -64,6 +64,11 @@ public class TourRequestController {
         return service.savePlan(id, areaId, body(request, TourRequestService.MAX_PLAN_BYTES), authentication);
     }
 
+    @DeleteMapping("/{id}/areas/{areaId}/plan")
+    public TourRequestService.Detail removePlan(@PathVariable Long id, @PathVariable Long areaId, Authentication authentication) {
+        return service.removePlan(id, areaId, authentication);
+    }
+
     @GetMapping("/{id}/areas/{areaId}/plan")
     public ResponseEntity<Void> plan(@PathVariable Long id, @PathVariable Long areaId, Authentication authentication) {
         return redirect(service.planUrl(id, areaId, authentication));
@@ -89,6 +94,24 @@ public class TourRequestController {
     public TourRequestService.Detail deletePhoto(@PathVariable Long id, @PathVariable Long pointId,
             Authentication authentication) {
         return service.deletePhoto(id, pointId, authentication);
+    }
+
+    // Photos added to a floor directly, before or without a plan.
+    @PostMapping("/{id}/areas/{areaId}/photos")
+    public TourRequestService.Detail addFloorPhoto(@PathVariable Long id, @PathVariable Long areaId,
+            HttpServletRequest request, Authentication authentication) throws IOException {
+        return service.addFloorPhoto(id, areaId, body(request, TourRequestService.MAX_PHOTO_BYTES), authentication);
+    }
+
+    @GetMapping("/{id}/floor-photos/{photoId}")
+    public ResponseEntity<Void> floorPhoto(@PathVariable Long id, @PathVariable Long photoId, Authentication authentication) {
+        return redirect(service.floorPhotoUrl(id, photoId, authentication));
+    }
+
+    @DeleteMapping("/{id}/floor-photos/{photoId}")
+    public TourRequestService.Detail deleteFloorPhoto(@PathVariable Long id, @PathVariable Long photoId,
+            Authentication authentication) {
+        return service.deleteFloorPhoto(id, photoId, authentication);
     }
 
     @PostMapping("/{id}/photos/submit")

@@ -62,6 +62,19 @@
 .area-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 .area-body { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--s-5); align-items: start; margin-top: var(--s-5); }
 .area-plan { display: grid; place-items: center; min-height: 220px; padding: 10px; border-radius: var(--r-card); background: var(--well); border: 1px solid var(--edge); }
+.area-plan-note { justify-self: start; margin: 2px 4px 10px; font-size: 14px; color: var(--ink-2); }
+.area-photos-lead { margin: 0 0 10px; font-size: 14px; color: var(--ink-2); }
+.area-body--tour { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.area-body--tour > .area-plan, .area-body--tour > .area-tour, .area-body--tour > .area-spatial, .area-body--tour > .area-making { align-self: stretch; }
+/* Customer: the team has the spatial context and is making the tour. */
+.area-making { display: grid; place-items: center; min-height: 220px; padding: var(--s-6); border-radius: var(--r-card); background: #111; color: #f6f5f2; text-align: center; }
+.area-making p { max-width: 14ch; font-size: clamp(26px, 2.4vw + 12px, 44px); font-weight: 700; line-height: 1.05; letter-spacing: -.01em; text-transform: uppercase; }
+/* The floor's spatial context, in place of the tour until there is one: the 3D view with its photo strip. */
+.area-spatial { display: flex; flex-direction: column; min-height: 420px; padding: 12px; overflow: hidden; border-radius: var(--r-card); background: #111; color: #f6f5f2; }
+.area-spatial .spatial-viewer { flex: 1; }
+.area-body--tour > .area-photos { grid-column: 1 / -1; }
+.area-tour { display: grid; place-items: center; min-height: 220px; height: 100%; border-radius: var(--r-card); background: #111; }
+.area-tour-play { display: grid; place-items: center; width: 64px; height: 64px; padding-left: 4px; border-radius: 50%; background: #fff; color: #111; box-shadow: 0 4px 16px rgb(0 0 0 / .25); }
 /* As wide as its slot, but never taller than most of the screen. */
 .area-plan .plan-view { width: min(100%, calc(62svh * var(--plan-ratio, 1.4))); }
 .area-mark { min-height: 32px; padding: 0 14px; font-size: 13px; }
@@ -141,3 +154,30 @@
 .area-photos-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px var(--s-4); }
 .area-photos-line { display: flex; align-items: center; gap: 10px; margin: 8px 0 var(--s-3); font-size: 14px; color: var(--ink-2); overflow-wrap: anywhere; }
 .area-photos-line--retake { color: var(--red); }
+.area-send { display: flex; justify-content: flex-end; margin-top: 16px; }
+
+/* A floor's own photos, added straight away (FloorGallery) */
+.floor-gallery { border-radius: 14px; transition: background-color var(--t-fast) var(--ease), outline-color var(--t-fast) var(--ease); outline: 1.5px dashed transparent; outline-offset: 6px; }
+.floor-gallery.is-over { outline-color: var(--amber); background: var(--amber-soft); }
+.floor-gallery + .floor-gallery, .frames + .floor-gallery { margin-top: var(--s-5); }
+.floor-gallery .frames { margin-top: var(--s-3); }
+.floor-gallery-hint { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 14px; color: var(--ink-2); }
+.floor-gallery-empty { margin-top: var(--s-3); padding: var(--s-5); border: 1.5px dashed var(--hair-strong); border-radius: 14px; font-size: 14px; color: var(--ink-2); text-align: center; }
+.frame-more { display: grid; place-content: center; gap: 2px; width: 100%; border: 1px solid var(--edge); background: var(--well); color: var(--ink-2); font: inherit; font-size: 13px; cursor: pointer; text-align: center; }
+.frame-more strong { font-size: 18px; color: var(--ink); }
+.frame-more:hover { background: var(--hair); }
+.area-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start; gap: 10px; margin-top: var(--s-5); }
+.area-foot .spatial { margin-top: 0; justify-items: end; text-align: right; }
+/* The photo going up right now: its preview, dimmed, with a spinner over it. */
+.frame--uploading { display: grid; place-items: center; border-style: solid; }
+.frame--uploading img { opacity: .55; }
+.frame-uploading { position: absolute; inset: 0; display: grid; place-items: center; }
+/* A photo the spatial context does not include yet. */
+.frame.frame--new { outline: 3px solid var(--amber, #f2a31b); outline-offset: -3px; }
+@media (max-width: 900px) {
+ /* Footer buttons (spatial context, 3D tour) full width, one under the other. */
+ .area-foot { flex-direction: column; align-items: stretch; }
+ .area-foot .spatial { justify-items: stretch; text-align: left; }
+ .area-foot .btn { width: 100%; }
+ .area-spatial { min-height: 320px; padding: 8px; }
+}

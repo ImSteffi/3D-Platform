@@ -38,6 +38,10 @@ public class CapturePoint {
     protected CapturePoint() {
     }
 
+    // True when the photo came in through a gallery link: only such photos can be deleted through the link.
+    @jakarta.persistence.Column(name = "photo_via_link", nullable = false)
+    private boolean photoViaLink;
+
     public CapturePoint(TourArea area, int seq, double x, double y, double direction, String note) {
         this.area = area;
         this.seq = seq;
@@ -58,6 +62,8 @@ public class CapturePoint {
     public String getRetakeNote() { return retakeNote; }
     public void setPhotoObjectKey(String photoObjectKey) { this.photoObjectKey = photoObjectKey; }
     public void setRetakeNote(String retakeNote) { this.retakeNote = retakeNote; }
+    public boolean isPhotoViaLink() { return photoViaLink; }
+    public void setPhotoViaLink(boolean photoViaLink) { this.photoViaLink = photoViaLink; }
     public void setSeq(int seq) { this.seq = seq; }
     public void setPosition(double x, double y) { this.x = x; this.y = y; }
     public void setDirection(double direction) { this.direction = direction; }

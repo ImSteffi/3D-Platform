@@ -1,3 +1,4 @@
+import { PLATFORM_NAME } from '../../brand'
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { getCurrentUser, logout, type CurrentUser } from '../../../features/auth/api/auth'
@@ -91,7 +92,7 @@ function Shell() {
    <Backdrop mode={mode} url={backdrop.url} />
    <a className="skip-link" href="#workspace-main">Skip to content</a>
    {mode !== 'lens' && <header className="workspace-topbar">
-    <Link className="workspace-brand" to={home}><span className="brand-symbol"><Icon name="cube" size={18} /></span><span>3D Platform</span></Link>
+    <Link className="workspace-brand" to={home}><span className="brand-symbol"><Icon name="cube" size={18} /></span><span>{PLATFORM_NAME}</span></Link>
     <button ref={accountToggle} type="button" className="workspace-avatar workspace-avatar--button" aria-label={`Account: ${user.displayName}`}
      aria-haspopup="true" aria-expanded={accountOpen} aria-controls="workspace-account-menu" onClick={() => setAccountOpen(!accountOpen)}>{initials}</button>
     {accountOpen && <>
@@ -104,7 +105,7 @@ function Shell() {
     </>}
    </header>}
    {mode !== 'lens' && <aside className="sidebar" aria-label="Main navigation">
-    <Link className="workspace-brand" to={home}><span className="brand-symbol"><Icon name="cube" size={18} /></span><span>3D Platform</span></Link>
+    <Link className="workspace-brand" to={home}><span className="brand-symbol"><Icon name="cube" size={18} /></span><span>{PLATFORM_NAME}</span></Link>
     <nav className="sidebar-nav">
      {items.map(item => <NavLink key={item.to} to={item.to}>
       <Icon name={item.icon} /><span>{item.label}</span>

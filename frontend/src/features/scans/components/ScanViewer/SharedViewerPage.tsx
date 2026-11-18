@@ -4,7 +4,7 @@ import { WorkspaceContext } from '../../../../shared/layout/WorkspaceLayout/Work
 import SplatScene from './SplatScene'
 import './SplatScene.css'
 
-const guest = { displayName: '', email: '', platformAdmin: false, organizationNames: [] }
+const guest = { displayName: '', email: '', platformAdmin: false, owner: false, organizationNames: [] }
 
 /** What a customer's viewer sees with no account: the tour, full-bleed, and nothing else. */
 export default function SharedViewerPage() {

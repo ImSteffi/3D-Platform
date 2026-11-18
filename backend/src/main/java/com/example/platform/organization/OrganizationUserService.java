@@ -63,6 +63,11 @@ public class OrganizationUserService {
                     HttpStatus.CONFLICT, "Email already exists");
         }
 
+        if (password.length() < 8) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "The password needs at least 8 characters.");
+        }
+
         if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,

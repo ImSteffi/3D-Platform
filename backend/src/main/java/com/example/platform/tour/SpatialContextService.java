@@ -30,6 +30,7 @@ public class SpatialContextService {
     private final TourRequestRepository tours;
     private final TourAreaRepository areas;
     private final CapturePointRepository points;
+    private final FloorPhotoRepository floorPhotos;
     private final SpatialContextRunRepository runs;
     private final SpatialContextFrameRepository frames;
     private final UserRepository users;
@@ -38,11 +39,12 @@ public class SpatialContextService {
     private final String bucket;
 
     public SpatialContextService(TourRequestRepository tours, TourAreaRepository areas, CapturePointRepository points,
-            SpatialContextRunRepository runs, SpatialContextFrameRepository frames, UserRepository users,
+            FloorPhotoRepository floorPhotos, SpatialContextRunRepository runs, SpatialContextFrameRepository frames, UserRepository users,
             AtlasClient atlas, S3Client r2, @Value("${storage.r2.bucket-name}") String bucket) {
         this.tours = tours;
         this.areas = areas;
         this.points = points;
+        this.floorPhotos = floorPhotos;
         this.runs = runs;
         this.frames = frames;
         this.users = users;
@@ -61,21 +63,21 @@ public class SpatialContextService {
         var latest = runs.findByArea_IdOrderByIdDesc(areaId).stream().findFirst().orElse(null);
         if (latest != null && latest.getStatus() == SpatialContextRun.Status.RUNNING)
             throw error(409, "Spatial context is already running for this floor.");
-        var photos = points.findByArea_IdOrderBySeqAsc(areaId).stream()
-                .filter(point -> point.getPhotoObjectKey() != null).toList();
+        var photos = sources(areaId);
         if (photos.isEmpty()) throw error(409, "This floor has no photos yet.");
         if (photos.size() > MAX_FRAMES) throw error(409, "Spatial context takes at most " + MAX_FRAMES + " photos.");
 
         var run = runs.save(new SpatialContextRun(area));
         var entries = new ArrayList<SpatialContextFrame>();
-        for (int i = 0; i < photos.size(); i++) entries.add(frames.save(new SpatialContextFrame(run, i, photos.get(i))));
+        for (int i = 0; i < photos.size(); i++) entries.add(frames.save(new SpatialContextFrame(run, i, photos.get(i).point())));
         try {
             var assetIds = new ArrayList<String>();
-            for (var point : photos) {
-                var bytes = r2.getObjectAsBytes(b -> b.bucket(bucket).key(point.getPhotoObjectKey())).asByteArray();
+            for (int i = 0; i < photos.size(); i++) {
+                var key = photos.get(i).key();
+                var bytes = r2.getObjectAsBytes(b -> b.bucket(bucket).key(key)).asByteArray();
                 var type = TourRequestService.imageType(bytes);
-                if (type == null) throw new AtlasClient.AtlasException("Photo " + point.getSeq() + " is not a JPG, PNG or WebP image.");
-                var name = String.format("area-%d-point-%02d.%s", areaId, point.getSeq(), type.substring(6));
+                if (type == null) throw new AtlasClient.AtlasException("Photo " + (i + 1) + " is not a JPG, PNG or WebP image.");
+                var name = String.format("area-%d-photo-%02d.%s", areaId, i + 1, type.substring(6));
                 assetIds.add(atlas.uploadAsset(name, type, bytes));
             }
             run.setOperationId(atlas.submitPosedRgbd(assetIds, "spatial-context-run-" + run.getId()));
@@ -164,9 +166,11 @@ public class SpatialContextService {
     }
 
     private Result result(TourArea area, SpatialContextRun run, List<SpatialContextFrame> entries) {
-        int photos = (int) points.findByArea_IdOrderBySeqAsc(area.getId()).stream()
-                .filter(point -> point.getPhotoObjectKey() != null).count();
-        if (run == null) return new Result(null, "NONE", null, null, null, photos, atlas.configured(), List.of());
+        int photos = sources(area.getId()).size();
+        if (run == null) return new Result(null, "NONE", null, null, null, photos, atlas.configured(), List.of(), List.of());
+        // Gallery photos added after this run started: the spatial context does not include them yet.
+        var fresh = floorPhotos.findByArea_IdOrderByIdAsc(area.getId()).stream()
+                .filter(photo -> photo.getCreatedAt().isAfter(run.getCreatedAt())).map(FloorPhoto::getId).toList();
         var base = "/api/admin/tour-requests/" + area.getTourRequest().getId() + "/areas/" + area.getId()
                 + "/spatial-context/runs/" + run.getId() + "/frames/";
         var done = run.getStatus() == SpatialContextRun.Status.SUCCEEDED;
@@ -178,7 +182,19 @@ public class SpatialContextService {
                 done && entry.getConfidenceObjectKey() != null ? base + entry.getFrameIndex() + "/confidence" : null))
                 .toList();
         return new Result(run.getId(), run.getStatus().name(), run.getError(), run.getCreatedAt(), run.getFinishedAt(),
-                photos, atlas.configured(), list);
+                photos, atlas.configured(), list, fresh);
+    }
+
+    /** One photo going to Atlas: a spot photo (with its point) or a floor gallery photo (no point). */
+    private record Source(CapturePoint point, String key) {}
+
+    // Spot photos in spot order, then the floor's own gallery photos in upload order.
+    private List<Source> sources(Long areaId) {
+        var list = new ArrayList<Source>();
+        points.findByArea_IdOrderBySeqAsc(areaId).stream().filter(point -> point.getPhotoObjectKey() != null)
+                .forEach(point -> list.add(new Source(point, point.getPhotoObjectKey())));
+        floorPhotos.findByArea_IdOrderByIdAsc(areaId).forEach(photo -> list.add(new Source(null, photo.getObjectKey())));
+        return list;
     }
 
     private TourArea area(Long tourId, Long areaId) {
@@ -211,5 +227,7 @@ public class SpatialContextService {
             String confidenceUrl) {}
     /** status: NONE, RUNNING, SUCCEEDED or FAILED. */
     public record Result(Long runId, String status, String error, Instant createdAt, Instant finishedAt, int photoCount,
-            boolean configured, List<FrameResult> frames) {}
+            boolean configured, List<FrameResult> frames,
+            // Gallery photos newer than this run, so the team knows to update it.
+            List<Long> newPhotoIds) {}
 }

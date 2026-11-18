@@ -43,6 +43,7 @@ public class AuthController {
                 user.getDisplayName(),
                 user.getEmail(),
                 user.isPlatformAdmin(),
+                user.isOwner(),
                 membershipRepository.findOrganizationNamesByUserId(user.getId()));
     }
 
@@ -53,6 +54,7 @@ public class AuthController {
             String displayName,
             String email,
             boolean platformAdmin,
+            boolean owner,
             List<String> organizationNames) {
     }
 }

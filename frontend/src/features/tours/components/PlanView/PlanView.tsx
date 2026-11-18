@@ -18,6 +18,8 @@ type Props = {
  selected?: string | number | null
  /** Shows each point's number at the end of its direction line. */
  numbered?: boolean
+ /** Plain dots: no number inside the disc. */
+ unlabeled?: boolean
  /** Dot diameter and direction line length, in pixels at a plan width of 800. */
  dotSize?: number
  lineLength?: number
@@ -33,7 +35,7 @@ export const DEFAULT_DOT_SIZE = 22
 export const DEFAULT_LINE_LENGTH = 26
 const clamp = (value: number) => Math.min(1, Math.max(0, value))
 
-export default function PlanView({ src, alt, markers = [], selected, numbered, dotSize = DEFAULT_DOT_SIZE, lineLength = DEFAULT_LINE_LENGTH, onSelect, onPlanClick, onMove, onRotate }: Props) {
+export default function PlanView({ src, alt, markers = [], selected, numbered, unlabeled, dotSize = DEFAULT_DOT_SIZE, lineLength = DEFAULT_LINE_LENGTH, onSelect, onPlanClick, onMove, onRotate }: Props) {
  const [ratio, setRatio] = useState(0)
  const [failedSrc, setFailedSrc] = useState('')
  // The shimmer runs only until this plan has loaded, so it never shows around a transparent plan.
@@ -85,8 +87,8 @@ export default function PlanView({ src, alt, markers = [], selected, numbered, d
     {pick
      ? <button type="button" className={dot} aria-label={'Point ' + marker.label} aria-pressed={selected === marker.key}
       onClick={() => pick(marker.key)} onPointerDown={event => start(event, marker, 'move')}
-      onPointerMove={event => track(event, marker)} onPointerUp={stop} onPointerCancel={stop}>{!numbered && marker.label}</button>
-     : <span className={dot}>{!numbered && marker.label}</span>}
+      onPointerMove={event => track(event, marker)} onPointerUp={stop} onPointerCancel={stop}>{!numbered && !unlabeled && marker.label}</button>
+     : <span className={dot}>{!numbered && !unlabeled && marker.label}</span>}
    </div>
   })}
   {markers.map(marker => {

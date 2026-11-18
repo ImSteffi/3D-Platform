@@ -37,3 +37,4 @@
 @media (max-width: 900px) {
  .spatial-sheet-panel { width: calc(100vw - 24px); margin: 12px; }
 }
+.spatial-hint--bare { margin: 10px 4px 0; font-size: 13px; }\n.spatial-stage canvas:focus-visible { outline: 2px solid var(--amber, #f2a31b); outline-offset: -2px; }

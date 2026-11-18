@@ -1,5 +1,5 @@
 /* One request (Desk): header on the ground, one frosted window, opaque wells inside it (review.css). */
-.page.rq-page { max-width: 1560px; gap: var(--s-3); }
+.page.rq-page { gap: var(--s-3); }
 .rq-top { display: flex; margin: -4px 0 -8px -10px; }
 .rq-back { height: 36px; }
 .rq-header { align-items: flex-end; }

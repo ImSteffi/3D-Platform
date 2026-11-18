@@ -1,3 +1,4 @@
+import { PLATFORM_NAME } from '../../../../shared/brand'
 import './LoginPage.css'
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
@@ -37,7 +38,7 @@ export default function LoginPage() {
     <main className="login-page">
       <Backdrop />
       <Panel as="div" padding="lg" className="login-panel">
-        <p className="login-brand"><span className="login-brand-symbol"><Icon name="cube" size={18} /></span>3D Platform</p>
+        <p className="login-brand"><span className="login-brand-symbol"><Icon name="cube" size={18} /></span>{PLATFORM_NAME}</p>
         <h1>Sign in</h1>
         <form className="login-form" onSubmit={handleSubmit}>
           <Field
@@ -64,7 +65,6 @@ export default function LoginPage() {
           <InlineError>{error}</InlineError>
           <Button type="submit" size="lg" block loading={submitting}>{submitting ? "Signing in…" : "Sign in"}</Button>
         </form>
-        <p className="login-support">No account yet? Accounts are set up by our team. Ask the person who arranged your tour.</p>
       </Panel>
     </main>
   );

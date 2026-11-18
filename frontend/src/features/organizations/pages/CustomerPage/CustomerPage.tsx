@@ -1,11 +1,12 @@
 import BackLink from '../../../../shared/ui/BackLink/BackLink'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useParams } from 'react-router'
 import { useShellMode } from '../../../../shared/layout/Backdrop'
 import { Button, EmptyState, InlineError, Panel, Skeleton, SkeletonGroup } from '../../../../shared/ui'
 import ScanCard from '../../../scans/components/ScanCard/ScanCard'
-import { getAdminUser, getAdminUserTourRequests, type AdminUser, type TourSummary } from '../../../tours/api/tourRequests'
-import AdminSpace from './AdminSpace'
+import { adminCreateSpaceForUser, getAdminUser, getAdminUserTourRequests, type AdminUser, type TourSummary } from '../../../tours/api/tourRequests'
+import { SpaceCard, type DetailCache } from '../../../spaces/pages/SpacesPage/SpacesPage'
+import '../../../spaces/pages/SpacesPage/SpacesPage.css'
 import { useCustomerTours, type CustomerTour } from './CustomerTours'
 import '../../styles/customers.css'
 import '../../../scans/components/ProjectScanList/ProjectScanList.css'
@@ -25,6 +26,7 @@ export default function CustomerPage() {
  const [spaces, setSpaces] = useState<TourSummary[] | null>(null)
  const [spacesError, setSpacesError] = useState('')
  const [attempt, setAttempt] = useState(0)
+ const [cache] = useState<DetailCache>(() => new Map())
 
  useEffect(() => {
   let active = true
@@ -37,6 +39,22 @@ export default function CustomerPage() {
  }, [id, attempt])
 
  const { tours, error: toursError, retry: retryTours, remove } = useCustomerTours(user?.organizations ?? null)
+
+ const [address, setAddress] = useState('')
+ const [creating, setCreating] = useState(false)
+ const [createError, setCreateError] = useState('')
+ async function createSpace(event: FormEvent) {
+  event.preventDefault()
+  const name = address.trim()
+  if (!name) return
+  setCreating(true); setCreateError('')
+  try {
+   const made = await adminCreateSpaceForUser(id, name)
+   setSpaces(current => [{ id: made.id, name: made.name, status: made.status, createdAt: made.createdAt, areaCount: 0, ownerName: made.ownerName }, ...(current ?? [])])
+   setAddress('')
+  } catch (reason) { setCreateError(errorOf(reason, 'Could not create the space. Try again.')) }
+  finally { setCreating(false) }
+ }
 
  function retry() { setUser(null); setUserError(''); setSpaces(null); setSpacesError(''); setAttempt(value => value + 1) }
  const validId = Number.isInteger(id) && id > 0
@@ -64,25 +82,17 @@ export default function CustomerPage() {
      </div>)}
     </div></SkeletonGroup>
    : <div className="person-rows">
-    <div className="person-row person-row--head" aria-hidden="true">
-     <div className="person-row-main">Spaces</div>
-     <div className="person-row-tours">Tours</div>
-    </div>
-    {spaces.map(space => {
-     const own = tours?.filter(tour => tour.id === space.scanId) ?? []
-     return <div key={space.id} className="person-row">
-      <div className="person-row-main"><AdminSpace summary={space} startOpen={false} /></div>
-      <div className="person-row-tours">
-       {own.length > 0 ? cards(own)
-        : !tours && !toursError && space.scanId ? <Skeleton height={120} radius="var(--r-card)" index={0} />
-        : <p className="person-row-none">No tour yet</p>}
-      </div>
-     </div>
-    })}
-    {spaces.length === 0 && <div className="person-row">
-     <div className="person-row-main"><p className="person-row-none">No spaces yet. When this person starts a space, it shows up here.</p></div>
-     <div className="person-row-tours" />
-    </div>}
+    <form className="new-space-form" onSubmit={createSpace}>
+     <input className="new-space-input" value={address} onChange={event => setAddress(event.target.value)} maxLength={100}
+      placeholder="Property address, e.g. Tamme 12, Tartu" aria-label="Address of the new space" />
+     <Button type="submit" variant="secondary" icon="plus" loading={creating} disabled={!address.trim()}>New space</Button>
+     {createError && <InlineError>{createError}</InlineError>}
+    </form>
+    {/* The same grid of cards the customer sees; a delivered space shows its tour on the card. */}
+    {spaces.length > 0 ? <ul className="spaces-grid" aria-label="Spaces">
+     {spaces.map(space => <li key={space.id}><SpaceCard tour={space} cache={cache} /></li>)}
+    </ul>
+    : null}
     {(unlinked.length > 0 || toursError) && <div className="person-row">
      <div className="person-row-main">
       <h2 className="admin-space-name">Not linked to a space</h2>

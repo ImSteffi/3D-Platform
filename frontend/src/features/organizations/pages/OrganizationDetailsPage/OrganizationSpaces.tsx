@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
+import { SpaceCard, type DetailCache } from '../../../spaces/pages/SpacesPage/SpacesPage'
+import '../../../spaces/pages/SpacesPage/SpacesPage.css'
 import { InlineError, Skeleton, SkeletonGroup } from '../../../../shared/ui'
 import { getAdminUserTourRequests, type TourSummary } from '../../../tours/api/tourRequests'
 import type { OrganizationUser } from '../../api/organizationUsers'
-import AdminSpace from '../CustomerPage/AdminSpace'
 import '../CustomerPage/CustomerPage.css'
 
 /** Every space the customer's people have asked for, shown straight on the customer page above the tours. */
@@ -12,6 +13,7 @@ export default function OrganizationSpaces({ users }: { users: OrganizationUser[
  const [spaces, setSpaces] = useState<Owned[] | null>(null)
  const [error, setError] = useState('')
  const [attempt, setAttempt] = useState(0)
+ const [cache] = useState<DetailCache>(() => new Map())
  const key = users.map(user => user.id).join(',')
 
  useEffect(() => {
@@ -28,8 +30,6 @@ export default function OrganizationSpaces({ users }: { users: OrganizationUser[
   {error ? <InlineError onRetry={() => { setError(''); setSpaces(null); setAttempt(v => v + 1) }}>{error}</InlineError>
    : !spaces ? <SkeletonGroup label="Loading spaces"><Skeleton height={64} radius="var(--r-card)" index={0} /></SkeletonGroup>
    : spaces.length === 0 ? <p className="person-row-none">No spaces yet.</p>
-   : <div className="person-rows">{spaces.map(space => <div key={space.id} className="person-row person-row--single">
-      <div className="person-row-main"><AdminSpace summary={space} owner={space.owner} /></div>
-     </div>)}</div>}
+   : <ul className="spaces-grid" aria-label="Spaces">{spaces.map(space => <li key={space.id}><SpaceCard tour={space} cache={cache} /></li>)}</ul>}
  </section>
 }

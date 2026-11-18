@@ -9,7 +9,7 @@ import {
 import { getClientProjects, type ClientProject } from '../../../projects/api/clientProjects'
 import './SpacesPage.css'
 
-type DetailCache = Map<number, Promise<TourDetail>>
+export type DetailCache = Map<number, Promise<TourDetail>>
 
 function bareLine(line: string): string {
  const text = line.replace(/^(Your move|With the team): /, '')
@@ -35,7 +35,8 @@ function PlanPlaceholder() {
  </svg>
 }
 
-function SpaceCard({ tour, cache }: { tour: TourSummary; cache: DetailCache }) {
+/** One space as a card that opens its page. Shared by the customer list and the team's page per customer. */
+export function SpaceCard({ tour, cache }: { tour: TourSummary; cache: DetailCache }) {
  const ref = useRef<HTMLAnchorElement>(null)
  const [detail, setDetail] = useState<TourDetail | null>(null)
  const [failed, setFailed] = useState<string | null>(null)

@@ -3,6 +3,7 @@ import { useShellMode } from '../../../../shared/layout/Backdrop'
 import { Button, EmptyState, Field, InlineError, Panel, Skeleton, SkeletonGroup } from '../../../../shared/ui'
 import { createOrganization, getOrganizations, type Organization } from '../../api/organizations'
 import OrganizationPeople from '../../components/OrganizationPeople'
+import TeamSection from '../../components/TeamSection'
 import '../../styles/customers.css'
 
 /** Route: /users. Everyone who can sign in, grouped by customer, plus the form that adds a customer. */
@@ -40,9 +41,14 @@ export default function UsersPage() {
  return <main className="page customer-page">
   <header className="page-header">
    <div><h1 className="desk-title">Users</h1></div>
-   {!formOpen && <Button icon="plus" onClick={() => setFormOpen(true)}>New customer</Button>}
   </header>
   <Panel padding="lg" className="desk-window">
+   <TeamSection />
+   <section className="desk-section" aria-labelledby="customers-title">
+   <div className="desk-section-head">
+    <h2 id="customers-title">Customers{organizations && <span className="desk-count">{organizations.length}</span>}</h2>
+    {!formOpen && <Button variant="secondary" icon="plus" onClick={() => setFormOpen(true)}>New customer</Button>}
+   </div>
    {formOpen && <Panel variant="well" className="desk-form">
     <form onSubmit={submit} noValidate>
      <h3>New customer</h3>
@@ -58,8 +64,9 @@ export default function UsersPage() {
    </Panel>}
    {error ? <InlineError onRetry={() => { setError(''); setAttempt(value => value + 1) }}>{error}</InlineError>
     : !organizations ? <SkeletonGroup label="Loading users"><Skeleton height={64} radius="var(--r-card)" index={0} /></SkeletonGroup>
-    : organizations.length === 0 ? <EmptyState icon="users" title="No customers yet" text="Create a customer first, then add the people who sign in for it." />
+    : organizations.length === 0 ? <EmptyState icon="users" title="No customers yet" />
     : organizations.map(organization => <OrganizationPeople key={organization.id} organizationId={organization.id} title={organization.name} />)}
+   </section>
   </Panel>
  </main>
 }

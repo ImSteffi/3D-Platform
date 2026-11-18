@@ -3,7 +3,6 @@ import {
  BufferGeometry, Color, DoubleSide, Float32BufferAttribute, Group, LineBasicMaterial, LineSegments, Mesh, MeshBasicMaterial,
  PerspectiveCamera, PlaneGeometry, Points, PointsMaterial, Quaternion, Scene, SRGBColorSpace, Texture, Vector3, WebGLRenderer,
 } from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { Spinner } from '../../../../shared/ui'
 import { pad } from '../../../spaces/pages/SpacePage/spaceModel'
 import type { SpatialFrame } from '../../api/tourRequests'
@@ -11,8 +10,15 @@ import { buildFrameCloud, loadImage } from './pointCloud'
 
 type Placed = { frame: SpatialFrame; position: Vector3; rotation: Quaternion; fov: number; aspect: number; depth: number }
 
-/** Point cloud of every photo's depth plus one textured frustum per photo; the strip below jumps to a photo's camera. */
-export default function SpatialContextViewer({ frames }: { frames: SpatialFrame[] }) {
+/** Keys that fly the view: W/S forward and back along where you look, A/D sideways, Shift faster. */
+const FLY_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ShiftRight'])
+
+/**
+ * Point cloud of every photo's depth plus one textured frustum per photo; the strip below jumps to a photo's camera.
+ * `bare`: only the point cloud, no photos (no frustums, no strip), for the floor card.
+ * Drag to orbit, scroll to zoom, and fly with WASD once the view has been clicked.
+ */
+export default function SpatialContextViewer({ frames, bare = false }: { frames: SpatialFrame[]; bare?: boolean }) {
  const host = useRef<HTMLDivElement>(null)
  const goTo = useRef<(index: number) => void>(() => {})
  const [loading, setLoading] = useState(true)
@@ -32,10 +38,63 @@ export default function SpatialContextViewer({ frames }: { frames: SpatialFrame[
   scene.background = new Color('#141516')
   const view = new PerspectiveCamera(60, 1, 0.01, 1000)
   view.position.set(0, 0.5, 2)
-  const controls = new OrbitControls(view, renderer.domElement)
-  controls.enableDamping = true
+  // Free flight, like a game: dragging turns the view where it stands, the keys move it.
+  const controls = { target: new Vector3() }
+  let yaw = 0, pitch = 0
+  const syncAngles = () => {
+   const d = controls.target.clone().sub(view.position).normalize()
+   yaw = Math.atan2(-d.x, -d.z)
+   pitch = Math.asin(Math.max(-1, Math.min(1, d.y)))
+  }
+  const look = () => {
+   const d = new Vector3(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch))
+   controls.target.copy(view.position).add(d)
+   view.lookAt(controls.target)
+  }
   const disposables: { dispose: () => void }[] = []
   const placed: Placed[] = []
+  // Keys held down while the view has focus; the loop moves the camera and its target together.
+  const held = new Set<string>()
+  let speed = 1
+  let last = 0
+  const canvas = renderer.domElement
+  canvas.tabIndex = 0
+  canvas.setAttribute('aria-label', 'Spatial context. Drag to look around, W A S D to move.')
+  const keyDown = (event: KeyboardEvent) => { if (FLY_KEYS.has(event.code)) { event.preventDefault(); held.add(event.code); flight = null } }
+  const keyUp = (event: KeyboardEvent) => { held.delete(event.code) }
+  const blur = () => held.clear()
+  canvas.addEventListener('keydown', keyDown)
+  canvas.addEventListener('keyup', keyUp)
+  canvas.addEventListener('blur', blur)
+  let drag: { x: number; y: number } | null = null
+  const pointerDown = (event: PointerEvent) => {
+   canvas.focus({ preventScroll: true })
+   canvas.setPointerCapture(event.pointerId)
+   drag = { x: event.clientX, y: event.clientY }
+   flight = null
+  }
+  const pointerMove = (event: PointerEvent) => {
+   if (!drag) return
+   yaw += (event.clientX - drag.x) * 0.004
+   pitch = Math.max(-1.5, Math.min(1.5, pitch + (event.clientY - drag.y) * 0.004))
+   drag = { x: event.clientX, y: event.clientY }
+   look()
+  }
+  const pointerUp = () => { drag = null }
+  // Scroll moves forward and back along the view.
+  const wheel = (event: WheelEvent) => {
+   event.preventDefault()
+   flight = null
+   const forward = new Vector3()
+   view.getWorldDirection(forward)
+   view.position.addScaledVector(forward, -event.deltaY * speed * 0.0015)
+   look()
+  }
+  canvas.addEventListener('pointerdown', pointerDown)
+  canvas.addEventListener('pointermove', pointerMove)
+  canvas.addEventListener('pointerup', pointerUp)
+  canvas.addEventListener('pointercancel', pointerUp)
+  canvas.addEventListener('wheel', wheel, { passive: false })
   let flight: { from: Vector3; to: Vector3; targetFrom: Vector3; targetTo: Vector3; fovFrom: number; fovTo: number; start: number } | null = null
 
   const resize = () => {
@@ -61,6 +120,24 @@ export default function SpatialContextViewer({ frames }: { frames: SpatialFrame[
   }
 
   renderer.setAnimationLoop(now => {
+   const dt = last ? Math.min(0.1, (now - last) / 1000) : 0
+   last = now
+   if (held.size) {
+    const forward = new Vector3()
+    view.getWorldDirection(forward)
+    const right = new Vector3().crossVectors(forward, view.up).normalize()
+    const move = new Vector3()
+    if (held.has('KeyW')) move.add(forward)
+    if (held.has('KeyS')) move.sub(forward)
+    if (held.has('KeyD')) move.add(right)
+    if (held.has('KeyA')) move.sub(right)
+    if (move.lengthSq()) {
+     // Shift: three times faster.
+     move.normalize().multiplyScalar(speed * dt * (held.has('ShiftLeft') || held.has('ShiftRight') ? 3 : 1))
+     view.position.add(move)
+     look()
+    }
+   }
    if (flight) {
     const t = reduced ? 1 : Math.min(1, (now - flight.start) / 700)
     const k = 1 - (1 - t) ** 3
@@ -70,14 +147,15 @@ export default function SpatialContextViewer({ frames }: { frames: SpatialFrame[
     controls.target.lerpVectors(flight.targetFrom, flight.targetTo, k)
     view.fov = flight.fovFrom + (flight.fovTo - flight.fovFrom) * k
     view.updateProjectionMatrix()
-    if (t >= 1) flight = null
+    view.lookAt(controls.target)
+    if (t >= 1) { flight = null; syncAngles() }
    }
-   controls.update()
    renderer.render(scene, view)
   })
 
   ;(async () => {
    const clouds = new Group(), frustums = new Group()
+   frustums.visible = !bare
    scene.add(clouds, frustums)
    const bounds: Vector3[] = []
    for (const frame of usable) {
@@ -127,6 +205,10 @@ export default function SpatialContextViewer({ frames }: { frames: SpatialFrame[
    controls.target.copy(centre)
    view.position.copy(centre).add(new Vector3(0, spread * 1.2, spread * 1.8))
    view.far = spread * 50
+   view.lookAt(controls.target)
+   syncAngles()
+   // About a third of the scene per second.
+   speed = spread * 0.35
    view.updateProjectionMatrix()
    setLoading(false)
   })().catch(reason => { if (!disposed) { setFailed(reason instanceof Error ? reason.message : 'The result could not be drawn.'); setLoading(false) } })
@@ -135,23 +217,31 @@ export default function SpatialContextViewer({ frames }: { frames: SpatialFrame[
    disposed = true
    observer.disconnect()
    renderer.setAnimationLoop(null)
-   controls.dispose()
+   canvas.removeEventListener('keydown', keyDown)
+   canvas.removeEventListener('keyup', keyUp)
+   canvas.removeEventListener('blur', blur)
+   canvas.removeEventListener('pointerdown', pointerDown)
+   canvas.removeEventListener('pointermove', pointerMove)
+   canvas.removeEventListener('pointerup', pointerUp)
+   canvas.removeEventListener('pointercancel', pointerUp)
+   canvas.removeEventListener('wheel', wheel)
    disposables.forEach(item => item.dispose())
    renderer.dispose()
    renderer.domElement.remove()
   }
   // The frames of one finished run never change; reload only when the run does.
   // eslint-disable-next-line react-hooks/exhaustive-deps
- }, [usable.map(frame => frame.depthUrl).join('|')])
+ }, [usable.map(frame => frame.depthUrl).join('|'), bare])
 
  return <div className="spatial-viewer on-dark">
   <div className="spatial-stage" ref={host}>
    {loading && <Spinner block label="Building the point cloud" />}
    {failed && <p className="spatial-stage-error">{failed}</p>}
   </div>
+  {bare ? <p className="spatial-hint spatial-hint--bare">Drag to look around. Click the view, then fly with W A S D where you look; hold Shift to go faster.</p> : <>
   <div className="spatial-strip-head">
    <span className="num">{current === null ? `${usable.length} cameras` : `${current + 1} of ${usable.length}`}</span>
-   <span className="spatial-hint">Drag to orbit, scroll to zoom. Pick a photo to look from its camera.</span>
+   <span className="spatial-hint">Drag to look around, fly with W A S D (Shift faster). Pick a photo to look from its camera.</span>
   </div>
   <ol className="spatial-strip">
    {usable.map((frame, position) => <li key={frame.index}>
@@ -162,5 +252,6 @@ export default function SpatialContextViewer({ frames }: { frames: SpatialFrame[
     </button>
    </li>)}
   </ol>
+  </>}
  </div>
 }

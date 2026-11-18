@@ -1,10 +1,14 @@
-import { useState, type DragEvent, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useState, type ReactNode } from 'react'
 import { Button, Icon, Panel, Spinner } from '../../../../shared/ui'
 import { loadSketch, sketchKey } from '../../../tours/components/PlanSketcher/sketchStorage'
 import PlanView from '../../../tours/components/PlanView/PlanView'
-import { planUrl, type TourArea, type TourDetail } from '../../../tours/api/tourRequests'
-import SpatialContext from '../../../tours/components/SpatialContext/SpatialContext'
+import { onGalleryLink, planUrl, type SpatialFrame, type TourArea, type TourDetail } from '../../../tours/api/tourRequests'
+import SpatialContext, { type SpatialState } from '../../../tours/components/SpatialContext/SpatialContext'
+// three.js loads only when a spatial context is shown.
+const SpatialContextViewer = lazy(() => import('../../../tours/components/SpatialContext/SpatialContextViewer'))
 import FileButton from './FileButton'
+import { planPickerAccept } from '../../../tours/api/prepareImage'
+import FloorGallery, { type FloorUpload } from './FloorGallery'
 import { floorState, pad, plural, type Entry } from './spaceModel'
 
 type Props = {
@@ -30,21 +34,27 @@ type Props = {
  onPlan: (area: TourArea, file: File | undefined) => void
  onSketch: (area: TourArea) => void
  onRemove: (area: TourArea) => void
+ /** Takes only the plan off this floor; the floor and its photos stay. */
+ onRemovePlan: (area: TourArea) => void
  /**
   * Operator mode (customer page in the admin desk). The operator only marks spots (a button beside the floor's name) and can delete
   * photos until the tour is delivered: no floor or plan editing, no customer to-do, no photo taking. Omit for the customer view.
   */
  admin?: { markTo: string }
+ /** False on the public gallery page: a link may add and change floors but not remove them. */
+ removable?: boolean
+ /** The request's send button, shown under this floor's photos. */
+ send?: ReactNode
+ /** Photos added to this floor directly (no plan or spot needed). Omit to hide the floor gallery. */
+ floorPhotos?: { uploading: FloorUpload | null; onAdd: (files: File[]) => void; onDelete: (photoId: number) => void }
 }
 
-const hasFiles = (event: DragEvent) => Array.from(event.dataTransfer.types).includes('Files')
 const stateWords = { retake: 'needs a retake', taken: 'photo taken', next: 'next', todo: 'to do' }
 const fallbackNote = 'Stand on the number and face along the arrow.'
 
 
 /** One floor: its own to-do, then the flat plan on the left and that floor's photos on the right. */
-export default function AreaSection({ tour, area, entries, version, busy, readOnly = false, primary, selected, waiting, srcOf, onSelect, onFiles, onDelete, onCamera, onPlan, onSketch, onRemove, admin }: Props) {
- const [over, setOver] = useState<number | 'plan' | null>(null)
+export default function AreaSection({ tour, area, entries, version, busy, readOnly = false, primary, selected, waiting, srcOf, onSelect, onFiles, onDelete, onCamera, onPlan, onSketch, onRemove, onRemovePlan, admin, send, removable = true, floorPhotos }: Props) {
  const status = tour.status
  const state = floorState(status, area)
  /** Photos can be added, replaced and deleted. */
@@ -53,7 +63,7 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
  /** A photo can be deleted until the tour is delivered; after the photos were sent, deleting one reopens photo taking. */
  const canDelete = admin ? open : !readOnly && (status === 'PLAN_READY' || status === 'PHOTOS_SUBMITTED' || status === 'APPROVED')
  /** The plan can be replaced or redrawn and the floor removed: until we have placed points on it. */
- const planOpen = !admin && !readOnly && (status === 'DRAFT' || entries.length === 0)
+ const planOpen = admin ? open && entries.length === 0 && !area.locked : open
  const free = (entry: Entry) => !waiting.includes(entry.point.id)
  const retakes = entries.filter(entry => entry.point.retakeNote)
  const firstRetake = retakes.find(free)
@@ -64,17 +74,24 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
  /** Only photos that exist or are uploading. */
  const shown = entries.filter(entry => entry.point.hasPhoto || !free(entry))
  const lead = primary ? 'primary' : 'secondary'
+ const tourMade = tour.status === 'DELIVERED'
+ const [spatial, setSpatial] = useState<SpatialFrame[] | null>(null)
+ const [fresh, setFresh] = useState<number[]>([])
+ const onSpatial = useCallback((state: SpatialState) => { setSpatial(state.frames); setFresh(state.fresh) }, [])
+ const spatialReady = spatial !== null
+ // Team only: once a floor has its spatial context and no tour yet, it takes the right side and the photos go below.
+ const showSpatial = !!admin && !tourMade && spatial !== null && spatial.length > 0
+ // The customer's side: once the team has the spatial context, the tour is on its way.
+ const making = !admin && !tourMade && !!area.spatialReady
+ const wide = tourMade || showSpatial || making
 
  // This floor's to-do: one sentence, one supporting line, its own buttons.
  let title = '', text = ''
  let buttons: ReactNode = null
  if (!admin) switch (state) {
   case 'no-plan':
-   title = 'Add this floor’s plan'; text = 'Upload an image or draw it here.'
-   buttons = <>
-    <Button variant="secondary" icon="edit" disabled={busy} onClick={() => onSketch(area)}>Draw the plan</Button>
-    <FileButton variant={lead} icon="upload" disabled={busy} onFiles={files => onPlan(area, files[0])}>Upload plan image</FileButton>
-   </>
+   // The plan's buttons sit in the plan box on the left; this side is the floor's photos.
+   title = 'Photos'; text = 'When the plan is in, we mark where to stand. Your photos of this floor go here.'
    break
   case 'plan-added':
    title = 'Plan added'; text = 'Send your floor plans to us when every floor has one.'
@@ -113,34 +130,49 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
    </div>
    {admin && open && area.hasPlan && <Button variant="secondary" className="area-mark" to={admin.markTo}>{entries.length ? 'Edit spots' : 'Mark spots'}</Button>}
    {planOpen && <div className="area-actions">
-    {area.hasPlan && <FileButton variant="quiet" icon="upload" disabled={busy} onFiles={files => onPlan(area, files[0])}>Replace plan</FileButton>}
-    {area.hasPlan && <Button variant="quiet" icon="edit" disabled={busy} onClick={() => onSketch(area)}>{hasDrawing ? 'Edit drawing' : 'Draw the plan'}</Button>}
-    <Button variant="quiet" icon="trash" disabled={busy} onClick={() => onRemove(area)}>Remove</Button>
+    {area.hasPlan && <FileButton variant="quiet" icon="upload" accept={planPickerAccept} disabled={busy} onFiles={files => onPlan(area, files[0])}>Replace plan</FileButton>}
+    {area.hasPlan && <Button variant="quiet" icon="edit" disabled={busy} onClick={() => onSketch(area)}>{hasDrawing ? 'Edit drawing' : 'Draw floor plan'}</Button>}
+    {area.hasPlan && <Button variant="quiet" icon="trash" disabled={busy} onClick={() => onRemovePlan(area)}>Remove plan</Button>}
+    {removable && <Button variant="quiet" icon="trash" disabled={busy} onClick={() => onRemove(area)}>Remove</Button>}
    </div>}
   </header>
 
-  <div className="area-body">
+  <div className={`area-body ${wide ? 'area-body--tour' : ''}`.trim()}>
    <div className="area-plan">
+    {!admin && state === 'marking' && <p className="area-plan-note">{title}</p>}
     {area.hasPlan
-     ? <PlanView src={planUrl(tour.id, area.id, version)} alt={'Floor plan of ' + area.name} dotSize={area.dotSize} lineLength={area.lineLength} selected={selected}
+     ? <PlanView src={planUrl(tour.id, area.id, version)} alt={'Floor plan of ' + area.name} dotSize={area.dotSize} lineLength={area.lineLength} selected={selected} unlabeled
       markers={entries.map(({ point, number }) => ({
        key: point.id, label: number, x: point.x, y: point.y, direction: point.direction,
-       state: point.retakeNote ? 'retake' : point.hasPhoto ? 'done' : point.id === firstEmpty?.point.id ? 'next' : 'later',
+       state: point.retakeNote ? 'retake' : point.hasPhoto ? 'done' : 'later',
       }))}
       onSelect={entries.length ? key => { const entry = entries.find(candidate => candidate.point.id === key); if (entry) onSelect(entry) } : undefined} />
-     : planOpen ? <div className={`area-plan-empty ${over === 'plan' ? 'is-over' : ''}`.trim()}
-      onDragOver={event => { if (hasFiles(event)) { event.preventDefault(); setOver('plan') } }} onDragLeave={() => setOver(null)}
-      onDrop={event => { event.preventDefault(); setOver(null); if (!busy) onPlan(area, event.dataTransfer.files[0]) }}>
-      <span className="area-plan-icon"><Icon name="planner" size={22} /></span>
-      <p>This floor&rsquo;s plan goes here. A JPG, PNG or WebP image works, and so does a clear photo of a hand-drawn sketch: mark the rooms, doors and stairs. You can also drop the image here.</p>
+     : planOpen ? <div className="area-plan-empty">
+      <div className="area-actions area-plan-btns">
+       <Button variant="secondary" icon="edit" disabled={busy} onClick={() => onSketch(area)}>Draw floor plan</Button>
+       <FileButton variant={primary ? 'primary' : 'secondary'} icon="upload" accept={planPickerAccept} disabled={busy} onFiles={files => onPlan(area, files[0])}>Upload floor plan</FileButton>
+      </div>
+      <p>Add this floor&rsquo;s plan. A JPG, PNG or WebP image works, and so does a clear photo of a hand-drawn sketch: mark the rooms, doors and stairs.</p>
      </div>
      : <p className="area-quiet">This floor has no plan.</p>}
    </div>
    {/* The operator sees photos only once there are some: no empty section and no title. */}
-   {(!admin || shown.length > 0) && <div className="area-photos">
+   {showSpatial && <div className="area-spatial on-dark">
+    <Suspense fallback={<Spinner block label="Loading the spatial context" />}><SpatialContextViewer frames={spatial} bare /></Suspense>
+   </div>}
+   {making && <div className="area-making" role="status"><p>We are making your 3D tour</p></div>}
+   {tourMade && <div className="area-tour" role="img" aria-label="3D tour">
+    <span className="area-tour-play"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor" /></svg></span>
+   </div>}
+   {(!admin || shown.length > 0 || (area.photos?.length ?? 0) > 0) && <div className="area-photos">
+    {!admin && !readOnly && !tourMade && !making && <p className="area-photos-lead">Once all your photos are in, we will make your 3D tour.</p>}
     {entries.length === 0
-     // No points yet: this side says where the floor stands instead of showing photos.
-     ? readOnly
+     // No spots yet: this side is the floor's own photo gallery, open straight away.
+     ? floorPhotos || (area.photos?.length ?? 0) > 0
+      ? <FloorGallery tour={tour} area={area} fresh={admin ? fresh : undefined} version={version} busy={busy} uploading={floorPhotos?.uploading ?? null}
+        editable={!!floorPhotos && open && !tourMade} title="Photos" hint={state === 'no-plan' || state === 'plan-added' || state === 'marking' ? undefined : title}
+        onAdd={files => floorPhotos?.onAdd(files)} onDelete={photoId => floorPhotos?.onDelete(photoId)} />
+      : readOnly
       ? <p className="area-quiet">No photos were needed for this floor.</p>
       : <div className="area-status">
        <h3>{title}</h3>
@@ -150,7 +182,7 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
      : <>
       <div className="area-photos-head">
        <h3>{admin ? 'Photos' : 'Your photos'}</h3>
-       {!readOnly && buttons && <div className="area-status-btns">{buttons}</div>}
+       {!readOnly && !tourMade && buttons && <div className="area-status-btns">{buttons}</div>}
       </div>
       {!admin && !readOnly && (state !== 'photos' || uploading > 0) && <p className={`area-photos-line area-photos-line--${state}`}>
        {state === 'photos' ? null : state === 'retake' ? text : title}
@@ -164,26 +196,32 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
        const frame = point.retakeNote ? 'retake' : point.hasPhoto ? 'taken' : point.id === firstEmpty?.point.id ? 'next' : 'todo'
        return <li key={point.id} id={`frame-${point.id}`} className="frame-cell">
         <div className="frame-box">
-         <button type="button" className={`frame frame--${frame}${over === point.id ? ' is-over' : ''}${point.hasPhoto && !busyHere ? ' skeleton-bg' : ''}`} aria-pressed={selected === point.id}
+         <button type="button" className={`frame frame--${frame}${point.hasPhoto && !busyHere ? ' skeleton-bg' : ''}`} aria-pressed={selected === point.id}
           aria-label={`Point ${number}, ${busyHere ? 'uploading' : stateWords[frame]}`}
-          onClick={() => onSelect(entry)}
-          onDragOver={editable ? event => { if (hasFiles(event)) { event.preventDefault(); setOver(point.id) } } : undefined}
-          onDragLeave={editable ? () => setOver(null) : undefined}
-          onDrop={editable ? event => { event.preventDefault(); setOver(null); onFiles(Array.from(event.dataTransfer.files), entry) } : undefined}>
+          onClick={() => onSelect(entry)}>
           {point.hasPhoto && !busyHere && <img src={srcOf(entry)} alt="" loading="lazy" decoding="async" draggable={false} />}
           {busyHere && <Spinner size={16} className="frame-wait" />}
           <span className="frame-num">{pad(number)}</span>
          </button>
-         {canDelete && point.hasPhoto && !busyHere && <button type="button" className="frame-delete" disabled={busy}
+         {canDelete && point.hasPhoto && !busyHere && (!onGalleryLink() || point.photoViaLink) && <button type="button" className="frame-delete" disabled={busy}
           aria-label={`Delete photo ${number}`} title="Delete this photo" onClick={() => onDelete(entry)}><Icon name="trash" size={15} /></button>}
         </div>
         {point.retakeNote && <p className="frame-note"><span className="visually-hidden">Our note: </span>{point.retakeNote}</p>}
        </li>
       })}
       </ol>
-      {admin && <SpatialContext tourId={tour.id} areaId={area.id} photoCount={entries.filter(entry => entry.point.hasPhoto).length} />}
+      {/* Photos added before the spots were marked stay with the floor. */}
+      {(area.photos?.length ?? 0) > 0 && <FloorGallery tour={tour} area={area} fresh={admin ? fresh : undefined} version={version} busy={busy} uploading={floorPhotos?.uploading ?? null}
+       editable={!!floorPhotos && open && !tourMade} title="Other photos" onAdd={files => floorPhotos?.onAdd(files)} onDelete={photoId => floorPhotos?.onDelete(photoId)} />}
+      {send && <div className="area-send">{send}</div>}
      </>}
    </div>}
   </div>
+  {/* Team only, once the floor has photos. Does nothing yet: the generation API gets connected here later. */}
+  {admin && !tourMade && (shown.length > 0 || (area.photos?.length ?? 0) > 0) && <div className="area-foot">
+   <SpatialContext tourId={tour.id} areaId={area.id} photoCount={entries.filter(entry => entry.point.hasPhoto).length + (area.photos?.length ?? 0)} onReady={onSpatial} />
+   {/* Does nothing yet: the generation API gets connected here later. Needs the spatial context first. */}
+   <Button icon="cube" disabled={!spatialReady} title={spatialReady ? undefined : 'Generate the spatial context first.'}>Generate 3D-Tour</Button>
+  </div>}
  </Panel>
 }

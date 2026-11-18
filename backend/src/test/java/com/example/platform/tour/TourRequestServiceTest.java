@@ -36,11 +36,12 @@ class TourRequestServiceTest {
     final TourRequestRepository tours = mock(TourRequestRepository.class);
     final TourAreaRepository areas = mock(TourAreaRepository.class);
     final CapturePointRepository points = mock(CapturePointRepository.class);
+    final FloorPhotoRepository floorPhotos = mock(FloorPhotoRepository.class);
     final UserRepository users = mock(UserRepository.class);
     final ScanRepository scans = mock(ScanRepository.class);
     final OrganizationMembershipRepository memberships = mock(OrganizationMembershipRepository.class);
     final S3Client r2 = mock(S3Client.class);
-    final TourRequestService service = new TourRequestService(tours, areas, points, users, scans,
+    final TourRequestService service = new TourRequestService(tours, areas, points, floorPhotos, users, scans,
             memberships, r2,
             mock(S3Presigner.class), "test");
 
@@ -582,9 +583,11 @@ class TourRequestServiceTest {
         assertEquals(2, saved.getValue().getCaptureGroup());
     }
 
-    @Test void aSentFloorCanChangeOnlyUntilItHasCapturePoints() {
-        var locked = "This floor already has capture points. Ask us if it needs to change.";
-        for (var status : List.of(SUBMITTED, PLAN_READY)) {
+    // The client may change a floor's plan at any time before delivery. A new plan on a floor the team
+    // already marked drops its spots, and a plan that was already sent back returns to the team.
+    @Test void aSentFloorCanChangeUntilDeliveryAndANewPlanClearsItsSpots() {
+        for (var status : List.of(SUBMITTED, PLAN_READY, PHOTOS_SUBMITTED, APPROVED)) {
+            reset(points, areas);
             var tour = tour(10L, status);
             var marked = area(20L, tour, 1, "plan");
             var fresh = area(21L, tour, 2, null);
@@ -593,39 +596,56 @@ class TourRequestServiceTest {
             when(points.findByArea_IdOrderBySeqAsc(20L)).thenReturn(existing);
             when(areas.countByTourRequest_Id(10L)).thenReturn(2L);
 
-            assertRefused(locked, () -> service.savePlan(10L, 20L, PNG, as(owner)));
-            assertRefused(locked, () -> service.removeArea(10L, 20L, as(owner)));
-            assertEquals("plan", marked.getPlanObjectKey());
-            verify(areas, never()).delete(marked);
+            service.savePlan(10L, 20L, PNG, as(owner));
+            assertTrue(marked.getPlanObjectKey().startsWith("users/1/tours/10/areas/20/floorplan_client/plan-"));
+            verify(points).deleteAll(existing);
+            assertEquals(SUBMITTED, tour.getStatus());
 
             service.savePlan(10L, 21L, PNG, as(owner));
             assertTrue(fresh.getPlanObjectKey().startsWith("users/1/tours/10/areas/21/floorplan_client/plan-"));
-            assertEquals(status.name(), service.removeArea(10L, 21L, as(owner)).status());
+            service.removeArea(10L, 21L, as(owner));
             verify(areas).delete(fresh);
 
             // A sent tour keeps at least one floor.
             when(areas.countByTourRequest_Id(10L)).thenReturn(1L);
-            assertStatus(409, () -> service.removeArea(10L, 21L, as(owner)));
-            verify(areas).delete(fresh);
-        }
-        for (var status : List.of(PHOTOS_SUBMITTED, APPROVED, DELIVERED)) {
-            var tour = tour(10L, status);
-            var fresh = area(21L, tour, 2, null);
-            when(areas.countByTourRequest_Id(10L)).thenReturn(2L);
-            assertStatus(409, () -> service.savePlan(10L, 21L, PNG, as(owner)));
-            assertStatus(409, () -> service.removeArea(10L, 21L, as(owner)));
-            assertNull(fresh.getPlanObjectKey());
-            verify(areas, never()).delete(fresh);
+            assertStatus(409, () -> service.removeArea(10L, 20L, as(owner)));
         }
     }
 
-    @Test void aDraftKeepsItsFreedomToChangeAndEmpty() {
+    // A floor can be sent with photos instead of a plan.
+    @Test void aFloorWithPhotosButNoPlanCanBeSent() {
         var tour = tour(10L, DRAFT);
-        var only = area(20L, tour, 1, "plan");
+        var bare = area(20L, tour, 1, null);
+        areasOf(tour, bare);
+        assertStatus(409, () -> service.submit(10L, as(owner)));
+        when(floorPhotos.countByArea_Id(20L)).thenReturn(3L);
+        assertEquals("SUBMITTED", service.submit(10L, as(owner)).status());
+    }
+
+    @Test void aDraftCanEmptyUntilItsFirstUploadReachesTheTeam() {
+        var tour = tour(10L, DRAFT);
+        var only = area(20L, tour, 1, null);
         when(areas.countByTourRequest_Id(10L)).thenReturn(1L);
-        service.savePlan(10L, 20L, PNG, as(owner));
         service.removeArea(10L, 20L, as(owner));
         verify(areas).delete(only);
+
+        // There is no send button: the first plan (or photo) sends the space to the team.
+        var floor = area(21L, tour, 2, null);
+        service.savePlan(10L, 21L, PNG, as(owner));
+        assertEquals(SUBMITTED, tour.getStatus());
+    }
+
+    @Test void theLastSpotPhotoSendsThePhotosToTheTeam() {
+        var tour = tour(10L, PLAN_READY);
+        var floor = area(20L, tour, 1, "plan");
+        areasOf(tour, floor);
+        var first = point(30L, floor, 1);
+        var last = point(31L, floor, 2);
+        first.setPhotoObjectKey("photo");
+        when(points.findByArea_IdOrderBySeqAsc(20L)).thenReturn(List.of(first, last));
+        when(points.findByArea_TourRequest_IdOrderBySeqAsc(10L)).thenReturn(List.of(first, last));
+        service.savePhoto(10L, 31L, JPEG, as(owner));
+        assertEquals(PHOTOS_SUBMITTED, tour.getStatus());
     }
 
     @Test void capturePointsCanBeSavedOnASentPlanOnlyForFloorsWithoutPhotos() {
@@ -677,7 +697,7 @@ class TourRequestServiceTest {
     }
 
     @Test void capturePointsCannotBeSavedOutsidePlanning() {
-        for (var status : List.of(DRAFT, PHOTOS_SUBMITTED, APPROVED, DELIVERED)) {
+        for (var status : List.of(PHOTOS_SUBMITTED, APPROVED, DELIVERED)) {
             var tour = tour(10L, status);
             areasOf(tour, area(20L, tour, 1, "plan"));
             assertStatus(409, () -> service.savePoints(10L, 20L, 1, List.of(input(.1, .1, 0)), as(admin)));

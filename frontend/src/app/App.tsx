@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useParams } from 'react-router'
 import LoginPage from '../features/auth/pages/LoginPage/LoginPage'
+import GalleryLinkPage from '../features/auth/pages/GalleryLinkPage/GalleryLinkPage'
 import SpacesPage from '../features/spaces/pages/SpacesPage/SpacesPage'
 import NewSpacePage from '../features/spaces/pages/NewSpacePage/NewSpacePage'
 import SpacePage from '../features/spaces/pages/SpacePage/SpacePage'
@@ -26,13 +27,15 @@ export default function App() {
  return <Routes>
   <Route path="/view/:token" element={<SharedViewerPage />} />
   <Route path="/login" element={<LoginPage />} />
+  <Route path="/g/:token" element={<GalleryLinkPage />} />
   <Route element={<WorkspaceLayout />}>
    <Route path="/" element={<Navigate to="/spaces" replace />} />
+   {/* One page for both: the customer's space, and the team's view of it with extra tools. */}
+   <Route path="/spaces/:spaceId/:tab?" element={<SpacePage />} />
    <Route element={<RequireRole role="customer" />}>
     <Route path="/home" element={<Navigate to="/spaces" replace />} />
     <Route path="/spaces" element={<SpacesPage />} />
     <Route path="/spaces/new" element={<NewSpacePage />} />
-    <Route path="/spaces/:spaceId/:tab?" element={<SpacePage />} />
     <Route path="/learn" element={<LearnPage />} />
     <Route path="/projects/:projectId" element={<ClientProjectPage />} />
    </Route>

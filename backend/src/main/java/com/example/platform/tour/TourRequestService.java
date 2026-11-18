@@ -39,6 +39,7 @@ public class TourRequestService {
     private final TourRequestRepository tours;
     private final TourAreaRepository areas;
     private final CapturePointRepository points;
+    private final FloorPhotoRepository floorPhotos;
     private final UserRepository users;
     private final ScanRepository scans;
     private final OrganizationMembershipRepository memberships;
@@ -47,18 +48,29 @@ public class TourRequestService {
     private final String bucket;
 
     public TourRequestService(TourRequestRepository tours, TourAreaRepository areas,
-            CapturePointRepository points, UserRepository users, ScanRepository scans,
+            CapturePointRepository points, FloorPhotoRepository floorPhotos, UserRepository users, ScanRepository scans,
             OrganizationMembershipRepository memberships, S3Client r2, S3Presigner signer,
             @Value("${storage.r2.bucket-name}") String bucket) {
         this.tours = tours;
         this.areas = areas;
         this.points = points;
+        this.floorPhotos = floorPhotos;
         this.users = users;
         this.scans = scans;
         this.memberships = memberships;
         this.r2 = r2;
         this.signer = signer;
         this.bucket = bucket;
+    }
+
+    // Set by Spring; absent in unit tests, where no floor has a spatial context.
+    private SpatialContextRunRepository spatialRuns;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setSpatialRuns(SpatialContextRunRepository spatialRuns) { this.spatialRuns = spatialRuns; }
+
+    private boolean spatialReady(TourArea area) {
+        return spatialRuns != null && spatialRuns.existsByArea_IdAndStatus(area.getId(), SpatialContextRun.Status.SUCCEEDED);
     }
 
     // ---- Client ----
@@ -142,6 +154,10 @@ public class TourRequestService {
         var keys = new java.util.ArrayList<String>();
         keys.add(area.getPlanObjectKey());
         entries.forEach(point -> keys.add(point.getPhotoObjectKey()));
+        var loose = floorPhotos.findByArea_IdOrderByIdAsc(area.getId());
+        loose.forEach(photo -> keys.add(photo.getObjectKey()));
+        floorPhotos.deleteAll(loose);
+        floorPhotos.flush();
         // As in delete(): remove loaded children first so Hibernate can flush.
         points.deleteAll(entries);
         points.flush();
@@ -158,11 +174,38 @@ public class TourRequestService {
         return storePlan(tour, changeableArea(tour, areaId), image, user);
     }
 
+    /** Takes the plan off a floor but keeps the floor and its photos. Spots sat on that plan, so they go too. */
+    @Transactional
+    public Detail removePlan(Long id, Long areaId, Authentication authentication) {
+        var user = user(authentication);
+        var tour = owned(id, user);
+        return dropPlan(tour, changeableArea(tour, areaId), user);
+    }
+
+    @Transactional
+    public Detail adminRemovePlan(Long id, Long areaId, Authentication authentication) {
+        var user = admin(authentication);
+        var tour = editable(id);
+        return dropPlan(tour, area(tour, areaId), user);
+    }
+
+    private Detail dropPlan(TourRequest tour, TourArea area, User user) {
+        var old = area.getPlanObjectKey();
+        if (old == null) throw error(404, "This floor has no plan.");
+        clearSpots(tour, area);
+        area.setPlanObjectKey(null);
+        areas.flush();
+        discard(old);
+        return detail(tour, user);
+    }
+
     // Capture points stay where they are: an administrator replacing a marked plan keeps them.
     private Detail storePlan(TourRequest tour, TourArea area, byte[] image, User user) {
         var old = area.getPlanObjectKey();
         area.setPlanObjectKey(store(folder(area) + "floorplan_client/plan-", image, MAX_PLAN_BYTES));
         discard(old);
+        if (!user.isPlatformAdmin()) clearSpots(tour, area);
+        if (!user.isPlatformAdmin()) arrived(tour);
         return detail(tour, user);
     }
 
@@ -179,10 +222,98 @@ public class TourRequestService {
         var tour = owned(id, user, DRAFT);
         var entries = areas.findByTourRequest_IdOrderByIdAsc(id);
         if (entries.isEmpty()) throw error(409, "Add at least one area before sending.");
-        if (entries.stream().anyMatch(area -> area.getPlanObjectKey() == null))
-            throw error(409, "Every area needs a floor plan before sending.");
+        // A floor may be sent with a plan, with photos, or both.
+        if (entries.stream().anyMatch(area -> area.getPlanObjectKey() == null && floorPhotos.countByArea_Id(area.getId()) == 0))
+            throw error(409, "Every floor needs a floor plan or photos before sending.");
         tour.setStatus(SUBMITTED);
         return detail(tour, user);
+    }
+
+    // ---- Floor photos: added to a floor straight away, without a plan or capture points ----
+
+    @Transactional
+    public Detail addFloorPhoto(Long id, Long areaId, byte[] image, Authentication authentication) {
+        var user = user(authentication);
+        var tour = user.isPlatformAdmin() ? found(id) : owned(id, user);
+        requireNotDelivered(tour);
+        var area = area(tour, areaId);
+        // The same image again is skipped quietly: the floor already has it.
+        var hash = sha256(image);
+        fingerprintOlder(areaId);
+        if (floorPhotos.existsByArea_IdAndContentHash(areaId, hash)) return detail(tour, user);
+        if (floorPhotos.countByArea_Id(areaId) >= MAX_POINTS_PER_GROUP)
+            throw error(409, "A floor can have at most " + MAX_POINTS_PER_GROUP + " photos.");
+        floorPhotos.save(new FloorPhoto(area, store(folder(area) + "photos/floor-", image, MAX_PHOTO_BYTES), hash, viaLink(authentication)));
+        if (!user.isPlatformAdmin()) arrived(tour);
+        return detail(tour, user);
+    }
+
+    @Transactional(readOnly = true)
+    public String floorPhotoUrl(Long id, Long photoId, Authentication authentication) {
+        return signedUrl(floorPhoto(accessible(id, user(authentication)), photoId).getObjectKey());
+    }
+
+    @Transactional
+    public Detail deleteFloorPhoto(Long id, Long photoId, Authentication authentication) {
+        var user = user(authentication);
+        var tour = accessible(id, user);
+        requireNotDelivered(tour);
+        var photo = floorPhoto(tour, photoId);
+        if (viaLink(authentication) && !photo.isViaLink())
+            throw error(403, "Only photos added through this link can be deleted here.");
+        var key = photo.getObjectKey();
+        floorPhotos.delete(photo);
+        floorPhotos.flush();
+        discard(key);
+        return detail(tour, user);
+    }
+
+    // Once at start-up, so copies stored before duplicates were checked disappear without waiting for an upload.
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    @Transactional
+    public void fingerprintOlderPhotos() {
+        floorPhotos.findByContentHashIsNull().stream().map(photo -> photo.getArea().getId()).distinct().forEach(this::fingerprintOlder);
+    }
+
+    // Photos stored before duplicates were checked have no fingerprint yet: read them once and give them one,
+    // dropping a copy the floor already has.
+    private void fingerprintOlder(Long areaId) {
+        var all = floorPhotos.findByArea_IdOrderByIdAsc(areaId);
+        var seen = new java.util.HashSet<String>();
+        all.forEach(photo -> { if (photo.getContentHash() != null) seen.add(photo.getContentHash()); });
+        for (var photo : all) {
+            var hash = photo.getContentHash();
+            if (hash == null) {
+                try {
+                    hash = sha256(r2.getObjectAsBytes(b -> b.bucket(bucket).key(photo.getObjectKey())).asByteArray());
+                } catch (SdkException unreadable) {
+                    continue;
+                }
+                if (seen.contains(hash)) {
+                    floorPhotos.delete(photo);
+                    floorPhotos.flush();
+                    discard(photo.getObjectKey());
+                    continue;
+                }
+                photo.setContentHash(hash);
+                floorPhotos.saveAndFlush(photo);
+                seen.add(hash);
+            }
+        }
+    }
+
+    private static String sha256(byte[] bytes) {
+        try {
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes));
+        } catch (java.security.NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException(impossible);
+        }
+    }
+
+    private FloorPhoto floorPhoto(TourRequest tour, Long photoId) {
+        var photo = floorPhotos.findById(photoId).orElseThrow(() -> error(404, "Photo not found."));
+        if (!photo.getArea().getTourRequest().getId().equals(tour.getId())) throw error(404, "Photo not found.");
+        return photo;
     }
 
     @Transactional
@@ -195,7 +326,10 @@ public class TourRequestService {
         point.setPhotoObjectKey(store(folder(point.getArea()) + "photos/point-"
                 + String.format("%02d", point.getSeq()) + "-", image, MAX_PHOTO_BYTES));
         point.setRetakeNote(null);
+        point.setPhotoViaLink(viaLink(authentication));
         discard(old);
+        // Once every spot has its photo, the set goes to the team on its own: there is no send button.
+        if (photosComplete(tour)) tour.setStatus(PHOTOS_SUBMITTED);
         return detail(tour, user);
     }
 
@@ -224,6 +358,8 @@ public class TourRequestService {
         var point = point(tour, pointId);
         var key = point.getPhotoObjectKey();
         if (key == null) throw error(404, "This point has no photo.");
+        if (viaLink(authentication) && !point.isPhotoViaLink())
+            throw error(403, "Only photos added through this link can be deleted here.");
         point.setPhotoObjectKey(null);
         if (reviewing) tour.setStatus(PLAN_READY);
         discard(key);
@@ -231,6 +367,19 @@ public class TourRequestService {
     }
 
     @Transactional
+    // Uploads reach the team as they happen: a draft becomes a request with its first plan or photo.
+    private static void arrived(TourRequest tour) {
+        if (tour.getStatus() == DRAFT) tour.setStatus(SUBMITTED);
+    }
+
+    // Every floor is planned and marked, every spot has a photo and no retake is pending.
+    private boolean photosComplete(TourRequest tour) {
+        for (var area : areas.findByTourRequest_IdOrderByIdAsc(tour.getId()))
+            if (area.getPlanObjectKey() == null || points.findByArea_IdOrderBySeqAsc(area.getId()).isEmpty()) return false;
+        var all = points.findByArea_TourRequest_IdOrderBySeqAsc(tour.getId());
+        return !all.isEmpty() && all.stream().allMatch(point -> point.getPhotoObjectKey() != null && point.getRetakeNote() == null);
+    }
+
     public Detail submitPhotos(Long id, Authentication authentication) {
         var user = user(authentication);
         var tour = owned(id, user, PLAN_READY);
@@ -262,6 +411,8 @@ public class TourRequestService {
             Authentication authentication) {
         var user = admin(authentication);
         var tour = tours.findById(id).orElseThrow(() -> error(404, "Tour request not found."));
+        // The team may start marking a space the customer is still setting up: nothing is locked.
+        if (tour.getStatus() == DRAFT) tour.setStatus(SUBMITTED);
         // A floor added after the plan was sent is marked without reopening the whole plan.
         boolean late = tour.getStatus() == PLAN_READY;
         if (!late) requireStatus(tour, SUBMITTED);
@@ -304,11 +455,13 @@ public class TourRequestService {
                 previous.remove(same);
                 point.setPhotoObjectKey(same.getPhotoObjectKey());
                 point.setRetakeNote(same.getRetakeNote());
+                point.setPhotoViaLink(same.isPhotoViaLink());
             }
             points.save(point);
         }
         points.flush();
         previous.forEach(old -> discard(old.getPhotoObjectKey()));
+        sendWhenMarked(tour);
         return detail(tour, user);
     }
 
@@ -333,6 +486,9 @@ public class TourRequestService {
                 + " would have " + total + " capture points; the limit is " + MAX_POINTS_PER_GROUP + ".");
         int seq = existing.stream().mapToInt(CapturePoint::getSeq).max().orElse(0) + 1;
         points.save(new CapturePoint(area, seq, input.x(), input.y(), input.direction(), blankToNull(input.note())));
+        points.flush();
+        if (tour.getStatus() == DRAFT) tour.setStatus(SUBMITTED);
+        sendWhenMarked(tour);
         // The new point needs a photo, so a finished photo set is incomplete again.
         var status = effectiveStatus(tour);
         if (status == PHOTOS_SUBMITTED || status == APPROVED) {
@@ -391,6 +547,16 @@ public class TourRequestService {
         admin(authentication);
         var customer = users.findById(userId).orElseThrow(() -> error(404, "User not found."));
         return tours.findByUser_IdOrderByIdDesc(customer.getId()).stream().map(this::summary).toList();
+    }
+
+    /** The team starts a space for a customer, named after the property's address. */
+    @Transactional
+    public Detail adminCreateForUser(Long userId, String name, Authentication authentication) {
+        var admin = admin(authentication);
+        var customer = users.findById(userId).orElseThrow(() -> error(404, "User not found."));
+        if (customer.isPlatformAdmin()) throw error(409, "Spaces belong to customers, not administrators.");
+        var tour = tours.save(new TourRequest(customer, name.strip(), null));
+        return detail(tour, admin);
     }
 
     @Transactional(readOnly = true)
@@ -477,6 +643,25 @@ public class TourRequestService {
         }
         tour.setStatus(PLAN_READY);
         return detail(tour, user);
+    }
+
+    /**
+     * There is no "send plan" step: once every floor that has a plan also has its spots, the customer
+     * sees them and can take the photos. Floors without a plan use their own photo gallery instead.
+     */
+    private void sendWhenMarked(TourRequest tour) {
+        if (tour.getStatus() != SUBMITTED) return;
+        var perGroup = new HashMap<Integer, Integer>();
+        boolean any = false;
+        for (var area : areas.findByTourRequest_IdOrderByIdAsc(tour.getId())) {
+            if (area.getPlanObjectKey() == null) continue;
+            int count = points.findByArea_IdOrderBySeqAsc(area.getId()).size();
+            if (count == 0) return;
+            any = true;
+            perGroup.merge(area.getCaptureGroup(), count, Integer::sum);
+        }
+        if (!any || perGroup.values().stream().anyMatch(count -> count > MAX_POINTS_PER_GROUP)) return;
+        tour.setStatus(PLAN_READY);
     }
 
     @Transactional
@@ -580,13 +765,23 @@ public class TourRequestService {
 
     // The client may replace or remove a floor freely in a draft, and after sending only
     // until the administrator has marked capture points on it.
+    // The client may replace, redraw or remove a floor's plan at any time before delivery.
     private TourArea changeableArea(TourRequest tour, Long areaId) {
+        requireNotDelivered(tour);
+        return area(tour, areaId);
+    }
+
+    // A new plan makes the team's spots on that floor meaningless: drop them (and their photos)
+    // and, if the plan had already been sent back, return the request to the team for marking.
+    private void clearSpots(TourRequest tour, TourArea area) {
+        var entries = points.findByArea_IdOrderBySeqAsc(area.getId());
+        if (entries.isEmpty()) return;
+        var keys = entries.stream().map(CapturePoint::getPhotoObjectKey).toList();
+        points.deleteAll(entries);
+        points.flush();
+        keys.forEach(this::discard);
         var status = tour.getStatus();
-        if (status != SUBMITTED && status != PLAN_READY) requireStatus(tour, DRAFT);
-        var area = area(tour, areaId);
-        if (status != DRAFT && !points.findByArea_IdOrderBySeqAsc(areaId).isEmpty())
-            throw error(409, "This floor already has capture points. Ask us if it needs to change.");
-        return area;
+        if (status == PLAN_READY || status == PHOTOS_SUBMITTED || status == APPROVED) tour.setStatus(SUBMITTED);
     }
 
     private TourRequest inStatus(Long id, TourRequest.Status required) {
@@ -694,14 +889,25 @@ public class TourRequestService {
                         !showPoints ? List.of() : points.findByArea_IdOrderBySeqAsc(area.getId()).stream()
                                 .map(point -> new PointResponse(point.getId(), point.getSeq(), point.getX(),
                                         point.getY(), point.getDirection(), point.getNote(),
-                                        point.getPhotoObjectKey() != null, point.getRetakeNote()))
-                                .toList()))
+                                        point.getPhotoObjectKey() != null, point.getRetakeNote(), point.isPhotoViaLink()))
+                                .toList(),
+                        tour.getStatus() != DRAFT && !points.findByArea_IdOrderBySeqAsc(area.getId()).isEmpty(),
+                        floorPhotos.findByArea_IdOrderByIdAsc(area.getId()).stream().map(FloorPhoto::getId).toList(),
+                        floorPhotos.findByArea_IdOrderByIdAsc(area.getId()).stream().filter(FloorPhoto::isViaLink).map(FloorPhoto::getId).toList(),
+                        spatialReady(area)))
                 .toList();
         var scan = deliveredScan(tour);
         return new Detail(tour.getId(), tour.getName(), tour.getNotes(), effectiveStatus(tour).name(),
                 tour.getCreatedAt(), tour.getUser().getDisplayName(), tour.getUser().getEmail(), entries,
                 scan == null ? null : scan.getId(), scan == null ? null : scan.getName(),
                 scan == null ? null : scan.getProject().getId(), areasToPlan(all));
+    }
+
+    /** Marks the requests a gallery link makes (GalleryLinkController), as opposed to a signed-in account. */
+    public static final String GALLERY_LINK = "gallery-link";
+
+    private static boolean viaLink(Authentication authentication) {
+        return GALLERY_LINK.equals(authentication.getDetails());
     }
 
     private static String blankToNull(String value) {
@@ -722,10 +928,20 @@ public class TourRequestService {
     public record DeliverableScan(Long scanId, String scanName, Long projectId, String projectName,
             String organizationName) {}
     public record PointResponse(Long id, int seq, double x, double y, double direction, String note,
-            boolean hasPhoto, String retakeNote) {}
+            boolean hasPhoto, String retakeNote,
+            // Came in through a gallery link: the link may delete it.
+            boolean photoViaLink) {}
     public record AreaResponse(Long id, String name, String kind, int captureGroup, boolean hasPlan,
             int dotSize, int lineLength,
-            List<PointResponse> points) {}
+            List<PointResponse> points,
+            // True once the team has placed spots on this floor, even while the client cannot see them yet.
+            boolean locked,
+            // Photos added to the floor directly (ids, oldest first).
+            List<Long> photos,
+            // The ones that came in through a gallery link: the link may delete only these.
+            List<Long> linkPhotos,
+            // The team has the floor's spatial context: the customer sees that the tour is being made.
+            boolean spatialReady) {}
     public record Detail(Long id, String name, String notes, String status, Instant createdAt,
             String ownerName, String ownerEmail, List<AreaResponse> areas,
             Long scanId, String scanName, Long projectId, int areasToPlan) {}

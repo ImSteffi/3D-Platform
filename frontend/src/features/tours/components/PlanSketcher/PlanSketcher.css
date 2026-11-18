@@ -30,3 +30,11 @@
  .sketcher-tool { flex: 1 1 auto; padding: 0 10px; }
  .sketcher-gap { flex-basis: 100%; height: 0; }
 }
+
+/* Resize handles on the selected shape (left out of the saved image) */
+.sketcher-handle { fill: #ffffff; stroke: #f2a31b; stroke-width: 3; cursor: grab; }
+.sketcher-handle:hover { fill: #fff3dc; }
+.sketcher-handle--nw, .sketcher-handle--se { cursor: nwse-resize; }
+.sketcher-handle--ne, .sketcher-handle--sw { cursor: nesw-resize; }
+.sketcher-handle--n, .sketcher-handle--s { cursor: ns-resize; }
+.sketcher-handle--e, .sketcher-handle--w { cursor: ew-resize; }

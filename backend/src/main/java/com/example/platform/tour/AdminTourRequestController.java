@@ -30,10 +30,22 @@ public class AdminTourRequestController {
         return service.listForUser(userId, authentication);
     }
 
+    @PostMapping("/users/{userId}/tour-requests")
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.CREATED)
+    public TourRequestService.Detail createForUser(@PathVariable Long userId, @Valid @RequestBody CreateForUserRequest request,
+            Authentication authentication) {
+        return service.adminCreateForUser(userId, request.name(), authentication);
+    }
+
     @PostMapping("/tour-requests/{id}/areas")
     public TourRequestService.Detail addArea(@PathVariable Long id,
             @Valid @RequestBody TourRequestController.AreaRequest request, Authentication authentication) {
         return service.adminAddArea(id, request.name(), request.kind(), authentication);
+    }
+
+    @DeleteMapping("/tour-requests/{id}/areas/{areaId}/plan")
+    public TourRequestService.Detail removePlan(@PathVariable Long id, @PathVariable Long areaId, Authentication authentication) {
+        return service.adminRemovePlan(id, areaId, authentication);
     }
 
     @PutMapping("/tour-requests/{id}/areas/{areaId}/plan")
@@ -137,6 +149,7 @@ public class AdminTourRequestController {
     public record MarkerSizesRequest(@NotNull Integer dotSize, @NotNull Integer lineLength) {}
     public record RetakeRequest(@NotNull Long pointId, @Size(max = 500) String note) {}
     public record AreaUpdateRequest(@Size(max = 100) String name, TourArea.Kind kind) {}
+    public record CreateForUserRequest(@jakarta.validation.constraints.NotBlank @Size(max = 100) String name) {}
     public record DeliverRequest(@NotNull Long scanId) {}
     public record ReviewRequest(boolean approve, List<@NotNull @Valid RetakeRequest> retakes) {}
 }

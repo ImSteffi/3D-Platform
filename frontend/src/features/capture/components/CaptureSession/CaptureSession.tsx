@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { imagePickerAccept, prepareImages } from '../../../tours/api/prepareImage'
 import { photoCounts, photoUrl, planUrl, uploadPhoto, validImage, type TourDetail } from '../../../tours/api/tourRequests'
 import { Button, Icon, InlineError, Spinner, StatusPill } from '../../../../shared/ui'
 import { imageLooksDark } from '../../utils/brightness'
@@ -194,12 +195,14 @@ export default function CaptureSession(props: { tour: TourDetail; startPointId?:
   }, 'image/jpeg', JPEG_QUALITY)
  }
 
- function pick(event: ChangeEvent<HTMLInputElement>) {
-  const file = event.target.files?.[0]
+ async function pick(event: ChangeEvent<HTMLInputElement>) {
+  const picked = event.target.files?.[0]
   event.target.value = ''
-  if (!file || !current || uploading) return
-  const problem = validImage(file, MAX_PHOTO_MB)
-  if (problem) { setPickError(problem); return }
+  if (!picked || !current || uploading) return
+  // iPhone HEIC and other formats become a JPG here; videos and panoramas are refused with a reason.
+  const { ready, problem } = await prepareImages([picked], 'photo')
+  const file = ready[0]
+  if (!file || !alive.current) { setPickError(problem ?? ''); return }
   setPickError('')
   discardShot()
   const url = keepUrl(file)
@@ -352,8 +355,8 @@ export default function CaptureSession(props: { tour: TourDetail; startPointId?:
      </div>
     </div>
    </div>
-   <input ref={cameraInput} className="cap-file" type="file" accept="image/*" capture="environment" tabIndex={-1} aria-hidden="true" onChange={pick} />
-   <input ref={galleryInput} className="cap-file" type="file" accept="image/*" tabIndex={-1} aria-hidden="true" onChange={pick} />
+   <input ref={cameraInput} className="cap-file" type="file" accept="image/*" capture="environment" tabIndex={-1} aria-hidden="true" onChange={event => { void pick(event) }} />
+   <input ref={galleryInput} className="cap-file" type="file" accept={imagePickerAccept} tabIndex={-1} aria-hidden="true" onChange={event => { void pick(event) }} />
   </>
  }
 

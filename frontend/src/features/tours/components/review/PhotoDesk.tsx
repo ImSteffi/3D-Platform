@@ -120,6 +120,32 @@ export default function PhotoDesk({ tour, onTour, mode, editable = false }: Prop
   finally { setBusy('') }
  }
 
+ const several = tour.areas.length > 1
+ // Browsing: the plan with its guide is the view; the photos taken so far sit below it.
+ if (!review && editable) {
+  const taken = entries.filter(entry => entry.point.hasPhoto)
+  return <div className="pd pd--plan">
+   <PlanEditor key={tour.id} tour={tour} onTour={onTour} mode="live" reserve={taken.length ? 420 : 250} />
+   {taken.length > 0 && <section className="pd-gallery" aria-label="Photos">
+    <h2>Photos <span className="num rv-dim">{taken.length}</span></h2>
+    <ol>{taken.map(entry => <li key={entry.point.id}>
+     <a className={'pd-frame' + (broken[entry.point.id] ? '' : ' skeleton-bg')} href={photoUrl(tour.id, entry.point.id)} target="_blank" rel="noreferrer"
+      aria-label={`Open photo ${entry.point.seq}${several ? ', ' + entry.area.name : ''}`}>
+      {!broken[entry.point.id] && <img src={photoUrl(tour.id, entry.point.id)} alt="" loading="lazy" draggable={false}
+       onError={() => setBroken(current => ({ ...current, [entry.point.id]: true }))} />}
+      <span className="num pd-frame-number">{pad(entry.point.seq)}</span>
+     </a>
+     <button type="button" className="rv-icon-button rv-icon-button--danger" aria-label={`Delete photo ${entry.point.seq}`} title="Delete photo"
+      disabled={!!busy} onClick={() => { setDeleteError(''); setDeleting(entry) }}><Icon name="trash" size={15} /></button>
+    </li>)}</ol>
+   </section>}
+   {deleting && <ConfirmDialog title={`Delete photo ${deleting.point.seq}?`} confirmLabel="Delete photo" busy={busy === 'delete'} error={deleteError}
+    onConfirm={() => { void confirmDelete() }} onCancel={() => setDeleting(null)}>
+    The customer will be asked to take the photo for point <strong>{pad(deleting.point.seq)}</strong> in {deleting.area.name} again.
+   </ConfirmDialog>}
+  </div>
+ }
+
  if (!active) return editable
   ? <PlanEditor key={tour.id} tour={tour} onTour={onTour} mode="live" />
   : <p className="rv-quiet">This plan has no capture points yet.</p>
@@ -128,7 +154,6 @@ export default function PhotoDesk({ tour, onTour, mode, editable = false }: Prop
  const note = retakes[point.id] ?? ''
  const drafted = !!note.trim()
  const canJudge = review && point.hasPhoto
- const several = tour.areas.length > 1
  const stateOf = (candidate: TourPoint) => candidate.id === point.id ? 'next' as const
   : (retakes[candidate.id]?.trim() || candidate.retakeNote) ? 'retake' as const
   : candidate.hasPhoto ? 'done' as const : 'pending' as const

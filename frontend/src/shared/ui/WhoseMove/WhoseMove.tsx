@@ -11,11 +11,13 @@ export type WhoseMoveProps = {
 }
 
 const words = {
- customer: { you: 'Your move', team: 'With the team', done: 'Tour ready' },
- operator: { you: 'With the customer', team: 'Your move', done: 'Delivered' },
+ customer: { you: '', team: 'With the team', done: 'Tour ready' },
+ operator: { you: 'With the customer', team: '', done: 'Delivered' },
 }
 
 export default function WhoseMove({ who, perspective = 'customer', label, className }: WhoseMoveProps) {
+ const text = label ?? words[perspective][who]
+ if (!text) return null
  const mine = perspective === 'customer' ? who === 'you' : who === 'team'
- return <StatusPill tone={who === 'done' ? 'green' : mine ? 'amber' : 'neutral'} className={className}>{label ?? words[perspective][who]}</StatusPill>
+ return <StatusPill tone={who === 'done' ? 'green' : mine ? 'amber' : 'neutral'} className={className}>{text}</StatusPill>
 }

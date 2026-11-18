@@ -70,3 +70,9 @@
 }
 .person-row--single { grid-template-columns: 1fr; }
 .admin-space-owner { color: var(--ink); font-weight: 500; }
+
+/* New space for this customer, named after the address */
+.new-space-form { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); margin-bottom: var(--s-3); }
+.new-space-input { flex: 1 1 260px; min-height: 44px; padding: 0 var(--s-3); border: 1px solid var(--line, rgba(0,0,0,.12)); border-radius: 22px; background: var(--surface, #fff); color: var(--ink); font: inherit; font-size: 14px; }
+.new-space-form .inline-error { flex-basis: 100%; }
+

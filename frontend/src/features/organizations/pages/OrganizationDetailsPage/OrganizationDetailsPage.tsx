@@ -1,10 +1,11 @@
 import BackLink from '../../../../shared/ui/BackLink/BackLink'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useParams } from 'react-router'
-import { Button, EmptyState, InlineError, Panel, Skeleton, SkeletonGroup } from '../../../../shared/ui'
+import { Button, EmptyState, Field, InlineError, Panel, Skeleton, SkeletonGroup } from '../../../../shared/ui'
 import DeskRowsSkeleton from '../../components/DeskRowsSkeleton'
 import { useShellMode } from '../../../../shared/layout/Backdrop'
 import { getOrganizations, type Organization } from '../../api/organizations'
+import { renameOrganization } from '../../api/team'
 import { getOrganizationUsers, type OrganizationUser } from '../../api/organizationUsers'
 import OrganizationSpaces from './OrganizationSpaces'
 import OrganizationTours from '../../../projects/components/OrganizationTours/OrganizationTours'
@@ -22,6 +23,20 @@ export default function OrganizationDetailsPage() {
  const [attempt, setAttempt] = useState(0)
 
  const [users, setUsers] = useState<OrganizationUser[]>([])
+ const [renaming, setRenaming] = useState(false)
+ const [newName, setNewName] = useState('')
+ const [renameError, setRenameError] = useState('')
+ const [savingName, setSavingName] = useState(false)
+
+ async function saveName(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault()
+  const trimmed = newName.trim()
+  if (!trimmed || trimmed.length > 200) { setRenameError('Enter a name of 1 to 200 characters.'); return }
+  setSavingName(true); setRenameError('')
+  try { setOrganization(await renameOrganization(id, trimmed)); setRenaming(false) }
+  catch (reason) { setRenameError(reason instanceof Error ? reason.message : 'Could not rename this customer.') }
+  finally { setSavingName(false) }
+ }
 
  useEffect(() => {
   let active = true
@@ -55,8 +70,17 @@ export default function OrganizationDetailsPage() {
   <header className="page-header">
    <div>
     <BackLink to="/users" />
-    <h1 className="desk-title">{organization?.name ?? 'Customer'}</h1>
+    {renaming
+     ? <form className="org-rename" onSubmit={saveName} noValidate>
+      <Field name="organizationName" label="Customer name" value={newName} onChange={setNewName} error={renameError} autoComplete="off" autoFocus maxLength={200} />
+      <div className="desk-form-actions">
+       <Button type="submit" loading={savingName}>Save</Button>
+       <Button variant="secondary" onClick={() => setRenaming(false)}>Cancel</Button>
+      </div>
+     </form>
+     : <h1 className="desk-title">{organization?.name ?? 'Customer'}</h1>}
    </div>
+   {organization && !renaming && <Button variant="secondary" icon="edit" onClick={() => { setNewName(organization.name); setRenameError(''); setRenaming(true) }}>Rename</Button>}
   </header>
 
   <Panel padding="lg" className="desk-window">

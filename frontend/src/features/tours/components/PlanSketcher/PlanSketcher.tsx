@@ -15,10 +15,22 @@ type Shape =
  | { id: number; kind: 'room'; x: number; y: number; w: number; h: number; label: string }
  | { id: number; kind: 'wall'; x1: number; y1: number; x2: number; y2: number }
  | { id: number; kind: 'pen'; points: [number, number][] }
- | { id: number; kind: 'door'; x: number; y: number }
- | { id: number; kind: 'stairs'; x: number; y: number }
+ // Door and stairs may be resized; sketches saved before that have no w/h and use the default size.
+ | { id: number; kind: 'door'; x: number; y: number; w?: number; h?: number }
+ | { id: number; kind: 'stairs'; x: number; y: number; w?: number; h?: number }
  | { id: number; kind: 'text'; x: number; y: number; label: string }
+type Box = [number, number, number, number]
+/** Corner and side handles of the selection box; a wall has one handle per end instead. */
+type Handle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'p1' | 'p2'
 type Drag = { mode: 'draw'; start: [number, number] } | { mode: 'move'; id: number; last: [number, number] }
+ | { mode: 'resize'; id: number; handle: Handle; original: Shape; from: Box }
+
+const boxHandles: { handle: Handle; fx: number; fy: number }[] = [
+ { handle: 'nw', fx: 0, fy: 0 }, { handle: 'n', fx: 0.5, fy: 0 }, { handle: 'ne', fx: 1, fy: 0 }, { handle: 'e', fx: 1, fy: 0.5 },
+ { handle: 'se', fx: 1, fy: 1 }, { handle: 's', fx: 0.5, fy: 1 }, { handle: 'sw', fx: 0, fy: 1 }, { handle: 'w', fx: 0, fy: 0.5 },
+]
+const doorSize = (shape: { w?: number; h?: number }) => [shape.w ?? 40, shape.h ?? 40] as const
+const stairsSize = (shape: { w?: number; h?: number }) => [shape.w ?? 60, shape.h ?? 100] as const
 
 const tools: { tool: Tool; label: string; hint: string }[] = [
  { tool: 'room', label: 'Room', hint: 'Drag to draw a room, then type its name.' },
@@ -49,9 +61,33 @@ function bounds(shape: Shape): [number, number, number, number] {
    const xs = shape.points.map(point => point[0]), ys = shape.points.map(point => point[1])
    return [Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)]
   }
-  case 'door': return [shape.x, shape.y - 40, 40, 40]
-  case 'stairs': return [shape.x, shape.y, 60, 100]
+  case 'door': { const [w, h] = doorSize(shape); return [shape.x, shape.y - h, w, h] }
+  case 'stairs': { const [w, h] = stairsSize(shape); return [shape.x, shape.y, w, h] }
   case 'text': return [shape.x - 8, shape.y - 24, Math.max(40, shape.label.length * 13) + 16, 34]
+ }
+}
+
+/** The selection box after dragging one of its handles to (x, y); never smaller than one grid step. */
+function draggedBox([x, y, w, h]: Box, handle: Handle, px: number, py: number): Box {
+ let [left, top, right, bottom] = [x, y, x + w, y + h]
+ if (handle.includes('w')) left = Math.min(px, right - GRID)
+ if (handle.includes('e')) right = Math.max(px, left + GRID)
+ if (handle.includes('n')) top = Math.min(py, bottom - GRID)
+ if (handle.includes('s')) bottom = Math.max(py, top + GRID)
+ return [left, top, right - left, bottom - top]
+}
+
+/** The shape fitted to a new box (from its box when the drag started). Labels keep their size. */
+function resized(shape: Shape, from: Box, [x, y, w, h]: Box): Shape {
+ switch (shape.kind) {
+  case 'room': return { ...shape, x, y, w, h }
+  case 'door': return { ...shape, x, y: y + h, w, h }
+  case 'stairs': return { ...shape, x, y, w, h }
+  case 'pen': {
+   const sx = from[2] ? w / from[2] : 1, sy = from[3] ? h / from[3] : 1
+   return { ...shape, points: shape.points.map(([px, py]) => [x + (px - from[0]) * sx, y + (py - from[1]) * sy]) }
+  }
+  default: return shape
  }
 }
 
@@ -64,16 +100,27 @@ function draw(shape: Shape): ReactNode {
   </>
   case 'wall': return <line x1={shape.x1} y1={shape.y1} x2={shape.x2} y2={shape.y2} stroke={INK} strokeWidth={6} strokeLinecap="round" />
   case 'pen': return <polyline points={shape.points.map(point => point.join(',')).join(' ')} fill="none" stroke={INK} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-  case 'door': return <>
-   <rect x={shape.x} y={shape.y - 40} width={40} height={40} fill="#ffffff" fillOpacity={0} />
-   <path d={`M${shape.x} ${shape.y}V${shape.y - 40}A40 40 0 0 1 ${shape.x + 40} ${shape.y}`} fill="none" stroke={MARK} strokeWidth={4} strokeLinecap="round" />
-   <text x={shape.x + 20} y={shape.y + 18} textAnchor="middle" fontFamily={FONT} fontSize={14} fill={MARK}>Door</text>
-  </>
-  case 'stairs': return <>
-   <rect x={shape.x} y={shape.y} width={60} height={100} fill="#ffffff" stroke={MARK} strokeWidth={3} />
-   {[1, 2, 3, 4, 5, 6].map(step => <line key={step} x1={shape.x} x2={shape.x + 60} y1={shape.y + step * 14} y2={shape.y + step * 14} stroke={MARK} strokeWidth={2} />)}
-   <text x={shape.x + 30} y={shape.y + 118} textAnchor="middle" fontFamily={FONT} fontSize={14} fill={MARK}>Stairs</text>
-  </>
+  case 'door': {
+   const [w, h] = doorSize(shape)
+   return <>
+    <rect x={shape.x} y={shape.y - h} width={w} height={h} fill="#ffffff" fillOpacity={0} />
+    <path d={`M${shape.x} ${shape.y}V${shape.y - h}A${w} ${h} 0 0 1 ${shape.x + w} ${shape.y}`} fill="none" stroke={MARK} strokeWidth={4} strokeLinecap="round" />
+    <text x={shape.x + w / 2} y={shape.y + 18} textAnchor="middle" fontFamily={FONT} fontSize={14} fill={MARK}>Door</text>
+   </>
+  }
+  case 'stairs': {
+   const [w, h] = stairsSize(shape)
+   // Steps keep roughly the same spacing however long the stairs are drawn.
+   const steps = Math.max(2, Math.round(h / 14) - 1)
+   return <>
+    <rect x={shape.x} y={shape.y} width={w} height={h} fill="#ffffff" stroke={MARK} strokeWidth={3} />
+    {Array.from({ length: steps }, (_, index) => {
+     const y = shape.y + (index + 1) * h / (steps + 1)
+     return <line key={index} x1={shape.x} x2={shape.x + w} y1={y} y2={y} stroke={MARK} strokeWidth={2} />
+    })}
+    <text x={shape.x + w / 2} y={shape.y + h + 18} textAnchor="middle" fontFamily={FONT} fontSize={14} fill={MARK}>Stairs</text>
+   </>
+  }
   case 'text': {
    // A transparent box makes the label easy to hit; the text itself ignores the pointer.
    const [x, y, w, h] = bounds(shape)
@@ -158,6 +205,14 @@ export default function PlanSketcher({ title, storageKey, onSave, onClose }: Pro
   const point = at(event)
   const [x, y] = [snap(point[0]), snap(point[1])]
   const id = nextId.current
+  // A handle of the selected shape resizes it, whichever tool is active.
+  const handle = (event.target as Element).closest('[data-handle]')?.getAttribute('data-handle') as Handle | null
+  if (handle && current) {
+   setUndo(history => [...history.slice(-49), shapes])
+   drag.current = { mode: 'resize', id: current.id, handle, original: current, from: bounds(current) }
+   event.currentTarget.setPointerCapture(event.pointerId)
+   return
+  }
   if (tool === 'select') {
    const hit = Number((event.target as Element).closest('[data-id]')?.getAttribute('data-id'))
    if (!hit) { setSelected(null); return }
@@ -192,6 +247,14 @@ export default function PlanSketcher({ title, storageKey, onSave, onClose }: Pro
    return
   }
   const [x, y] = [snap(point[0]), snap(point[1])]
+  if (active.mode === 'resize') {
+   const original = active.original
+   const next: Shape = original.kind === 'wall'
+    ? active.handle === 'p1' ? { ...original, x1: x, y1: y } : { ...original, x2: x, y2: y }
+    : resized(original, active.from, draggedBox(active.from, active.handle, x, y))
+   setShapes(list => list.map(shape => shape.id === active.id ? next : shape))
+   return
+  }
   setDraft(shape => {
    if (!shape) return shape
    if (shape.kind === 'room') return { ...shape, x: Math.min(active.start[0], x), y: Math.min(active.start[1], y), w: Math.abs(x - active.start[0]), h: Math.abs(y - active.start[1]) }
@@ -270,7 +333,16 @@ export default function PlanSketcher({ title, storageKey, onSave, onClose }: Pro
     </g>
     {shapes.map(shape => <g key={shape.id} data-id={shape.id}>{draw(shape)}</g>)}
     {draft && <g opacity={0.6}>{draw(draft)}</g>}
-    {box && <rect data-ui x={box[0] - 8} y={box[1] - 8} width={box[2] + 16} height={box[3] + 16} fill="none" stroke="#f2a31b" strokeWidth={3} strokeDasharray="10 7" pointerEvents="none" />}
+    {box && current?.kind !== 'wall' && <rect data-ui x={box[0] - 8} y={box[1] - 8} width={box[2] + 16} height={box[3] + 16} fill="none" stroke="#f2a31b" strokeWidth={3} strokeDasharray="10 7" pointerEvents="none" />}
+    {/* Drag a handle to resize: corners change both sides, side handles one. A wall has a handle at each end. */}
+    {current && box && current.kind !== 'text' && <g data-ui className="sketcher-handles">
+     {current.kind === 'wall'
+      ? ([['p1', current.x1, current.y1], ['p2', current.x2, current.y2]] as const).map(([handle, cx, cy]) =>
+        <circle key={handle} data-handle={handle} className="sketcher-handle" cx={cx} cy={cy} r={10} />)
+      : boxHandles.map(({ handle, fx, fy }) =>
+        <circle key={handle} data-handle={handle} className={`sketcher-handle sketcher-handle--${handle}`}
+         cx={box[0] - 8 + (box[2] + 16) * fx} cy={box[1] - 8 + (box[3] + 16) * fy} r={9} />)}
+    </g>}
    </svg>
   </div>
  </dialog>

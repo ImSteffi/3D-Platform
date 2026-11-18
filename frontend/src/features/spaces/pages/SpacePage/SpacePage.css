@@ -22,3 +22,6 @@
  .space-help span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 @media (prefers-reduced-transparency: reduce) { .space-help { background: var(--solid); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+.space-skel-actions { display: flex; gap: var(--s-5); margin-left: auto; }
+.space-skel .area-head { display: flex; align-items: center; }
+.space-skel .space-skel-plan { width: 100%; }

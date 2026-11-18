@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useShellMode } from '../../../../shared/layout/Backdrop'
-import { Button, EmptyState, Icon, InlineError, Panel, Skeleton, SkeletonGroup, StatusPill, WhoseMove } from '../../../../shared/ui'
-import { getAdminTourRequests, getTourRequest, photoCounts, whoseMove, type TourStatus, type TourSummary } from '../../api/tourRequests'
+import { Button, EmptyState, Icon, InlineError, Panel, Skeleton, SkeletonGroup, StatusPill } from '../../../../shared/ui'
+import { getAdminTourRequests, getTourRequest, photoCounts, type TourStatus, type TourSummary } from '../../api/tourRequests'
 import { errorText, formatDate, operatorStatus, statusTone } from '../../components/review/reviewText'
 import './AdminTourRequestsPage.css'
 
 type Filter = 'SUBMITTED' | 'PHOTOS_SUBMITTED' | 'APPROVED' | 'PLAN_READY'
-const actions: Partial<Record<TourStatus, string>> = { SUBMITTED: 'Place points', PHOTOS_SUBMITTED: 'Review photos', APPROVED: 'Deliver tour' }
 /** A floor the customer added later needs points, whatever the request's status: it is the operator's move again. */
 const newFloor = (tour: TourSummary) => tour.status !== 'SUBMITTED' && tour.status !== 'DRAFT' && tour.status !== 'DELIVERED' && (tour.areasToPlan ?? 0) > 0
 /** Where a request is counted and listed. Each request appears once. */
@@ -21,9 +20,9 @@ const PROGRESS_ROWS = 16
 type Progress = Record<number, { taken: number; total: number }>
 type Loaded = { attempt: number; tours?: TourSummary[]; error?: string }
 
-function Row({ tour, progress, action }: { tour: TourSummary; progress?: { taken: number; total: number }; action?: string }) {
+function Row({ tour, progress }: { tour: TourSummary; progress?: { taken: number; total: number } }) {
  const path = '/review/' + tour.id
- return <li className={'q-row' + (action ? ' q-row--top' : '')}>
+ return <li className="q-row">
   <div className="q-row-name">
    <Link to={path} className="q-row-link">{tour.name}</Link>
    <span>{tour.ownerName}</span>
@@ -32,11 +31,10 @@ function Row({ tour, progress, action }: { tour: TourSummary; progress?: { taken
   <span className="q-row-progress">{progress && progress.total > 0 && <><b className="num">{progress.taken} / {progress.total}</b> photos</>}</span>
   <span className="q-row-pills">
    {newFloor(tour) ? <StatusPill tone="amber">New floor to plan</StatusPill> : <StatusPill tone={statusTone(tour.status)}>{operatorStatus[tour.status] ?? tour.status}</StatusPill>}
-   {tour.status !== 'DELIVERED' && <WhoseMove who={newFloor(tour) ? 'team' : whoseMove(tour.status)} perspective="operator" />}
   </span>
   <time className="q-row-date num" dateTime={tour.createdAt}>{formatDate(tour.createdAt)}</time>
   <span className="q-row-end">
-   {action ? <Button to={path} iconAfter="arrow" className="q-row-action">{action}</Button> : <Icon name="chevron" size={16} className="q-row-chevron" />}
+   <Icon name="chevron" size={16} className="q-row-chevron" />
   </span>
  </li>
 }
@@ -89,7 +87,6 @@ export default function AdminTourRequestsPage() {
  const header = <header className="page-header">
   <div>
    <h1>Queue</h1>
-   <p>Every capture, by who has the next move.</p>
   </div>
  </header>
 
@@ -126,8 +123,8 @@ export default function AdminTourRequestsPage() {
    </div>}
 
    {!!yours.length && <section className="q-group" aria-labelledby="q-yours">
-    <h2 id="q-yours">Your move <span className="num">{yours.length}</span></h2>
-    <ul className="q-list">{yours.map((tour, index) => <Row key={tour.id} tour={tour} progress={progress[tour.id]} action={index === 0 ? actions[bucket(tour)] : undefined} />)}</ul>
+    <h2 id="q-yours">To do <span className="num">{yours.length}</span></h2>
+    <ul className="q-list">{yours.map((tour) => <Row key={tour.id} tour={tour} progress={progress[tour.id]} />)}</ul>
    </section>}
 
    {!!waiting.length && <section className="q-group q-group--waiting" aria-labelledby="q-waiting">

@@ -36,10 +36,15 @@
 /* ---- Plan editor (SUBMITTED) ---- */
 .pe { display: flex; flex-direction: column; gap: var(--s-4); }
 .pe-unsaved { display: inline-block; width: 7px; height: 7px; margin-left: 2px; border-radius: 50%; background: var(--amber); }
-.pe-body { display: grid; grid-template-columns: minmax(0, 1fr) 340px; align-items: start; gap: var(--s-5); }
-.pe-well { display: flex; min-height: max(360px, calc(100svh - 218px)); padding: var(--s-4); }
+.pe-body { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(340px, 1fr); align-items: start; gap: var(--s-5); }
+.pe-well { display: flex; align-items: center; justify-content: center; min-height: 220px; padding: 10px; }
 .pe-side { position: sticky; top: var(--margin); display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; max-height: calc(100svh - 2 * var(--margin)); }
 .pe-side-head { display: flex; justify-content: flex-end; }
+.pe-section { display: flex; flex-direction: column; gap: var(--s-3); }
+.pe-section + .pe-section { padding-top: var(--s-5); border-top: 1px solid var(--hair); }
+.pe-section-head { display: flex; align-items: center; gap: var(--s-3); }
+.pe-bar-state { display: flex; align-items: center; gap: var(--s-2); }
+.pe-footer { display: flex; flex-direction: column; gap: var(--s-2); max-width: 420px; margin-left: auto; width: 100%; }
 .pe-count { flex: none; height: 28px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 14px; background: var(--fill); font-size: 13px; color: var(--ink); white-space: nowrap; }
 .pe-count.is-over { background: var(--red-soft); color: var(--red-ink); }
 
@@ -79,7 +84,7 @@
 .pe-send { display: flex; flex-direction: column; gap: var(--s-2); padding-top: var(--s-4); border-top: 1px solid var(--hair); }
 
 /* ---- Photo desk (PHOTOS_SUBMITTED review; read-only browse elsewhere) ---- */
-.pd { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: var(--s-4) var(--s-5); }
+.pd { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(380px, 1fr); gap: var(--s-4) var(--s-5); }
 .pd-main { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
 .pd-photo { position: relative; display: grid; place-items: center; height: clamp(320px, calc(100svh - 500px), 820px); overflow: hidden; }
 .pd--browse .pd-photo { height: clamp(320px, calc(100svh - 430px), 820px); }
@@ -215,3 +220,18 @@
 @media (prefers-reduced-motion: reduce) {
  .pd-strip { scroll-behavior: auto; }
 }
+
+/* Browsing: plan first, the photos taken so far below it. */
+.pd--plan { display: flex; flex-direction: column; gap: 24px; }
+.pd-gallery h2 { display: flex; gap: 8px; align-items: baseline; margin: 0 0 12px; font-size: 1rem; }
+.pd-gallery ol { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.pd-gallery li { position: relative; }
+.pd-gallery .pd-frame { display: block; width: 100%; aspect-ratio: 4 / 3; }
+.pd-gallery .rv-icon-button { position: absolute; top: 6px; right: 6px; background: #fff; }
+.pe .rv-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+/* Marking spots: each floor is its own card, like on the space page, instead of one panel holding them all. */
+.rq-window:has(> .pe) { padding: 0; background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.rq-window:has(> .pe) .pe-section { padding: 22px; border-radius: var(--r-panel); background: var(--glass); border: 1px solid var(--edge); box-shadow: var(--shadow-panel); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
+.rq-window:has(> .pe) .pe-section + .pe-section { border-top: 1px solid var(--edge); }
+@media (max-width: 900px) { .rq-window:has(> .pe) .pe-section { padding: var(--s-4); border-radius: 22px; } }
+@media (prefers-reduced-transparency: reduce) { .rq-window:has(> .pe) .pe-section { background: var(--solid); -webkit-backdrop-filter: none; backdrop-filter: none; } }

@@ -25,6 +25,8 @@ export type TourPoint = {
  note: string | null
  hasPhoto: boolean
  retakeNote: string | null
+ /** Came in through a gallery link: the link may delete it. */
+ photoViaLink?: boolean
 }
 
 export type TourArea = {
@@ -36,6 +38,14 @@ export type TourArea = {
  dotSize: number
  lineLength: number
  points: TourPoint[]
+ /** The team has placed spots on this floor (the client may not see them yet), so its plan can no longer change. Older backends omit this. */
+ locked?: boolean
+ /** Photos added to the floor directly (ids, oldest first). Older backends omit this. */
+ photos?: number[]
+ /** Photos that came in through a gallery link: the only ones a link may delete. */
+ linkPhotos?: number[]
+ /** The team has made this floor's spatial context: its tour is being made. */
+ spatialReady?: boolean
 }
 
 export type TourDetail = {
@@ -118,30 +128,40 @@ async function send<T>(method: string, url: string, body?: unknown, file?: File)
 }
 
 const root = '/api/tour-requests'
+
+/** Set on the public gallery page: the space's calls then go through its link instead of a signed-in session. */
+let galleryToken: string | null = null
+export function setGalleryToken(token: string | null) { galleryToken = token }
+/** True on a gallery link page: such a link may delete only the photos it added. */
+export const onGalleryLink = () => galleryToken !== null
+const base = (id: number) => galleryToken ? `/api/gallery/${encodeURIComponent(galleryToken)}` : `${root}/${id}`
 const adminRoot = '/api/admin/tour-requests'
 
 export const getTourRequests = () => get<TourSummary[]>(root)
-export const getTourRequest = (id: number) => get<TourDetail>(`${root}/${id}`)
+export const getTourRequest = (id: number) => get<TourDetail>(`${base(id)}`)
 export const createTourRequest = (name: string, notes: string) =>
  send<TourDetail>('POST', root, { name, notes: notes || null })
-export const deleteTourRequest = (id: number) => send<void>('DELETE', `${root}/${id}`)
+export const deleteTourRequest = (id: number) => send<void>('DELETE', `${base(id)}`)
 export const addArea = (id: number, name: string, kind: AreaKind) =>
- send<TourDetail>('POST', `${root}/${id}/areas`, { name, kind })
+ send<TourDetail>('POST', `${base(id)}/areas`, { name, kind })
 export const removeArea = (id: number, areaId: number) =>
- send<TourDetail>('DELETE', `${root}/${id}/areas/${areaId}`)
+ send<TourDetail>('DELETE', `${base(id)}/areas/${areaId}`)
+/** Takes the plan off a floor; the floor and its photos stay. */
+export const removePlan = (id: number, areaId: number) =>
+ send<TourDetail>('DELETE', `${base(id)}/areas/${areaId}/plan`)
 export const uploadPlan = (id: number, areaId: number, file: File) =>
- send<TourDetail>('PUT', `${root}/${id}/areas/${areaId}/plan`, undefined, file)
-export const submitTourRequest = (id: number) => send<TourDetail>('POST', `${root}/${id}/submit`)
+ send<TourDetail>('PUT', `${base(id)}/areas/${areaId}/plan`, undefined, file)
+export const submitTourRequest = (id: number) => send<TourDetail>('POST', `${base(id)}/submit`)
 export const uploadPhoto = (id: number, pointId: number, file: File) =>
- send<TourDetail>('PUT', `${root}/${id}/points/${pointId}/photo`, undefined, file)
+ send<TourDetail>('PUT', `${base(id)}/points/${pointId}/photo`, undefined, file)
 export const deletePhoto = (id: number, pointId: number) =>
- send<TourDetail>('DELETE', `${root}/${id}/points/${pointId}/photo`)
-export const submitPhotos = (id: number) => send<TourDetail>('POST', `${root}/${id}/photos/submit`)
+ send<TourDetail>('DELETE', `${base(id)}/points/${pointId}/photo`)
+export const submitPhotos = (id: number) => send<TourDetail>('POST', `${base(id)}/photos/submit`)
 
 export const planUrl = (id: number, areaId: number, version = 0) =>
- `${root}/${id}/areas/${areaId}/plan?v=${version}`
+ `${base(id)}/areas/${areaId}/plan?v=${version}`
 export const photoUrl = (id: number, pointId: number, version = 0) =>
- `${root}/${id}/points/${pointId}/photo?v=${version}`
+ `${base(id)}/points/${pointId}/photo?v=${version}`
 
 export const getAdminTourRequests = () => get<TourSummary[]>(adminRoot)
 export const saveAreaPoints = (id: number, areaId: number, captureGroup: number, points: PointInput[]) =>
@@ -207,20 +227,20 @@ const plural = (count: number, word: string) => `${count} ${word}${count === 1 ?
 
 /**
  * One short plain sentence saying whose move it is and what happens next, for the customer:
- * "Your move: 11 photos to go", "With the team: preparing your capture plan", "Your tour is ready".
+ * "11 photos to go", "With the team: preparing your capture plan", "Your tour is ready".
  * Give it a TourDetail to get real photo counts; a TourSummary gets generic wording.
  */
 export function nextMoveLine(tour: TourSummary | TourDetail): string {
  switch (tour.status) {
-  case 'DRAFT': return 'Your move: add your floor plan'
+  case 'DRAFT': return 'Add your floor plan'
   case 'SUBMITTED': return 'With the team: preparing your capture plan'
   case 'PLAN_READY': {
-   if (!('areas' in tour)) return 'Your move: take your photos'
+   if (!('areas' in tour)) return 'Take your photos'
    const { total, taken, retakes } = photoCounts(tour)
    const left = total - taken - retakes
-   if (left > 0) return `Your move: ${plural(left, 'photo')} to go`
-   if (retakes > 0) return `Your move: ${plural(retakes, 'photo')} to retake`
-   return 'Your move: send your photos to the team'
+   if (left > 0) return `${plural(left, 'photo')} to go`
+   if (retakes > 0) return `${plural(retakes, 'photo')} to retake`
+   return 'Send your photos to the team'
   }
   case 'PHOTOS_SUBMITTED': return 'With the team: checking your photos'
   case 'APPROVED': return 'With the team: building your tour'
@@ -256,6 +276,8 @@ export const adminAddArea = (id: number, name: string, kind: AreaKind) =>
  send<TourDetail>('POST', `${adminRoot}/${id}/areas`, { name, kind })
 export const adminUploadPlan = (id: number, areaId: number, file: File) =>
  send<TourDetail>('PUT', `${adminRoot}/${id}/areas/${areaId}/plan`, undefined, file)
+export const adminRemovePlan = (id: number, areaId: number) =>
+ send<TourDetail>('DELETE', `${adminRoot}/${id}/areas/${areaId}/plan`)
 export const adminRemoveArea = (id: number, areaId: number) =>
  send<TourDetail>('DELETE', `${adminRoot}/${id}/areas/${areaId}`)
 export const adminUpdateArea = (id: number, areaId: number, changes: { name?: string; kind?: AreaKind }) =>
@@ -287,7 +309,33 @@ export type SpatialContext = {
  /** False when the server has no WLT_API_KEY. */
  configured: boolean
  frames: SpatialFrame[]
+ /** Gallery photos added after this run: not in it yet. */
+ newPhotoIds?: number[]
 }
 const spatialUrl = (id: number, areaId: number) => `${adminRoot}/${id}/areas/${areaId}/spatial-context`
 export const getSpatialContext = (id: number, areaId: number) => get<SpatialContext>(spatialUrl(id, areaId))
 export const startSpatialContext = (id: number, areaId: number) => send<SpatialContext>('POST', spatialUrl(id, areaId))
+
+/* Admin: a space the team starts for a customer, named after the address. */
+export const adminCreateSpaceForUser = (userId: number, name: string) =>
+ send<TourDetail>('POST', `${adminUsersRoot}/${userId}/tour-requests`, { name })
+
+/* Admin: the gallery link. Opening it signs the space's owner in and opens the space. Valid 7 days. */
+export type GalleryLink = { path: string; url: string | null; expiresAt: string }
+const galleryUrl = (id: number) => `${adminRoot}/${id}/gallery-link`
+export async function getGalleryLink(id: number): Promise<GalleryLink | null> {
+ const response = await fetch(galleryUrl(id), { credentials: 'same-origin', cache: 'no-store' })
+ await check(response)
+ const text = await response.text()
+ return text ? JSON.parse(text) : null
+}
+export const createGalleryLink = (id: number) => send<GalleryLink>('POST', galleryUrl(id))
+export const revokeGalleryLink = (id: number) => send<void>('DELETE', galleryUrl(id))
+
+
+/* Photos added to a floor straight away, without a plan or capture points. */
+export const addFloorPhoto = (id: number, areaId: number, file: File) =>
+ send<TourDetail>('POST', `${base(id)}/areas/${areaId}/photos`, undefined, file)
+export const deleteFloorPhoto = (id: number, photoId: number) =>
+ send<TourDetail>('DELETE', `${base(id)}/floor-photos/${photoId}`)
+export const floorPhotoUrl = (id: number, photoId: number) => `${base(id)}/floor-photos/${photoId}`

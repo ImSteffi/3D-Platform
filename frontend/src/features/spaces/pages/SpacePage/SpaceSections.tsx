@@ -6,24 +6,33 @@ import CaptureSession from '../../../capture/components/CaptureSession/CaptureSe
 import PlanSketcher from '../../../tours/components/PlanSketcher/PlanSketcher'
 import { forgetSketch, sketchKey } from '../../../tours/components/PlanSketcher/sketchStorage'
 import {
- addArea, deletePhoto, deleteTourRequest, kindLabels, photoUrl, removeArea, submitPhotos, submitTourRequest, uploadPhoto, uploadPlan, validImage,
+ addFloorPhoto, deleteFloorPhoto, adminAddArea, adminRemoveArea, adminRemovePlan, adminUploadPlan, addArea as customerAddArea, deletePhoto, deleteTourRequest, kindLabels, photoUrl, removeArea as customerRemoveArea, removePlan as customerRemovePlan, uploadPhoto, uploadPlan as customerUploadPlan,
  type AreaKind, type TourArea,
 } from '../../../tours/api/tourRequests'
+import { prepareImages } from '../../../tours/api/prepareImage'
+import type { FloorUpload } from './FloorGallery'
 import AreaSection from './AreaSection'
 import { entriesOf, floorState, message, needsYou, pad, plural, type Entry, type SpaceProps } from './spaceModel'
 import './SpaceSections.css'
 
 const MAX_AREAS = 20
 const kinds = (Object.keys(kindLabels) as AreaKind[]).map(value => ({ value, label: kindLabels[value] }))
-const floors = (count: number) => count === 1 ? 'one floor' : `${count} floors`
 
 type Props = SpaceProps & {
  /** Only the floor sections, read-only: no add row and no to-dos (used once the tour is delivered). */
  sectionsOnly?: boolean
+ /** The team's view of a customer's space: same page, plus spot marking, Atlas, and the team's own plan edits. */
+ admin?: boolean
+ /** The public gallery page (no account): no deleting the space or its floors. */
+ gallery?: boolean
 }
 
 /** The space before delivery, as one page: the add-plan row, then one section per floor, each with its own to-do. */
-export default function SpaceSections({ tour, version, busy, run, fail, apply, sectionsOnly = false }: Props) {
+export default function SpaceSections({ tour, version, busy, run, fail, apply, sectionsOnly = false, admin = false, gallery = false }: Props) {
+ const addArea = admin ? adminAddArea : customerAddArea
+ const uploadPlan = admin ? adminUploadPlan : customerUploadPlan
+ const removeArea = admin ? adminRemoveArea : customerRemoveArea
+ const dropPlan = admin ? adminRemovePlan : customerRemovePlan
  const navigate = useNavigate()
  const status = tour.status
  const draft = status === 'DRAFT'
@@ -36,6 +45,10 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
  const [saving, setSaving] = useState(false)
  const [addError, setAddError] = useState('')
  const [sketching, setSketching] = useState<TourArea | null>(null)
+ /** How many photos are still uploading to each floor (by area id). */
+ const [floorUploads, setFloorUploads] = useState<Record<number, FloorUpload>>({})
+ /** A plan change on a floor the team already marked, waiting for the customer to confirm. */
+ const [pendingChange, setPendingChange] = useState<{ area: TourArea; what: 'replace' | 'draw' | 'remove' | 'unplan'; go: () => void } | null>(null)
  // Deleting
  const [deletingSpace, setDeletingSpace] = useState(false)
  const [photoToDelete, setPhotoToDelete] = useState<Entry | null>(null)
@@ -71,13 +84,57 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
   } catch (reason) { setAddError(message(reason, 'We could not add this plan. Please try again.')) }
   finally { setSaving(false) }
  }
- function plan(area: TourArea, file: File | undefined) {
-  if (!file) return
-  const problem = validImage(file, 20)
+ // Changing a floor the team already marked clears its spots (and photos): ask first.
+ const marked = (area: TourArea) => !admin && !draft && (area.locked || area.points.length > 0)
+ function guarded(area: TourArea, what: 'replace' | 'draw' | 'remove' | 'unplan', go: () => void) {
+  if (marked(area)) setPendingChange({ area, what, go })
+  else go()
+ }
+ async function plan(area: TourArea, picked: File | undefined) {
+  if (!picked) return
+  const { ready, problem } = await prepareImages([picked], 'plan')
   if (problem) fail(problem)
-  else void run(() => uploadPlan(tour.id, area.id, file), true)
+  const file = ready[0]
+  if (file) guarded(area, 'replace', () => { void run(() => uploadPlan(tour.id, area.id, file), true) })
+ }
+ // Photos added to a floor directly: one at a time, so each upload is its own request.
+ // Each photo is prepared and sent on its own, so the first one shows up within seconds. The next photo
+ // is prepared while the current one uploads.
+ async function addFloorPhotos(area: TourArea, files: File[]) {
+  if (!files.length) return
+  const set = (upload: FloorUpload | null) => setFloorUploads(current => {
+   const next = { ...current }
+   if (upload) next[area.id] = upload; else delete next[area.id]
+   return next
+  })
+  const problems: string[] = []
+  // A few photos are prepared ahead (iPhone photos convert side by side) while one uploads at a time.
+  const AHEAD = 4
+  const prepared: ReturnType<typeof prepareImages>[] = []
+  const prepareUpTo = (last: number) => { for (let j = prepared.length; j <= Math.min(last, files.length - 1); j++) prepared.push(prepareImages([files[j]], 'photo')) }
+  prepareUpTo(AHEAD - 1)
+  set({ done: 0, total: files.length, preview: null })
+  for (let i = 0; i < files.length; i++) {
+   const { ready, problem } = await prepared[i]
+   prepareUpTo(i + AHEAD)
+   if (problem) problems.push(problem)
+   const file = ready[0]
+   if (file) {
+    const preview = URL.createObjectURL(file)
+    set({ done: i, total: files.length, preview })
+    try { apply(await addFloorPhoto(tour.id, area.id, file)) }
+    catch (reason) { problems.push(message(reason, `${files[i].name} could not be uploaded.`)) }
+    finally { URL.revokeObjectURL(preview) }
+   }
+   set({ done: i + 1, total: files.length, preview: null })
+  }
+  set(null)
+  if (problems.length) fail(problems.length === 1 ? problems[0] : `${problems.length} files were skipped. ${problems.slice(0, 3).join(' ')}${problems.length > 3 ? ' …' : ''}`)
  }
  function removePlan(area: TourArea) {
+  guarded(area, 'remove', () => doRemovePlan(area))
+ }
+ function doRemovePlan(area: TourArea) {
   void run(() => removeArea(tour.id, area.id)).then(removed => { if (removed) forgetSketch(sketchKey(area.id)) })
  }
  async function removeSpace() {
@@ -109,10 +166,11 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
   * Photos for one floor. Dropped on a frame: that point first, then the floor's empty points after it.
   * Picked for the floor: one photo goes to the selected point (or the floor's retake / next point), several fill its empty points in order.
   */
- function addFiles(area: TourArea, files: File[], target: Entry | null) {
-  if (status !== 'PLAN_READY' || !files.length) return
-  const problem = files.map(file => validImage(file, 30)).find(Boolean)
-  if (problem) { fail(problem); return }
+ async function addFiles(area: TourArea, picked: File[], target: Entry | null) {
+  if (status !== 'PLAN_READY' || !picked.length) return
+  const { ready: files, problem } = await prepareImages(picked, 'photo')
+  if (problem) fail(problem)
+  if (!files.length) return
   const own = entries.filter(entry => entry.area.id === area.id)
   const empties = own.filter(entry => !entry.point.hasPhoto && free(entry))
   const retakes = own.filter(entry => entry.point.retakeNote && free(entry))
@@ -121,7 +179,7 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
   if (target) targets = free(target) ? [target, ...empties.filter(entry => entry.number > target.number)] : []
   else if (files.length === 1 && single && free(single)) targets = [single]
   else targets = empties.length ? empties : retakes
-  if (!targets.length) { fail(`Every point on ${area.name} already has a photo. Drop a photo onto a frame to replace it.`); return }
+  if (!targets.length) { fail(`Every point on ${area.name} already has a photo. Delete a photo to take it again.`); return }
   const extra = files.length - targets.length
   fail(extra > 0 ? `Only ${plural(targets.length, 'point')} on ${area.name} could take a photo, so ${plural(extra, 'extra photo')} ${extra === 1 ? 'was' : 'were'} skipped.` : '')
   // Photos added together are matched to the points by the time they were taken.
@@ -130,24 +188,9 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
   setSelected(null)
  }
 
- // The request-level sends, each with a short reason while it cannot be used.
- const count = (wanted: string[]) => states.filter(item => wanted.includes(item.state)).length
- const noPlan = count(['no-plan']), marking = count(['marking']), wantPhotos = count(['retake', 'photos'])
- let send: { label: string; action: () => void; reason: string } | null = null
- if (draft) send = {
-  label: 'Send floor plans to us', action: () => { void run(() => submitTourRequest(tour.id)) },
-  reason: !tour.areas.length ? 'Add a floor plan first.' : noPlan ? `${floors(noPlan)} still ${noPlan === 1 ? 'needs' : 'need'} a plan.`.replace(/^o/, 'O') : '',
- }
- else if (status === 'PLAN_READY') send = {
-  label: 'Send photos to us', action: () => { void run(() => submitPhotos(tour.id)) },
-  reason: (claimed.length ? 'Your photos are still uploading.'
-   : wantPhotos ? `${floors(wantPhotos)} still ${wantPhotos === 1 ? 'needs' : 'need'} photos.`
-   : noPlan ? `${floors(noPlan)} still ${noPlan === 1 ? 'needs' : 'need'} a plan.`
-   : marking ? `We’re still marking ${floors(marking)}.` : !entries.length ? 'There are no photos to send yet.' : '').replace(/^o/, 'O'),
- }
-
+ // There is no send button: plans and photos reach the team as they are uploaded.
  return <div className="sections">
-  {/* Action row: add plan on the left; the request-level send on the right */}
+  {/* Action row: add plan on the left */}
   {!sectionsOnly && <div className={`sections-actions ${adding ? 'is-adding' : ''}`.trim()}>
    {adding ? <Panel as="form" padding="sm" className="add-form" aria-label="Add a plan" onSubmit={event => { void add(event) }}>
     <Field label="Name of this plan" value={name} onChange={setName} maxLength={100} autoFocus placeholder="For example Ground floor, Basement, Garden" />
@@ -163,11 +206,8 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
     <Button variant="secondary" icon="plus" disabled={full} onClick={() => setAdding(true)}>Add plan</Button>
     {full && <p className="row-reason">A space can have up to {MAX_AREAS} plans.</p>}
    </div>}
-   {(send || draft) && <div className="sections-next">
-    {send?.reason && <p className="row-reason">{send.reason}</p>}
-    {draft && <Button variant="quiet" icon="trash" disabled={busy} onClick={() => setDeletingSpace(true)}>Delete space</Button>}
-    {send && <Button variant={primaryArea === undefined && !send.reason ? 'primary' : 'secondary'} iconAfter="arrow"
-     loading={busy && !send.reason} disabled={busy || !!send.reason} onClick={send.action}>{send.label}</Button>}
+   {draft && <div className="sections-next">
+    {draft && !admin && !gallery && <Button variant="quiet" icon="trash" disabled={busy} onClick={() => setDeletingSpace(true)}>Delete space</Button>}
    </div>}
   </div>}
 
@@ -177,10 +217,18 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
    onSelect={entry => setSelected(entry.point.id === selected ? null : entry.point.id)}
    onFiles={(files, entry) => addFiles(area, files, entry)} onDelete={entry => { setDeleteError(''); setPhotoToDelete(entry) }}
    onCamera={entry => setCamera(entry?.point.id ?? null)}
-   onPlan={plan} onSketch={setSketching} onRemove={removePlan} />)}
+   onPlan={plan} onSketch={area => guarded(area, 'draw', () => setSketching(area))} onRemove={removePlan} onRemovePlan={area => guarded(area, 'unplan', () => { void run(() => dropPlan(tour.id, area.id), true).then(done => { if (done) forgetSketch(sketchKey(area.id)) }) })} removable={!gallery}
+   floorPhotos={admin ? undefined : { uploading: floorUploads[area.id] ?? null, onAdd: files => { void addFloorPhotos(area, files) }, onDelete: photoId => { void run(() => deleteFloorPhoto(tour.id, photoId)) } }} admin={admin ? { markTo: `/review/${tour.id}` } : undefined} />)}
   {tour.areas.length === 0 && <Panel><p className="sections-none">{sectionsOnly ? 'This space has no floor plans.'
-   : 'No floor plans yet. Add one for every floor or building, then upload an image or draw it here.'}</p></Panel>}
+   : 'No floors yet. Click Add plan for each floor or building, then upload a photo of its floor plan or draw it by hand.'}</p></Panel>}
 
+  {pendingChange && <ConfirmDialog title={pendingChange.what === 'remove' ? 'Remove this floor?' : 'Change this floor plan?'}
+   confirmLabel={pendingChange.what === 'remove' ? 'Remove floor' : 'Change plan'} busyLabel="Working…"
+   onConfirm={() => { const go = pendingChange.go; setPendingChange(null); go() }} onCancel={() => setPendingChange(null)}>
+   <p>We have already marked where to stand on <strong>{pendingChange.area.name}</strong>. {pendingChange.what === 'remove'
+    ? "Removing it deletes those spots and any photos on this floor."
+    : "A new plan clears those spots and any photos on this floor, and we mark it again."} This cannot be undone.</p>
+  </ConfirmDialog>}
   {sketching && <PlanSketcher key={sketching.id} title={sketching.name} storageKey={sketchKey(sketching.id)}
    onSave={file => run(() => uploadPlan(tour.id, sketching.id, file), true)} onClose={() => setSketching(null)} />}
   {deletingSpace && <ConfirmDialog title="Delete this space?" confirmLabel="Delete space" busy={removing} error={deleteError}
@@ -190,7 +238,7 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
   {photoToDelete && <ConfirmDialog title="Delete this photo?" confirmLabel="Delete photo" busy={removing} error={deleteError}
    onConfirm={() => { void removePhoto(photoToDelete) }} onCancel={() => { setPhotoToDelete(null); setDeleteError('') }}>
    <p>Photo <strong className="num">{pad(photoToDelete.number)}</strong> in {photoToDelete.area.name} will be removed. You can take it again.</p>
-   {tour.status !== 'PLAN_READY' && <p>Your photos were already sent to us, so this reopens photo taking: add the missing photo and send them again.</p>}
+   {tour.status !== 'PLAN_READY' && <p>We are already checking these photos. Add the missing photo again and it reaches us on its own.</p>}
   </ConfirmDialog>}
   {camera !== undefined && createPortal(<CaptureSession tour={tour} startPointId={camera ?? undefined}
    onChange={updated => { apply(updated); setSession(current => current + 1) }}

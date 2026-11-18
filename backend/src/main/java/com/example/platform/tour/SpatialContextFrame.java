@@ -44,7 +44,7 @@ public class SpatialContextFrame {
         this.run = run;
         this.frameIndex = frameIndex;
         this.point = point;
-        this.pointSeq = point.getSeq();
+        this.pointSeq = point == null ? 0 : point.getSeq();
     }
 
     public Long getId() { return id; }
