@@ -32,7 +32,7 @@ function Columns({ title, values, labels, every = 1 }: { title: string; values: 
   <h3>{title}</h3>
   <div className="analytics-columns" role="img" aria-label={`${title}: ${values.map((value, index) => `${labels[index]} ${value}`).join(', ')}`}>
    {values.map((value, index) => <div key={index} className="analytics-column" title={`${labels[index]}: ${value}`}>
-    <span style={{ height: `${value / top * 100}%` }} />
+    <i className="analytics-column-track"><span style={{ height: `${value / top * 100}%` }} /></i>
     <small>{index % every === 0 ? labels[index] : ''}</small>
    </div>)}
   </div>
