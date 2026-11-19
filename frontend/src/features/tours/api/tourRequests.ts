@@ -270,6 +270,13 @@ async function adminGet<T>(url: string, missing: string): Promise<T> {
 const adminUsersRoot = '/api/admin/users'
 export const getAdminUser = (userId: number) =>
  adminGet<AdminUser>(`${adminUsersRoot}/${userId}`, 'We could not find this person, or the server does not offer this page yet.')
+/* Admin: change or remove a customer's account (admins are managed on the Team list). */
+const adminCustomersRoot = '/api/admin/customers'
+export type CustomerRemoval = { spaces: number; heirName: string | null; heirEmail: string | null }
+export const updateCustomer = (userId: number, changes: { displayName: string; email: string; password?: string }) =>
+ send<{ id: number; displayName: string; email: string }>('PUT', `${adminCustomersRoot}/${userId}`, changes)
+export const getCustomerRemoval = (userId: number) => send<CustomerRemoval>('GET', `${adminCustomersRoot}/${userId}/removal`)
+export const deleteCustomer = (userId: number) => send<void>('DELETE', `${adminCustomersRoot}/${userId}`)
 export const getAdminUserTourRequests = (userId: number) =>
  adminGet<TourSummary[]>(`${adminUsersRoot}/${userId}/tour-requests`, 'The server does not list this person’s spaces yet.')
 export const adminAddArea = (id: number, name: string, kind: AreaKind) =>

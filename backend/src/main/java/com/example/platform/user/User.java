@@ -8,6 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
+// Writes only the columns that changed: the app may update name, email and password, never the admin or owner flags.
+@org.hibernate.annotations.DynamicUpdate
 @Table(name = "users", schema = "public")
 public class User {
 
@@ -60,6 +62,10 @@ public class User {
     public boolean isPlatformAdmin() {
         return platformAdmin;
     }
+
+    public void setDisplayName(String displayName) { this.displayName = displayName; }
+    public void setEmail(String email) { this.email = email; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 
     public boolean isOwner() {
         return owner;

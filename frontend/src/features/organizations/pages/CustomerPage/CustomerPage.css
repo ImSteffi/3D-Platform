@@ -76,3 +76,12 @@
 .new-space-input { flex: 1 1 260px; min-height: 44px; padding: 0 var(--s-3); border: 1px solid var(--line, rgba(0,0,0,.12)); border-radius: 22px; background: var(--surface, #fff); color: var(--ink); font: inherit; font-size: 14px; }
 .new-space-form .inline-error { flex-basis: 100%; }
 
+
+/* The person: initials, name and email, with Edit beside them. */
+.person-head { display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+.person-head-mark { width: 48px; height: 48px; font-size: 15px; }
+.person-head-text { min-width: 0; flex: 1; }
+.person-head-text h1 { font-size: clamp(22px, 1.4vw + 12px, 28px); overflow-wrap: anywhere; }
+.person-head-text p { margin-top: 2px; font-size: 14px; color: var(--ink-2); overflow-wrap: anywhere; }
+.person-edit-actions { flex-wrap: wrap; }
+.person-edit-delete { margin-left: auto; }

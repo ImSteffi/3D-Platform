@@ -1,10 +1,11 @@
 import BackLink from '../../../../shared/ui/BackLink/BackLink'
 import { useEffect, useState, type FormEvent } from 'react'
-import { useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { useShellMode } from '../../../../shared/layout/Backdrop'
-import { Button, EmptyState, InlineError, Panel, Skeleton, SkeletonGroup } from '../../../../shared/ui'
+import { Button, ConfirmDialog, EmptyState, Field, InlineError, Panel, Skeleton, SkeletonGroup } from '../../../../shared/ui'
+import { initials } from '../../utils/initials'
 import ScanCard from '../../../scans/components/ScanCard/ScanCard'
-import { adminCreateSpaceForUser, getAdminUser, getAdminUserTourRequests, type AdminUser, type TourSummary } from '../../../tours/api/tourRequests'
+import { adminCreateSpaceForUser, deleteCustomer, getAdminUser, getCustomerRemoval, updateCustomer, type CustomerRemoval, getAdminUserTourRequests, type AdminUser, type TourSummary } from '../../../tours/api/tourRequests'
 import { SpaceCard, type DetailCache } from '../../../spaces/pages/SpacesPage/SpacesPage'
 import '../../../spaces/pages/SpacesPage/SpacesPage.css'
 import { useCustomerTours, type CustomerTour } from './CustomerTours'
@@ -56,6 +57,44 @@ export default function CustomerPage() {
   finally { setCreating(false) }
  }
 
+ // The person's own details: edit them, or remove the account.
+ const navigate = useNavigate()
+ const [editing, setEditing] = useState(false)
+ const [name, setName] = useState('')
+ const [email, setEmail] = useState('')
+ const [password, setPassword] = useState('')
+ const [saving, setSaving] = useState(false)
+ const [editError, setEditError] = useState('')
+ const [removal, setRemoval] = useState<CustomerRemoval | null>(null)
+ const [removing, setRemoving] = useState(false)
+ const [removeError, setRemoveError] = useState('')
+ function startEdit() {
+  if (!user) return
+  setName(user.displayName); setEmail(user.email); setPassword(''); setEditError(''); setEditing(true)
+ }
+ async function save(event: FormEvent) {
+  event.preventDefault()
+  if (!name.trim() || !email.trim()) { setEditError('Enter a name and an email.'); return }
+  if (password && password.length < 8) { setEditError('The new password needs at least 8 characters.'); return }
+  setSaving(true); setEditError('')
+  try {
+   const saved = await updateCustomer(id, { displayName: name.trim(), email: email.trim(), password: password || undefined })
+   setUser(current => current && { ...current, displayName: saved.displayName, email: saved.email })
+   setEditing(false)
+  } catch (reason) { setEditError(errorOf(reason, 'Could not save. Try again.')) }
+  finally { setSaving(false) }
+ }
+ async function askRemove() {
+  setRemoveError('')
+  try { setRemoval(await getCustomerRemoval(id)) }
+  catch (reason) { setEditError(errorOf(reason, 'Could not check this person\u2019s spaces. Try again.')) }
+ }
+ async function removePerson() {
+  setRemoving(true); setRemoveError('')
+  try { await deleteCustomer(id); navigate(`/organizations/${orgId}`, { replace: true }) }
+  catch (reason) { setRemoveError(errorOf(reason, 'Could not delete this person. Try again.')); setRemoving(false) }
+ }
+
  function retry() { setUser(null); setUserError(''); setSpaces(null); setSpacesError(''); setAttempt(value => value + 1) }
  const validId = Number.isInteger(id) && id > 0
 
@@ -67,8 +106,43 @@ export default function CustomerPage() {
  </ul>
 
  return <main className="page customer-page person-page">
-  <h1 className="visually-hidden">{user?.displayName ?? 'Customer'}</h1>
   <BackLink to={`/organizations/${orgId}`} />
+  {user ? <header className="person-head">
+   <span className="desk-mark desk-mark--person person-head-mark" aria-hidden="true">{initials(user.displayName)}</span>
+   <div className="person-head-text">
+    <h1>{user.displayName}</h1>
+    <p>{user.email}</p>
+   </div>
+   {!editing && <Button variant="secondary" icon="edit" onClick={startEdit}>Edit</Button>}
+  </header>
+  : !userError && <SkeletonGroup label="Loading person"><header className="person-head">
+   <Skeleton width={48} height={48} radius={999} index={0} />
+   <div className="person-head-text"><Skeleton width={180} height={24} index={1} /><Skeleton width={220} height={14} index={2} style={{ marginTop: 8 }} /></div>
+  </header></SkeletonGroup>}
+
+  {editing && user && <Panel variant="well" className="desk-form person-edit">
+   <form onSubmit={save} noValidate>
+    <fieldset className="desk-form-fields" disabled={saving}>
+     <Field name="personName" label="Name" value={name} onChange={setName} autoComplete="off" maxLength={200} autoFocus />
+     <Field name="personEmail" label="Email" type="email" value={email} onChange={setEmail} autoComplete="off" maxLength={254} />
+     <Field name="personPassword" label="New password" type="password" value={password} onChange={setPassword} autoComplete="new-password"
+      hint="Leave empty to keep the current password. At least 8 characters." error={editError} />
+     <div className="desk-form-actions person-edit-actions">
+      <Button type="submit" loading={saving}>Save</Button>
+      <Button variant="secondary" onClick={() => setEditing(false)}>Cancel</Button>
+      <Button variant="danger" icon="trash" className="person-edit-delete" onClick={() => { void askRemove() }}>Delete person</Button>
+     </div>
+    </fieldset>
+   </form>
+  </Panel>}
+
+  {removal && user && <ConfirmDialog title={`Delete ${user.displayName}?`} confirmLabel="Delete person" busy={removing} busyLabel="Deleting\u2026"
+   error={removeError} onConfirm={() => { void removePerson() }} onCancel={() => setRemoval(null)}>
+   <p>{user.email} can no longer sign in. This cannot be undone.</p>
+   {removal.spaces > 0 && (removal.heirName
+    ? <p>Their {removal.spaces === 1 ? 'space moves' : `${removal.spaces} spaces move`} to <strong>{removal.heirName}</strong> ({removal.heirEmail}), who already shares them in the organization.</p>
+    : <p>They have {removal.spaces === 1 ? 'a space' : `${removal.spaces} spaces`} and nobody else in the organization. Add another person first, or the delete is refused.</p>)}
+  </ConfirmDialog>}
 
   {userError && <Panel><InlineError onRetry={retry}>{userError}</InlineError></Panel>}
 

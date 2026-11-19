@@ -57,4 +57,6 @@ public class TourRequest {
     public void setStatus(Status status) { this.status = status; }
     public Scan getScan() { return scan; }
     public void setScan(Scan scan) { this.scan = scan; }
+    /** Hands the space to a colleague, when its owner's account is removed. */
+    public void setUser(User user) { this.user = user; }
 }

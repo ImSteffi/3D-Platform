@@ -22,6 +22,17 @@ public interface OrganizationMembershipRepository
 
         boolean existsByOrganization_IdAndUser_Id(Long organizationId, Long userId);
 
+        List<OrganizationMembership> findByUser_Id(Long userId);
+
+        /** Other people in any of the user's organizations, oldest membership first: who takes over their spaces. */
+        @Query("""
+                        select theirs.user from OrganizationMembership mine, OrganizationMembership theirs
+                        where mine.user.id = :userId and theirs.organization.id = mine.organization.id
+                        and theirs.user.id <> :userId
+                        order by theirs.id
+                        """)
+        List<com.example.platform.user.User> findColleagues(@Param("userId") Long userId);
+
         @Query("""
                         SELECT membership.organization.name
                         FROM OrganizationMembership membership

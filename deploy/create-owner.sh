@@ -10,6 +10,11 @@ printf 'Your email: '; read -r EMAIL
 stty -echo; printf 'Password (at least 12 characters): '; read -r PASS; stty echo; echo
 stty -echo; printf 'Password again: '; read -r PASS2; stty echo; echo
 [ "$PASS" = "$PASS2" ] || { echo "The passwords differ."; exit 1; }
+# Arrow keys and corrected typos can leave invisible control characters in what was typed: drop them.
+NAME=$(printf '%s' "$NAME" | tr -d '[:cntrl:]' | sed 's/^ *//; s/ *$//')
+EMAIL=$(printf '%s' "$EMAIL" | tr -d '[:cntrl:][:space:]')
+printf 'Creating: "%s" <%s>. OK? (y/n) ' "$NAME" "$EMAIL"; read -r OK
+[ "$OK" = y ] || { echo "Nothing created."; exit 1; }
 [ ${#PASS} -ge 12 ] || { echo "Use at least 12 characters."; exit 1; }
 
 # bcrypt with the {bcrypt} prefix: the format the app stores and checks.
