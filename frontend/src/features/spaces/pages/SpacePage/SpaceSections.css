@@ -181,3 +181,9 @@
  .area-foot .btn { width: 100%; }
  .area-spatial { min-height: 320px; padding: 8px; }
 }
+.area-tour { display: flex; flex-direction: column; gap: var(--s-3); min-height: 0; background: none; }
+.area-tour-frame { display: block; width: 100%; aspect-ratio: 16 / 10; min-height: 260px; border: 0; border-radius: var(--r-card); background: #111; }
+.area-tour-share { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+.area-tour-share-label { display: inline-flex; align-items: center; gap: 6px; margin-right: var(--s-1); font-weight: 600; }
+.area-tour-copy { display: flex; gap: var(--s-2); }
+.area-tour-copy input { flex: 1; min-width: 0; padding: 8px 12px; border: 1px solid rgb(0 0 0 / .15); border-radius: 10px; background: #fff; font: 13px/1.4 ui-monospace, monospace; }
