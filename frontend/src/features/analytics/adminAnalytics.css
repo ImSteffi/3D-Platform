@@ -1,0 +1,8 @@
+.admin-analytics { display: grid; gap: var(--s-5); }
+.admin-analytics .analytics h2 { margin: 0; font-size: 20px; }
+.aa-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.aa-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--s-3); align-items: baseline; font-size: 14px; }
+.aa-list a { font-weight: 600; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aa-list .num { grid-row: 1 / span 2; grid-column: 2; align-self: center; }
+.aa-muted { grid-column: 1; font-size: 13px; color: var(--text-muted, #6b6b6b); }
+.admin-analytics .analytics-bars li { grid-template-columns: minmax(0, 15em) 1fr 4ch; }

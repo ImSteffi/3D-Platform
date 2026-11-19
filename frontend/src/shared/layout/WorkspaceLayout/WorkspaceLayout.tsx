@@ -83,7 +83,7 @@ function Shell() {
  const initials = user.displayName.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase() || '?'
  const queueCount = operator && tours ? tours.filter(waitingOnOperator).length : 0
  const items: { to: string; icon: IconName; label: string; badge?: number }[] = operator
-  ? [{ to: '/review', icon: 'queue', label: 'Queue', badge: queueCount }, { to: '/users', icon: 'users', label: 'Users' }]
+  ? [{ to: '/review', icon: 'queue', label: 'Queue', badge: queueCount }, { to: '/users', icon: 'users', label: 'Users' }, { to: '/analytics', icon: 'chart', label: 'Analytics' }]
   : [{ to: '/spaces', icon: 'spaces', label: 'Spaces' }, { to: '/learn', icon: 'learn', label: 'Learn' }]
  const signOutLabel = loggingOut ? 'Signing out…' : 'Sign out'
 

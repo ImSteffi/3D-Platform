@@ -28,6 +28,7 @@ public class FrontendController {
             // The gallery link sent to customers, opened without signing in.
             "/g/{token}",
             "/users",
+            "/analytics",
             // Earlier addresses that the React router still answers.
             "/generate",
             "/generate/tour",

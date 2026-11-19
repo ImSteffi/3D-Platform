@@ -355,3 +355,13 @@ export const addFloorPhoto = (id: number, areaId: number, file: File) =>
 export const deleteFloorPhoto = (id: number, photoId: number) =>
  send<TourDetail>('DELETE', `${base(id)}/floor-photos/${photoId}`)
 export const floorPhotoUrl = (id: number, photoId: number) => `${base(id)}/floor-photos/${photoId}`
+
+/** The team's overview of the whole platform (Analytics page). */
+export type AdminCount = { label: string; count: number }
+export type AdminAnalytics = {
+ totals: { customers: number; organizations: number; spaces: number; floors: number; views: number; visitors: number; averageSeconds: number; embeds: number }
+ days: { day: string; spaces: number; photos: number; views: number }[]
+ topSpaces: { id: number; name: string; customer: string; views: number; averageSeconds: number }[]
+ sources: AdminCount[]; devices: AdminCount[]; regions: AdminCount[]
+}
+export const getAdminAnalytics = () => get<AdminAnalytics>('/api/admin/analytics')

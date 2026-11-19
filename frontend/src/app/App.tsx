@@ -11,6 +11,7 @@ import SharedViewerPage from '../features/scans/components/ScanViewer/SharedView
 import AdminProjectPage from '../features/projects/pages/AdminProjectPage/AdminProjectPage'
 import OrganizationDetailsPage from '../features/organizations/pages/OrganizationDetailsPage/OrganizationDetailsPage'
 import UsersPage from '../features/organizations/pages/UsersPage/UsersPage'
+import AdminAnalyticsPage from '../features/analytics/AdminAnalyticsPage'
 import CustomerPage from '../features/organizations/pages/CustomerPage/CustomerPage'
 import ClientProjectPage from '../features/projects/pages/ClientProjectPage/ClientProjectPage'
 import WorkspaceLayout from '../shared/layout/WorkspaceLayout/WorkspaceLayout'
@@ -46,6 +47,7 @@ export default function App() {
     <Route path="/organizations/:organizationId/projects/:projectId" element={<AdminProjectPage />} />
     <Route path="/organizations/:organizationId/people/:userId" element={<CustomerPage />} />
     <Route path="/users" element={<UsersPage />} />
+    <Route path="/analytics" element={<AdminAnalyticsPage />} />
     <Route path="/organizations/:organizationId" element={<OrganizationDetailsPage />} />
    </Route>
    {/* Legacy paths */}

@@ -1,5 +1,5 @@
 export type IconName = 'cube' | 'grid' | 'folder' | 'building' | 'scan' | 'arrow' | 'plus' | 'search' | 'logout' | 'chevron' | 'menu' | 'check' | 'upload' | 'shield' | 'close' | 'planner'
- | 'home' | 'spaces' | 'learn' | 'camera' | 'image' | 'share' | 'link' | 'code' | 'download' | 'play' | 'eye' | 'pin' | 'flag' | 'retake' | 'clock' | 'user' | 'users' | 'help' | 'trash' | 'edit' | 'external' | 'queue' | 'layers' | 'sun' | 'phone' | 'back' | 'more' | 'copy' | 'info' | 'warning'
+ | 'home' | 'spaces' | 'learn' | 'camera' | 'image' | 'share' | 'link' | 'code' | 'download' | 'play' | 'eye' | 'pin' | 'flag' | 'retake' | 'clock' | 'chart' | 'user' | 'users' | 'help' | 'trash' | 'edit' | 'external' | 'queue' | 'layers' | 'sun' | 'phone' | 'back' | 'more' | 'copy' | 'info' | 'warning'
 const paths: Record<IconName, string> = {
  planner: 'M4 3h16v18H4zM4 8h16M9 8v13M9 14h11M14 8v6',
  cube: 'M12 3 4 7.5v9L12 21l8-4.5v-9L12 3ZM4 7.5l8 4.5 8-4.5M12 12v9',
@@ -27,6 +27,7 @@ const paths: Record<IconName, string> = {
  pin: 'M12 21s6.500-5.600 6.500-10.500a6.500 6.500 0 0 0-13 0C5.500 15.400 12 21 12 21ZM14.300 10.500a2.300 2.300 0 1 1-4.600 0 2.300 2.300 0 0 1 4.600 0Z',
  flag: 'M5.500 21V4M5.500 5h11l-2 4 2 4h-11',
  retake: 'M4.500 12a7.500 7.500 0 0 1 13-5.100L19.500 9M19.500 4.500V9H15M19.500 12a7.500 7.500 0 0 1-13 5.100L4.500 15M4.500 19.500V15H9',
+ chart: 'M4 20h16M7 16v-5M12 16V6M17 16v-8',
  clock: 'M20.500 12a8.500 8.500 0 1 1-17 0 8.500 8.500 0 0 1 17 0ZM12 7.500V12l3 2',
  user: 'M15.500 8a3.500 3.500 0 1 1-7 0 3.500 3.500 0 0 1 7 0ZM5 20c.6-3.400 3.400-5.500 7-5.500s6.400 2.100 7 5.500',
  users: 'M12.500 8.500a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM3.500 19.500c.5-3 2.900-4.800 6-4.800s5.500 1.800 6 4.800M15.500 5.800a3 3 0 0 1 0 5.400M17.500 14.900c1.600.6 2.700 2 3 4.100',
