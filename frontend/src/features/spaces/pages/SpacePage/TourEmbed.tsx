@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button } from '../../../../shared/ui'
+import { Icon } from '../../../../shared/ui'
 
 /** Test scene until generated tours exist: every floor shows Fred's tour. */
 export const testTourPath = '/tour-viewer/fred/index.html'
@@ -24,11 +24,19 @@ export default function TourEmbed({ title, spaceId, floorId }: { title: string; 
   try { await navigator.clipboard.writeText(kind === 'url' ? url : iframe); setCopied(kind) } catch { setCopied(null) }
  }
 
+ const option = (kind: Kind, icon: 'link' | 'code', label: string, hint: string) =>
+  <button type="button" className={`tour-share-btn${copied === kind ? ' is-copied' : ''}`} title={hint} onClick={() => { void copy(kind) }}>
+   <Icon name={copied === kind ? 'check' : icon} size={15} />
+   <span>{copied === kind ? 'Copied to clipboard' : label}</span>
+  </button>
+
  return <div className="area-tour">
   <iframe className="area-tour-frame" src={path} title={title} allow="fullscreen; xr-spatial-tracking; pointer-lock" />
-  <div className="area-tour-share" aria-live="polite">
-   <Button variant="secondary" icon={copied === 'url' ? 'check' : 'link'} onClick={() => copy('url')}>{copied === 'url' ? 'Copied to clipboard' : 'URL'}</Button>
-   <Button variant="secondary" icon={copied === 'iframe' ? 'check' : 'code'} onClick={() => copy('iframe')}>{copied === 'iframe' ? 'Copied to clipboard' : 'IFRAME'}</Button>
+  <div className="tour-share" aria-live="polite">
+   <div className="tour-share-group">
+    {option('url', 'link', 'URL', 'Copy the link to this tour')}
+    {option('iframe', 'code', 'IFRAME', 'Copy the code to embed this tour on a website')}
+   </div>
   </div>
  </div>
 }

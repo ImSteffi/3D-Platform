@@ -12,9 +12,38 @@
         
     <style>
 #viewerBranding, #viewerTitle, #timelineContainer, #walkHint, #play, #pause,
-#orbitCamera, #flyCamera, #arMode, #vrMode { display: none !important; }
+#orbitCamera, #flyCamera, #fpsCamera, #arMode, #vrMode { display: none !important; }
 #fred-error { position: fixed; inset: 0; display: grid; place-content: center;
  padding: 24px; background: #12171a; color: white; font: 16px system-ui; }
+
+canvas:focus, canvas:focus-visible { outline: none; }
+#tenzo-stock-enter { color: #fff !important; font: 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif !important; background: rgb(10 12 14 / .28) !important; }
+#tenzo-stock-enter:focus-visible { outline: none; }
+.tour-start { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 10px;
+  width: max-content; max-width: calc(100% - 32px); padding: 22px 26px; border-radius: 18px; text-align: center;
+  background: rgb(14 16 18 / .62); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 12px 40px rgb(0 0 0 / .35); }
+#tenzo-stock-enter:hover .tour-start-title { font-size: clamp(17px, 2.2vw, 22px); font-weight: 650; letter-spacing: -.01em; }
+.tour-start-text { font-size: 14px; color: rgb(255 255 255 / .78); }
+.tour-start-keys { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; margin-top: 4px; padding-top: 12px;
+  border-top: 1px solid rgb(255 255 255 / .16); font-size: 13px; color: rgb(255 255 255 / .78); }
+.tour-start-keys > span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.tour-start-keys b { color: #fff; font-weight: 600; }
+.tour-start-keys kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 5px;
+  border: 1px solid rgb(255 255 255 / .3); background: rgb(255 255 255 / .1); color: #fff; font: 600 11px/1 system-ui, sans-serif; }
+@media (max-width: 420px), (max-height: 320px) { .tour-start { padding: 14px 16px; gap: 6px; } .tour-start-keys { display: none; } }
+.tour-start-move { align-items: center; }
+.tour-start-keyset { display: inline-grid; gap: 4px; }
+.tour-start-keyset > span { display: inline-flex; gap: 4px; }
+/* The viewer's own buttons stay usable above the start screen, so settings work while paused. */
+#ui { z-index: 60; }
+#controlsWrap, #buttonsContainer, #ui .buttonGroup { pointer-events: none; }
+#ui .controlButton { pointer-events: auto; }
+#tour-pause { position: fixed; z-index: 61; left: max(16px, env(safe-area-inset-left)); bottom: max(16px, env(safe-area-inset-bottom));
+  display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px;
+  background: rgb(14 16 18 / .62); color: #fff; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); cursor: pointer; }
+#tour-pause[hidden] { display: none; }
+/* While paused the viewer's buttons stay visible instead of fading out. */
+body.tour-paused #controlsWrap.faded-out { visibility: visible; opacity: 1; transition: none; }
 </style></head>
     <body>
         <canvas id="application-canvas"></canvas>

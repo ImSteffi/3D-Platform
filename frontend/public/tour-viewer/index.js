@@ -88129,8 +88129,8 @@ class NavInteraction {
         if (!(event instanceof MouseEvent))
             return;
         const { events, state } = global;
-        // dblclick/double-tap in gaming controls does nothing, like click/tap
-        if ((state.cameraMode === 'walk' || state.cameraMode === 'fly') && state.gamingControls)
+        // Tenzo: double-tap walks there in walk mode, also with gaming controls (the phone joystick).
+        if (state.cameraMode === 'fly' && state.gamingControls)
             return;
         const request = ++this._targetPickRequest;
         const target = await this._pickSceneTarget(event.offsetX, event.offsetY);
@@ -88140,10 +88140,7 @@ class NavInteraction {
         if (!currentState)
             return;
         if (currentState.cameraMode === 'walk') {
-            if (!currentState.gamingControls) {
-                // run to the picked point (same multiplier as shift-click)
-                events.fire('navigateTo', target.position, target.normal, 2);
-            }
+            events.fire('navigateTo', target.position, target.normal, 1);
         }
         else {
             // in other modes dblclick focuses orbit on the picked point.
@@ -88162,6 +88159,8 @@ class NavInteraction {
             this._suppressClick = false;
             return;
         }
+        // Tenzo: a single tap does not walk (it jumped while looking around); double-tap walks.
+        if (state.cameraMode === 'walk') return;
         if (state.cameraMode === 'walk' && !state.gamingControls) {
             const result = this._pickCollision(this._lastPointerOffsetX, this._lastPointerOffsetY);
             if (result) {
@@ -88606,7 +88605,7 @@ class TouchDevice {
                         this._global.events.fire('mobileTap');
                     }
                     else if (isWalk) {
-                        this._tapJump = true;
+                        // Tenzo: a tap does not jump; double-tap walks there (see _onInputEvent).
                     }
                     else if (isFly && !gamingControls) {
                         // Walk-interaction listens for this and fires navigateTo
