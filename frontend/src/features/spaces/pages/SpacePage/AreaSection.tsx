@@ -7,7 +7,6 @@ import SpatialContext, { type SpatialState } from '../../../tours/components/Spa
 // three.js loads only when a spatial context is shown.
 const SpatialContextViewer = lazy(() => import('../../../tours/components/SpatialContext/SpatialContextViewer'))
 import FileButton from './FileButton'
-import TourEmbed from './TourEmbed'
 import { planPickerAccept } from '../../../tours/api/prepareImage'
 import FloorGallery, { type FloorUpload } from './FloorGallery'
 import { floorState, pad, plural, type Entry } from './spaceModel'
@@ -75,17 +74,16 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
  /** Only photos that exist or are uploading. */
  const shown = entries.filter(entry => entry.point.hasPhoto || !free(entry))
  const lead = primary ? 'primary' : 'secondary'
- // Test: every floor shows the test scene (the team can hide it) on this floor until generation is connected.
- const [testTour, setTestTour] = useState(true)
- const tourMade = tour.status === 'DELIVERED' || testTour
+ const tourMade = tour.status === 'DELIVERED'
  const [spatial, setSpatial] = useState<SpatialFrame[] | null>(null)
  const [fresh, setFresh] = useState<number[]>([])
+ const spatialReady = spatial !== null
  const onSpatial = useCallback((state: SpatialState) => { setSpatial(state.frames); setFresh(state.fresh) }, [])
  // Team only: once a floor has its spatial context and no tour yet, it takes the right side and the photos go below.
  const showSpatial = !!admin && !tourMade && spatial !== null && spatial.length > 0
  // The customer's side: once the team has the spatial context, the tour is on its way.
  const making = !admin && !tourMade && !!area.spatialReady
- const wide = tourMade || showSpatial || making
+ const wide = showSpatial || making
 
  // This floor's to-do: one sentence, one supporting line, its own buttons.
  let title = '', text = ''
@@ -163,7 +161,6 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
     <Suspense fallback={<Spinner block label="Loading the spatial context" />}><SpatialContextViewer frames={spatial} bare /></Suspense>
    </div>}
    {making && <div className="area-making" role="status"><p>We are making your 3D tour</p></div>}
-   {tourMade && <TourEmbed title={`3D tour of ${area.name}`} spaceId={tour.id} floorId={area.id} />}
    {(!admin || shown.length > 0 || (area.photos?.length ?? 0) > 0) && <div className="area-photos">
     {!admin && !readOnly && !tourMade && !making && <p className="area-photos-lead">Once all your photos are in, we will make your 3D tour.</p>}
     {entries.length === 0
@@ -220,8 +217,8 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
   {/* Team only, once the floor has photos. Does nothing yet: the generation API gets connected here later. */}
   {admin && (shown.length > 0 || (area.photos?.length ?? 0) > 0) && <div className="area-foot">
    {!tourMade && <SpatialContext tourId={tour.id} areaId={area.id} photoCount={entries.filter(entry => entry.point.hasPhoto).length + (area.photos?.length ?? 0)} onReady={onSpatial} />}
-   {/* Test until the generation API is connected: shows the test scene. */}
-   {tour.status !== 'DELIVERED' && <Button icon="cube" aria-pressed={testTour} onClick={() => setTestTour(on => !on)}>{testTour ? 'Hide 3D-Tour' : 'Generate 3D-Tour'}</Button>}
+   {/* Does nothing yet: the generation API gets connected here later. Needs the spatial context first. */}
+   {!tourMade && <Button icon="cube" disabled={!spatialReady} title={spatialReady ? undefined : 'Generate the spatial context first.'}>Generate 3D-Tour</Button>}
   </div>}
  </Panel>
 }

@@ -1,20 +1,26 @@
 import { main } from "/tour-viewer/index.js";
 import { attachStockSession } from "/tour-viewer/stock-session.js";
 
+// Which tour: ?scene=<folder on this site> holding scene.sog, scene.voxel.json and settings.json.
+// Only paths on this site are accepted.
+const scene = new URLSearchParams(location.search).get("scene") || "";
+const folder = /^\/(?!\/)[A-Za-z0-9_\-./]*$/.test(scene) && !scene.includes("..") ? scene.replace(/\/$/, "") : null;
+
 async function loadSettings() {
-  const response = await fetch("/tour-viewer/fred/settings.json");
+  const response = await fetch(`${folder}/settings.json`);
   if (!response.ok) throw new Error("Settings unavailable");
   return response.json();
 }
 
 async function start() {
+  if (!folder) throw new Error("No tour given");
   const config = {
     poster: null,
     skyboxUrl: null,
-    contentUrl: "/tour-viewer/fred/scene.sog",
+    contentUrl: `${folder}/scene.sog`,
     contentFilename: "scene.sog",
-    contents: fetch("/tour-viewer/fred/scene.sog"),
-    collisionUrl: "/tour-viewer/fred/scene.voxel.json",
+    contents: fetch(`${folder}/scene.sog`),
+    collisionUrl: `${folder}/scene.voxel.json`,
     noui: false,
     noanim: true,
     nofx: false,
@@ -61,10 +67,10 @@ async function start() {
 }
 
 start().catch((error) => {
-  console.error("Fred viewer failed to load", error);
+  console.error("Tour viewer failed to load", error);
   document.getElementById("tenzo-stock-enter")?.remove();
   const message = document.createElement("div");
-  message.id = "fred-error";
+  message.id = "tour-error";
   message.setAttribute("role", "alert");
   message.textContent = "Could not load the 3D tour. Please reload the page.";
   document.body.appendChild(message);
