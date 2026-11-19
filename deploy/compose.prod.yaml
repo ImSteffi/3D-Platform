@@ -1,0 +1,72 @@
+# Production: the app, its Postgres database and Caddy (HTTPS) on one small server.
+# Run from this folder:  docker compose -f compose.prod.yaml --env-file .env up -d --build
+# Sized for a 2 GB server: Java is capped at 512 MB and Postgres is kept small.
+
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_ADMIN_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_ADMIN_PASSWORD}
+      # Read by init-db/01-app-user.sh on the very first start only.
+      APP_DB_USER: ${DATABASE_USERNAME}
+      APP_DB_PASSWORD: ${DATABASE_PASSWORD}
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=30", "-c", "work_mem=4MB"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+    # No published port: the database is reachable only from the app container.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_ADMIN_USERNAME} -d ${DATABASE_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/${DATABASE_NAME}
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_ADMIN_USERNAME: ${DATABASE_ADMIN_USERNAME}
+      DATABASE_ADMIN_PASSWORD: ${DATABASE_ADMIN_PASSWORD}
+      R2_ENDPOINT: ${R2_ENDPOINT}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      WLT_API_KEY: ${WLT_API_KEY}
+      PUBLIC_ORIGIN: https://${DOMAIN}
+      SESSION_COOKIE_SECURE: "true"
+      JAVA_TOOL_OPTIONS: -Xmx512m -XX:MaxMetaspaceSize=192m -XX:+UseSerialGC
+    # Not published: Caddy is the only way in.
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

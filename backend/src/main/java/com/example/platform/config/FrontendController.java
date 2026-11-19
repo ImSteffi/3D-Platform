@@ -25,6 +25,9 @@ public class FrontendController {
             "/organizations/{organizationId}/projects/{projectId}",
             "/organizations/{organizationId}/people/{userId}",
             "/view/{token}",
+            // The gallery link sent to customers, opened without signing in.
+            "/g/{token}",
+            "/users",
             // Earlier addresses that the React router still answers.
             "/generate",
             "/generate/tour",
