@@ -139,6 +139,15 @@ const adminRoot = '/api/admin/tour-requests'
 
 export const getTourRequests = () => get<TourSummary[]>(root)
 export const getTourRequest = (id: number) => get<TourDetail>(`${base(id)}`)
+export type AnalyticsCount = { label: string; views: number }
+export type TourAnalytics = {
+ totals: { views: number; visitors: number; averageSeconds: number; embeds: number }
+ days: { day: string; views: number; visitors: number }[]
+ sources: AnalyticsCount[]; devices: AnalyticsCount[]; regions: AnalyticsCount[]
+ hours: number[]; weekdays: number[]
+}
+export const analyticsCsvUrl = (id: number) => `${base(id)}/analytics.csv`
+export const getTourAnalytics = (id: number) => get<TourAnalytics>(`${base(id)}/analytics`)
 export const createTourRequest = (name: string, notes: string) =>
  send<TourDetail>('POST', root, { name, notes: notes || null })
 export const deleteTourRequest = (id: number) => send<void>('DELETE', `${base(id)}`)

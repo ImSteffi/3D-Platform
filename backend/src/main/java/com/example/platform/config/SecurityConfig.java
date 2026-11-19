@@ -21,6 +21,8 @@ public class SecurityConfig {
                                 // Gallery links: the token itself is the permission, limited to one space (GalleryLinkController).
                                 .requestMatchers("/api/gallery/**").permitAll()
                                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/public/views/**").permitAll()
+                                // Tour pages report their views; they can be on any site, without a session.
+                                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/public/tour-views", "/api/public/tour-views/*/time").permitAll()
                                 .requestMatchers("/api/admin/**").hasRole("PLATFORM_ADMIN")
                                 .requestMatchers(
                                                 "/api/organizations",
@@ -62,11 +64,14 @@ public class SecurityConfig {
                                                                         jakarta.servlet.RequestDispatcher.FORWARD_REQUEST_URI);
                                                         var path = forwarded instanceof String original
                                                                         ? original : request.getRequestURI();
-                                                        if (!path.startsWith(request.getContextPath() + "/view/")) {
+                                                        // Tours are made to be embedded on other sites.
+                                                if (!path.startsWith(request.getContextPath() + "/view/")
+                                                                && !path.startsWith(request.getContextPath() + "/tour-viewer/")) {
                                                                 response.setHeader("X-Frame-Options", "DENY");
                                                                 response.setHeader("Content-Security-Policy", "frame-ancestors 'none'");
                                                         }
                                                 }))
+                                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/public/tour-views", "/api/public/tour-views/*/time"))
                                 .requestCache(cache -> cache.disable())
                                 .httpBasic(basic -> basic.disable());
 

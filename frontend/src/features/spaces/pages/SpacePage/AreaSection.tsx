@@ -163,7 +163,7 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
     <Suspense fallback={<Spinner block label="Loading the spatial context" />}><SpatialContextViewer frames={spatial} bare /></Suspense>
    </div>}
    {making && <div className="area-making" role="status"><p>We are making your 3D tour</p></div>}
-   {tourMade && <TourEmbed title={`3D tour of ${area.name}`} />}
+   {tourMade && <TourEmbed title={`3D tour of ${area.name}`} spaceId={tour.id} floorId={area.id} />}
    {(!admin || shown.length > 0 || (area.photos?.length ?? 0) > 0) && <div className="area-photos">
     {!admin && !readOnly && !tourMade && !making && <p className="area-photos-lead">Once all your photos are in, we will make your 3D tour.</p>}
     {entries.length === 0
