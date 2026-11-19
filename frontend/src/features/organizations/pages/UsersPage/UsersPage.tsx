@@ -31,10 +31,10 @@ export default function UsersPage() {
   event.preventDefault()
   if (saving) return
   const trimmed = name.trim()
-  if (!trimmed || trimmed.length > 200) { setFormError('Enter a customer name of 1 to 200 characters.'); return }
+  if (!trimmed || trimmed.length > 200) { setFormError('Enter a organization name of 1 to 200 characters.'); return }
   setSaving(true); setFormError('')
   try { const org = await createOrganization(trimmed); setOrganizations(current => [...(current ?? []), org]); closeForm() }
-  catch (reason) { setFormError(reason instanceof Error ? reason.message : 'Could not save this customer. Try again.') }
+  catch (reason) { setFormError(reason instanceof Error ? reason.message : 'Could not save this organization. Try again.') }
   finally { setSaving(false) }
  }
 
@@ -46,17 +46,17 @@ export default function UsersPage() {
    <TeamSection />
    <section className="desk-section" aria-labelledby="customers-title">
    <div className="desk-section-head">
-    <h2 id="customers-title">Customers{organizations && <span className="desk-count">{organizations.length}</span>}</h2>
-    {!formOpen && <Button variant="secondary" icon="plus" onClick={() => setFormOpen(true)}>New customer</Button>}
+    <h2 id="customers-title">Organizations{organizations && <span className="desk-count">{organizations.length}</span>}</h2>
+    {!formOpen && <Button variant="secondary" icon="plus" onClick={() => setFormOpen(true)}>New organization</Button>}
    </div>
    {formOpen && <Panel variant="well" className="desk-form">
     <form onSubmit={submit} noValidate>
-     <h3>New customer</h3>
-     <p>Give the customer a name. You add their people next.</p>
+     <h3>New organization</h3>
+     <p>Give the organization a name. You add its people next.</p>
      <fieldset className="desk-form-fields" disabled={saving}>
-      <Field name="organizationName" label="Customer name" value={name} onChange={setName} error={formError} autoComplete="off" autoFocus maxLength={200} />
+      <Field name="organizationName" label="Organization name" value={name} onChange={setName} error={formError} autoComplete="off" autoFocus maxLength={200} />
       <div className="desk-form-actions">
-       <Button type="submit" loading={saving}>{saving ? 'Creating customer' : 'Create customer'}</Button>
+       <Button type="submit" loading={saving}>{saving ? 'Creating organization' : 'Create organization'}</Button>
        <Button variant="secondary" onClick={closeForm}>Cancel</Button>
       </div>
      </fieldset>
@@ -64,7 +64,7 @@ export default function UsersPage() {
    </Panel>}
    {error ? <InlineError onRetry={() => { setError(''); setAttempt(value => value + 1) }}>{error}</InlineError>
     : !organizations ? <SkeletonGroup label="Loading users"><Skeleton height={64} radius="var(--r-card)" index={0} /></SkeletonGroup>
-    : organizations.length === 0 ? <EmptyState icon="users" title="No customers yet" />
+    : organizations.length === 0 ? <EmptyState icon="users" title="No organizations yet" />
     : organizations.map(organization => <OrganizationPeople key={organization.id} organizationId={organization.id} title={organization.name} />)}
    </section>
   </Panel>

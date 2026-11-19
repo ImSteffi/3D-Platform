@@ -77,7 +77,7 @@ public class TourRequestService {
 
     @Transactional(readOnly = true)
     public List<Summary> listOwn(Authentication authentication) {
-        return tours.findByUser_IdOrderByIdDesc(user(authentication).getId()).stream().map(this::summary).toList();
+        return tours.findVisibleTo(user(authentication).getId()).stream().map(this::summary).toList();
     }
 
     @Transactional
@@ -546,7 +546,8 @@ public class TourRequestService {
     public List<Summary> listForUser(Long userId, Authentication authentication) {
         admin(authentication);
         var customer = users.findById(userId).orElseThrow(() -> error(404, "User not found."));
-        return tours.findByUser_IdOrderByIdDesc(customer.getId()).stream().map(this::summary).toList();
+        // The same list the customer sees: their own spaces and their organization's.
+        return tours.findVisibleTo(customer.getId()).stream().map(this::summary).toList();
     }
 
     /** The team starts a space for a customer, named after the property's address. */
@@ -731,9 +732,18 @@ public class TourRequestService {
     // Another user's request is reported as missing rather than forbidden.
     private TourRequest accessible(Long id, User user) {
         var tour = tours.findById(id).orElseThrow(() -> error(404, "Tour request not found."));
-        if (!user.isPlatformAdmin() && !tour.getUser().getId().equals(user.getId()))
+        if (!user.isPlatformAdmin() && !shares(tour, user))
             throw error(404, "Tour request not found.");
         return tour;
+    }
+
+    /**
+     * Spaces are shared within an organization: its people all see and work on each other's spaces.
+     * Anyone else gets "not found", never "forbidden", so ids reveal nothing.
+     */
+    private boolean shares(TourRequest tour, User user) {
+        var owner = tour.getUser().getId();
+        return owner.equals(user.getId()) || memberships.shareAnOrganization(user.getId(), owner);
     }
 
     private TourRequest found(Long id) {
@@ -753,7 +763,7 @@ public class TourRequestService {
 
     private TourRequest owned(Long id, User user) {
         var tour = tours.findById(id).orElseThrow(() -> error(404, "Tour request not found."));
-        if (!tour.getUser().getId().equals(user.getId())) throw error(404, "Tour request not found.");
+        if (!shares(tour, user)) throw error(404, "Tour request not found.");
         return tour;
     }
 

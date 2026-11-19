@@ -30,4 +30,12 @@ public interface OrganizationMembershipRepository
                         """)
         List<String> findOrganizationNamesByUserId(
                         @Param("userId") Long userId);
+
+        /** True when both users belong to at least one same organization: they share its spaces. */
+        @Query("""
+                        select count(mine) > 0 from OrganizationMembership mine, OrganizationMembership theirs
+                        where mine.user.id = :userId and theirs.user.id = :otherId
+                        and mine.organization.id = theirs.organization.id
+                        """)
+        boolean shareAnOrganization(@Param("userId") Long userId, @Param("otherId") Long otherId);
 }

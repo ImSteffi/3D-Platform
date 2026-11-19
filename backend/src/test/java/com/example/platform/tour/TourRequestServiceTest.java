@@ -152,6 +152,20 @@ class TourRequestServiceTest {
         assertStatus(404, () -> service.planUrl(10L, 1L, as(stranger)));
     }
 
+    @Test void aColleagueInTheSameOrganizationSharesTheSpace() {
+        tour(10L, DRAFT);
+        when(memberships.shareAnOrganization(2L, 1L)).thenReturn(true);
+        assertEquals(10L, service.get(10L, as(stranger)).id());
+        assertEquals(10L, service.addArea(10L, "Ground floor", TourArea.Kind.FLOOR, as(stranger)).id());
+    }
+
+    @Test void someoneOutsideTheOrganizationStillGetsNothing() {
+        tour(10L, DRAFT);
+        when(memberships.shareAnOrganization(2L, 1L)).thenReturn(false);
+        assertStatus(404, () -> service.get(10L, as(stranger)));
+        assertStatus(404, () -> service.addArea(10L, "Ground floor", TourArea.Kind.FLOOR, as(stranger)));
+    }
+
     @Test void administratorCanReadAnyRequestButNotActAsTheOwner() {
         tour(10L, DRAFT);
         assertEquals(10L, service.get(10L, as(admin)).id());
@@ -443,7 +457,7 @@ class TourRequestServiceTest {
         var seen = service.get(10L, as(owner));
         assertEquals("DELIVERED", seen.status());
         assertEquals(50L, seen.scanId());
-        when(tours.findByUser_IdOrderByIdDesc(1L)).thenReturn(List.of(tour));
+        when(tours.findVisibleTo(1L)).thenReturn(List.of(tour));
         var summary = service.listOwn(as(owner)).getFirst();
         assertEquals("DELIVERED", summary.status());
         assertEquals(50L, summary.scanId());
@@ -502,7 +516,7 @@ class TourRequestServiceTest {
 
     @Test void aDeliveredRequestWhoseScanIsGoneIsReportedAsApproved() {
         var tour = tour(10L, DELIVERED); // the database cleared scan_id when the scan was deleted
-        when(tours.findByUser_IdOrderByIdDesc(1L)).thenReturn(List.of(tour));
+        when(tours.findVisibleTo(1L)).thenReturn(List.of(tour));
         var detail = service.get(10L, as(owner));
         assertEquals("APPROVED", detail.status());
         assertNull(detail.scanId());
@@ -748,7 +762,7 @@ class TourRequestServiceTest {
         areasOf(tour, marked, area(21L, tour, 2, "plan-2"), area(22L, tour, 3, null));
         var existing = List.of(point(30L, marked, 1));
         when(points.findByArea_IdOrderBySeqAsc(20L)).thenReturn(existing);
-        when(tours.findByUser_IdOrderByIdDesc(1L)).thenReturn(List.of(tour));
+        when(tours.findVisibleTo(1L)).thenReturn(List.of(tour));
         when(tours.findByStatusNotOrderByIdDesc(DRAFT)).thenReturn(List.of(tour));
 
         assertEquals(1, service.get(10L, as(owner)).areasToPlan());
@@ -767,7 +781,7 @@ class TourRequestServiceTest {
         when(users.findById(1L)).thenReturn(Optional.of(owner));
         var draft = tour(11L, DRAFT);
         var sent = tour(10L, SUBMITTED);
-        when(tours.findByUser_IdOrderByIdDesc(1L)).thenReturn(List.of(draft, sent));
+        when(tours.findVisibleTo(1L)).thenReturn(List.of(draft, sent));
         assertEquals(List.of(11L, 10L), service.listForUser(1L, as(admin)).stream()
                 .map(TourRequestService.Summary::id).toList());
 

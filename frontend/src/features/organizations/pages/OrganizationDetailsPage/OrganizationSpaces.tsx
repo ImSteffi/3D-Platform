@@ -19,7 +19,8 @@ export default function OrganizationSpaces({ users }: { users: OrganizationUser[
  useEffect(() => {
   let active = true
   Promise.all(users.map(user => getAdminUserTourRequests(user.id).then(list => list.map(space => ({ ...space, owner: user })))))
-   .then(lists => { if (active) setSpaces(lists.flat().sort((a, b) => b.createdAt.localeCompare(a.createdAt))) })
+   // Spaces are shared within the organization, so each person's list has the same ones: keep each once.
+   .then(lists => { if (active) setSpaces([...new Map(lists.flat().map(space => [space.id, space])).values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt))) })
    .catch(err => { if (active) setError(err instanceof Error ? err.message : 'Could not load the spaces. Try again.') })
   return () => { active = false }
   // eslint-disable-next-line react-hooks/exhaustive-deps

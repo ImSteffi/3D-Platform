@@ -34,7 +34,7 @@ export default function OrganizationDetailsPage() {
   if (!trimmed || trimmed.length > 200) { setRenameError('Enter a name of 1 to 200 characters.'); return }
   setSavingName(true); setRenameError('')
   try { setOrganization(await renameOrganization(id, trimmed)); setRenaming(false) }
-  catch (reason) { setRenameError(reason instanceof Error ? reason.message : 'Could not rename this customer.') }
+  catch (reason) { setRenameError(reason instanceof Error ? reason.message : 'Could not rename this organization.') }
   finally { setSavingName(false) }
  }
 
@@ -72,7 +72,7 @@ export default function OrganizationDetailsPage() {
     <BackLink to="/users" />
     {renaming
      ? <form className="org-rename" onSubmit={saveName} noValidate>
-      <Field name="organizationName" label="Customer name" value={newName} onChange={setNewName} error={renameError} autoComplete="off" autoFocus maxLength={200} />
+      <Field name="organizationName" label="Organization name" value={newName} onChange={setNewName} error={renameError} autoComplete="off" autoFocus maxLength={200} />
       <div className="desk-form-actions">
        <Button type="submit" loading={savingName}>Save</Button>
        <Button variant="secondary" onClick={() => setRenaming(false)}>Cancel</Button>
