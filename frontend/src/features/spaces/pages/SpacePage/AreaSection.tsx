@@ -36,6 +36,8 @@ type Props = {
  onRemove: (area: TourArea) => void
  /** Takes only the plan off this floor; the floor and its photos stay. */
  onRemovePlan: (area: TourArea) => void
+ /** Renames the floor; resolves to whether it was saved. */
+ onRename: (area: TourArea, name: string) => Promise<boolean>
  /** Undo (forward = false) or redo a plan change. */
  onStepPlan: (area: TourArea, forward: boolean) => void
  /**
@@ -70,11 +72,18 @@ function imageIn(data: DataTransfer | null): File | undefined {
 
 
 /** One floor: its own to-do, then the flat plan on the left and that floor's photos on the right. */
-export default function AreaSection({ tour, area, entries, version, busy, readOnly = false, primary, selected, waiting, srcOf, onSelect, onFiles, onDelete, onCamera, onPlan, onSketch, onRemove, onRemovePlan, onStepPlan, admin, send, removable = true, floorPhotos }: Props) {
+export default function AreaSection({ tour, area, entries, version, busy, readOnly = false, primary, selected, waiting, srcOf, onSelect, onFiles, onDelete, onCamera, onPlan, onSketch, onRemove, onRemovePlan, onRename, onStepPlan, admin, send, removable = true, floorPhotos }: Props) {
  const status = tour.status
  const state = floorState(status, area)
  /** Photos can be added, replaced and deleted. */
  const open = !readOnly && status !== 'DELIVERED'
+ const [renaming, setRenaming] = useState(false)
+ const [name, setName] = useState(area.name)
+ async function saveName() {
+  const next = name.trim()
+  if (!next || next === area.name) { setRenaming(false); return }
+  if (await onRename(area, next)) setRenaming(false)
+ }
  const editable = !admin && !readOnly && status === 'PLAN_READY' && entries.length > 0
  /** A photo can be deleted until the tour is delivered; after the photos were sent, deleting one reopens photo taking. */
  const canDelete = admin ? open : !readOnly && (status === 'PLAN_READY' || status === 'PHOTOS_SUBMITTED' || status === 'APPROVED')
@@ -178,7 +187,12 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
  return <Panel as="section" padding="none" className="area" aria-label={area.name}>
   <header className="area-head">
    <div className="area-name">
-    <h2>{area.name}</h2>
+    {renaming ? <form className="area-rename" onSubmit={event => { event.preventDefault(); void saveName() }}>
+     <input autoFocus value={name} maxLength={100} aria-label="Floor name" disabled={busy}
+      onChange={event => setName(event.target.value)} onKeyDown={event => { if (event.key === 'Escape') setRenaming(false) }} />
+     <Button type="submit" variant="primary" disabled={busy || !name.trim()}>Save</Button>
+     <Button variant="quiet" disabled={busy} onClick={() => setRenaming(false)}>Cancel</Button>
+    </form> : <h2>{area.name}</h2>}
    </div>
    {admin && open && area.hasPlan && <Button variant="secondary" className="area-mark" to={admin.markTo}>{entries.length ? 'Edit spots' : 'Mark spots'}</Button>}
    {planOpen && <div className="area-actions">
@@ -186,6 +200,7 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
     {area.hasPlan && <Button variant="quiet" icon="copy" disabled={busy} onClick={pasteFromClipboard}>Paste from clipboard</Button>}
     {area.hasPlan && <Button variant="quiet" icon="edit" disabled={busy} onClick={() => onSketch(area)}>{hasDrawing ? 'Edit drawing' : 'Draw floor plan'}</Button>}
     {area.hasPlan && <Button variant="quiet" icon="trash" disabled={busy} onClick={() => onRemovePlan(area)}>Remove plan</Button>}
+    {open && !renaming && <Button variant="quiet" icon="edit" disabled={busy} onClick={() => { setName(area.name); setRenaming(true) }}>Rename floor</Button>}
     {removable && <Button variant="quiet" icon="trash" disabled={busy} onClick={() => onRemove(area)}>Remove floor</Button>}
    </div>}
   </header>

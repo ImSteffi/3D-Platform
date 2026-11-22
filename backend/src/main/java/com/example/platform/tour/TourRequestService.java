@@ -625,6 +625,18 @@ public class TourRequestService {
         return removeAreaFrom(tour, area(tour, areaId), user);
     }
 
+    /** The customer renames one of their floors. */
+    @Transactional
+    public Detail renameArea(Long id, Long areaId, String name, Authentication authentication) {
+        var user = user(authentication);
+        var tour = owned(id, user);
+        var area = changeableArea(tour, areaId);
+        if (name == null || name.isBlank()) throw error(400, "A floor needs a name.");
+        if (name.strip().length() > 100) throw error(400, "A floor name can be at most 100 characters.");
+        area.setName(name.strip());
+        return detail(tour, user);
+    }
+
     @Transactional
     public Detail adminUpdateArea(Long id, Long areaId, String name, TourArea.Kind kind,
             Authentication authentication) {

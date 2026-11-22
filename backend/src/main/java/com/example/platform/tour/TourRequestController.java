@@ -52,6 +52,13 @@ public class TourRequestController {
         return service.addArea(id, request.name(), request.kind(), authentication);
     }
 
+    /** Renames a floor. */
+    @PatchMapping("/{id}/areas/{areaId}")
+    public TourRequestService.Detail renameArea(@PathVariable Long id, @PathVariable Long areaId,
+            @Valid @RequestBody RenameRequest request, Authentication authentication) {
+        return service.renameArea(id, areaId, request.name(), authentication);
+    }
+
     @DeleteMapping("/{id}/areas/{areaId}")
     public TourRequestService.Detail removeArea(@PathVariable Long id, @PathVariable Long areaId,
             Authentication authentication) {
@@ -154,5 +161,6 @@ public class TourRequestController {
     }
 
     public record CreateRequest(@NotBlank @Size(max = 100) String name, @Size(max = 2000) String notes) {}
+    public record RenameRequest(@NotBlank @Size(max = 100) String name) {}
     public record AreaRequest(@NotBlank @Size(max = 100) String name, @NotNull TourArea.Kind kind) {}
 }

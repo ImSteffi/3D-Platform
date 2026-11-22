@@ -93,6 +93,13 @@ public class GalleryLinkController {
         return visible(tours.addArea(s.spaceId(), request.name(), request.kind(), s.owner()));
     }
 
+    @PatchMapping("/api/gallery/{token}/areas/{areaId}")
+    public TourRequestService.Detail renameArea(@PathVariable String token, @PathVariable Long areaId,
+            @Valid @RequestBody TourRequestController.RenameRequest request) {
+        var s = scope(token);
+        return visible(tours.renameArea(s.spaceId(), areaId, request.name(), s.owner()));
+    }
+
     @PutMapping("/api/gallery/{token}/areas/{areaId}/plan")
     public TourRequestService.Detail savePlan(@PathVariable String token, @PathVariable Long areaId,
             HttpServletRequest request) throws IOException {

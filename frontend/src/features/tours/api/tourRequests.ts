@@ -156,6 +156,8 @@ export const createTourRequest = (name: string, notes: string) =>
 export const deleteTourRequest = (id: number) => send<void>('DELETE', `${base(id)}`)
 export const addArea = (id: number, name: string, kind: AreaKind) =>
  send<TourDetail>('POST', `${base(id)}/areas`, { name, kind })
+export const renameArea = (id: number, areaId: number, name: string) =>
+ send<TourDetail>('PATCH', `${base(id)}/areas/${areaId}`, { name })
 export const removeArea = (id: number, areaId: number) =>
  send<TourDetail>('DELETE', `${base(id)}/areas/${areaId}`)
 /** Takes the plan off a floor; the floor and its photos stay. */
