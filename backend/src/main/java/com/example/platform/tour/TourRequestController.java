@@ -64,6 +64,13 @@ public class TourRequestController {
         return service.savePlan(id, areaId, body(request, TourRequestService.MAX_PLAN_BYTES), authentication);
     }
 
+    /** Undo (direction=back) or redo (direction=forward) a plan change. */
+    @PostMapping("/{id}/areas/{areaId}/plan/{direction:back|forward}")
+    public TourRequestService.Detail stepPlan(@PathVariable Long id, @PathVariable Long areaId, @PathVariable String direction,
+            Authentication authentication) {
+        return service.stepPlan(id, areaId, "forward".equals(direction), authentication);
+    }
+
     @DeleteMapping("/{id}/areas/{areaId}/plan")
     public TourRequestService.Detail removePlan(@PathVariable Long id, @PathVariable Long areaId, Authentication authentication) {
         return service.removePlan(id, areaId, authentication);

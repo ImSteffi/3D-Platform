@@ -57,10 +57,12 @@ export default function SpatialContextViewer({ frames, bare = false }: { frames:
   const held = new Set<string>()
   let speed = 1
   let last = 0
+  // The loader places the view once; after that (or once the user has moved) only the user moves it.
+  let viewPlaced = false
   const canvas = renderer.domElement
   canvas.tabIndex = 0
   canvas.setAttribute('aria-label', 'Spatial context. Drag to look around, W A S D to move.')
-  const keyDown = (event: KeyboardEvent) => { if (FLY_KEYS.has(event.code)) { event.preventDefault(); held.add(event.code); flight = null } }
+  const keyDown = (event: KeyboardEvent) => { if (FLY_KEYS.has(event.code)) { event.preventDefault(); held.add(event.code); flight = null; viewPlaced = true } }
   const keyUp = (event: KeyboardEvent) => { held.delete(event.code) }
   const blur = () => held.clear()
   canvas.addEventListener('keydown', keyDown)
@@ -72,6 +74,7 @@ export default function SpatialContextViewer({ frames, bare = false }: { frames:
    canvas.setPointerCapture(event.pointerId)
    drag = { x: event.clientX, y: event.clientY }
    flight = null
+   viewPlaced = true
   }
   const pointerMove = (event: PointerEvent) => {
    if (!drag) return
@@ -85,6 +88,7 @@ export default function SpatialContextViewer({ frames, bare = false }: { frames:
   const wheel = (event: WheelEvent) => {
    event.preventDefault()
    flight = null
+   viewPlaced = true
    const forward = new Vector3()
    view.getWorldDirection(forward)
    view.position.addScaledVector(forward, -event.deltaY * speed * 0.0015)
@@ -197,19 +201,23 @@ export default function SpatialContextViewer({ frames, bare = false }: { frames:
     disposables.push(lines, lineMaterial, texture, plane, planeMaterial)
     placed.push({ frame, position, rotation, fov: 2 * Math.atan(height / 2 / fy) * 180 / Math.PI, aspect: width / height, depth: cloud.medianDepth })
     bounds.push(position)
+    const centre = bounds.reduce((sum, p) => sum.add(p), new Vector3()).divideScalar(bounds.length)
+    const spread = Math.max(1, ...bounds.map(p => p.distanceTo(centre)), ...placed.map(p => p.depth))
+    // Speed and draw distance grow with the scene; neither moves the view.
+    view.far = Math.max(view.far, spread * 50)
+    // About a third of the scene per second.
+    speed = spread * 0.35
+    if (!viewPlaced) {
+     // Once, with the first frame: look at it from behind and above. Later frames just appear around the user.
+     viewPlaced = true
+     controls.target.copy(centre)
+     view.position.copy(centre).add(new Vector3(0, spread * 1.2, spread * 1.8))
+     view.lookAt(controls.target)
+     syncAngles()
+    }
+    view.updateProjectionMatrix()
    }
    if (disposed) return
-   // Start looking at the middle of the cameras from behind and above.
-   const centre = bounds.reduce((sum, p) => sum.add(p), new Vector3()).divideScalar(Math.max(1, bounds.length))
-   const spread = Math.max(1, ...bounds.map(p => p.distanceTo(centre)), ...placed.map(p => p.depth))
-   controls.target.copy(centre)
-   view.position.copy(centre).add(new Vector3(0, spread * 1.2, spread * 1.8))
-   view.far = spread * 50
-   view.lookAt(controls.target)
-   syncAngles()
-   // About a third of the scene per second.
-   speed = spread * 0.35
-   view.updateProjectionMatrix()
    setLoading(false)
   })().catch(reason => { if (!disposed) { setFailed(reason instanceof Error ? reason.message : 'The result could not be drawn.'); setLoading(false) } })
 

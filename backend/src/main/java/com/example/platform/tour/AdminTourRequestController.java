@@ -48,6 +48,12 @@ public class AdminTourRequestController {
         return service.adminRemovePlan(id, areaId, authentication);
     }
 
+    @PostMapping("/tour-requests/{id}/areas/{areaId}/plan/{direction:back|forward}")
+    public TourRequestService.Detail stepPlan(@PathVariable Long id, @PathVariable Long areaId, @PathVariable String direction,
+            Authentication authentication) {
+        return service.adminStepPlan(id, areaId, "forward".equals(direction), authentication);
+    }
+
     @PutMapping("/tour-requests/{id}/areas/{areaId}/plan")
     public TourRequestService.Detail savePlan(@PathVariable Long id, @PathVariable Long areaId,
             HttpServletRequest request, Authentication authentication) throws IOException {

@@ -6,7 +6,7 @@ import CaptureSession from '../../../capture/components/CaptureSession/CaptureSe
 import PlanSketcher from '../../../tours/components/PlanSketcher/PlanSketcher'
 import { forgetSketch, sketchKey } from '../../../tours/components/PlanSketcher/sketchStorage'
 import {
- addFloorPhoto, deleteFloorPhoto, adminAddArea, adminRemoveArea, adminRemovePlan, adminUploadPlan, addArea as customerAddArea, deletePhoto, deleteTourRequest, kindLabels, photoUrl, removeArea as customerRemoveArea, removePlan as customerRemovePlan, uploadPhoto, uploadPlan as customerUploadPlan,
+ addFloorPhoto, deleteFloorPhoto, adminAddArea, adminRemoveArea, adminRemovePlan, adminStepPlan, adminUploadPlan, stepPlan as customerStepPlan, addArea as customerAddArea, deletePhoto, deleteTourRequest, kindLabels, photoUrl, removeArea as customerRemoveArea, removePlan as customerRemovePlan, uploadPhoto, uploadPlan as customerUploadPlan,
  type AreaKind, type TourArea,
 } from '../../../tours/api/tourRequests'
 import { prepareImages } from '../../../tours/api/prepareImage'
@@ -34,6 +34,7 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
  const uploadPlan = admin ? adminUploadPlan : customerUploadPlan
  const removeArea = admin ? adminRemoveArea : customerRemoveArea
  const dropPlan = admin ? adminRemovePlan : customerRemovePlan
+ const stepPlan = admin ? adminStepPlan : customerStepPlan
  const navigate = useNavigate()
  const status = tour.status
  const draft = status === 'DRAFT'
@@ -222,8 +223,8 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
    onSelect={entry => setSelected(entry.point.id === selected ? null : entry.point.id)}
    onFiles={(files, entry) => addFiles(area, files, entry)} onDelete={entry => { setDeleteError(''); setPhotoToDelete(entry) }}
    onCamera={entry => setCamera(entry?.point.id ?? null)}
-   onPlan={plan} onSketch={area => guarded(area, 'draw', () => setSketching(area))} onRemove={removePlan} onRemovePlan={area => guarded(area, 'unplan', () => { void run(() => dropPlan(tour.id, area.id), true).then(done => { if (done) forgetSketch(sketchKey(area.id)) }) })} removable={!gallery}
-   floorPhotos={admin ? undefined : { uploading: floorUploads[area.id] ?? null, onAdd: files => { void addFloorPhotos(area, files) }, onDelete: photoId => { void run(() => deleteFloorPhoto(tour.id, photoId)) } }} admin={admin ? { markTo: `/review/${tour.id}` } : undefined} />)}
+   onPlan={plan} onSketch={area => guarded(area, 'draw', () => setSketching(area))} onRemove={removePlan} onStepPlan={(area, forward) => guarded(area, 'replace', () => { void run(() => stepPlan(tour.id, area.id, forward), true) })} onRemovePlan={area => guarded(area, 'unplan', () => { void run(() => dropPlan(tour.id, area.id), true).then(done => { if (done) forgetSketch(sketchKey(area.id)) }) })} removable={!gallery}
+   floorPhotos={{ uploading: floorUploads[area.id] ?? null, onAdd: files => { void addFloorPhotos(area, files) }, onDelete: photoId => { void run(() => deleteFloorPhoto(tour.id, photoId)) } }} admin={admin ? { markTo: `/review/${tour.id}` } : undefined} />)}
   {!analytics && tour.areas.length === 0 && <Panel><p className="sections-none">{sectionsOnly ? 'This space has no floor plans.'
    : 'No floors yet. Click Add plan for each floor or building, then upload a photo of its floor plan or draw it by hand.'}</p></Panel>}
 

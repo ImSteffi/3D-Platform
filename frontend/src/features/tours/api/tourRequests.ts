@@ -46,6 +46,9 @@ export type TourArea = {
  linkPhotos?: number[]
  /** The team has made this floor's spatial context: its tour is being made. */
  spatialReady?: boolean
+ /** An earlier or a newer plan to switch to (undo / redo). */
+ canUndoPlan?: boolean
+ canRedoPlan?: boolean
 }
 
 export type TourDetail = {
@@ -158,6 +161,9 @@ export const removeArea = (id: number, areaId: number) =>
 /** Takes the plan off a floor; the floor and its photos stay. */
 export const removePlan = (id: number, areaId: number) =>
  send<TourDetail>('DELETE', `${base(id)}/areas/${areaId}/plan`)
+/** Undo (back) or redo (forward) a plan change. */
+export const stepPlan = (id: number, areaId: number, forward: boolean) =>
+ send<TourDetail>('POST', `${base(id)}/areas/${areaId}/plan/${forward ? 'forward' : 'back'}`)
 export const uploadPlan = (id: number, areaId: number, file: File) =>
  send<TourDetail>('PUT', `${base(id)}/areas/${areaId}/plan`, undefined, file)
 export const submitTourRequest = (id: number) => send<TourDetail>('POST', `${base(id)}/submit`)
@@ -292,6 +298,8 @@ export const adminAddArea = (id: number, name: string, kind: AreaKind) =>
  send<TourDetail>('POST', `${adminRoot}/${id}/areas`, { name, kind })
 export const adminUploadPlan = (id: number, areaId: number, file: File) =>
  send<TourDetail>('PUT', `${adminRoot}/${id}/areas/${areaId}/plan`, undefined, file)
+export const adminStepPlan = (id: number, areaId: number, forward: boolean) =>
+ send<TourDetail>('POST', `${adminRoot}/${id}/areas/${areaId}/plan/${forward ? 'forward' : 'back'}`)
 export const adminRemovePlan = (id: number, areaId: number) =>
  send<TourDetail>('DELETE', `${adminRoot}/${id}/areas/${areaId}/plan`)
 export const adminRemoveArea = (id: number, areaId: number) =>

@@ -65,6 +65,11 @@ public class TourRequestService {
 
     // Set by Spring; absent in unit tests, where no floor has a spatial context.
     private SpatialContextRunRepository spatialRuns;
+    // Set by Spring; absent in unit tests, where plans have no history (replaced files are deleted).
+    private PlanHistory planHistory;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setPlanHistory(PlanHistory planHistory) { this.planHistory = planHistory; }
 
     @org.springframework.beans.factory.annotation.Autowired
     void setSpatialRuns(SpatialContextRunRepository spatialRuns) { this.spatialRuns = spatialRuns; }
@@ -153,6 +158,7 @@ public class TourRequestService {
         var entries = points.findByArea_IdOrderBySeqAsc(area.getId());
         var keys = new java.util.ArrayList<String>();
         keys.add(area.getPlanObjectKey());
+        if (planHistory != null) planHistory.all(area.getId()).forEach(key -> { if (!keys.contains(key)) keys.add(key); });
         entries.forEach(point -> keys.add(point.getPhotoObjectKey()));
         var loose = floorPhotos.findByArea_IdOrderByIdAsc(area.getId());
         loose.forEach(photo -> keys.add(photo.getObjectKey()));
@@ -195,15 +201,42 @@ public class TourRequestService {
         clearSpots(tour, area);
         area.setPlanObjectKey(null);
         areas.flush();
-        discard(old);
+        if (planHistory == null) discard(old);
         return detail(tour, user);
     }
 
     // Capture points stay where they are: an administrator replacing a marked plan keeps them.
     private Detail storePlan(TourRequest tour, TourArea area, byte[] image, User user) {
         var old = area.getPlanObjectKey();
-        area.setPlanObjectKey(store(folder(area) + "floorplan_client/plan-", image, MAX_PLAN_BYTES));
-        discard(old);
+        var added = store(folder(area) + "floorplan_client/plan-", image, MAX_PLAN_BYTES);
+        area.setPlanObjectKey(added);
+        if (planHistory != null) planHistory.add(area.getId(), old, added).forEach(this::discard);
+        else discard(old);
+        if (!user.isPlatformAdmin()) clearSpots(tour, area);
+        if (!user.isPlatformAdmin()) arrived(tour);
+        return detail(tour, user);
+    }
+
+    /** forward = false: back to the plan before; true: forward again. */
+    @Transactional
+    public Detail stepPlan(Long id, Long areaId, boolean forward, Authentication authentication) {
+        var user = user(authentication);
+        var tour = owned(id, user);
+        return switchPlan(tour, changeableArea(tour, areaId), forward, user);
+    }
+
+    @Transactional
+    public Detail adminStepPlan(Long id, Long areaId, boolean forward, Authentication authentication) {
+        var user = admin(authentication);
+        var tour = editable(id);
+        return switchPlan(tour, area(tour, areaId), forward, user);
+    }
+
+    private Detail switchPlan(TourRequest tour, TourArea area, boolean forward, User user) {
+        var current = area.getPlanObjectKey();
+        var target = forward ? planHistory.next(area.getId(), current) : planHistory.previous(area.getId(), current);
+        if (target == null) throw error(409, forward ? "There is no newer plan to go forward to." : "There is no earlier plan to go back to.");
+        area.setPlanObjectKey(target);
         if (!user.isPlatformAdmin()) clearSpots(tour, area);
         if (!user.isPlatformAdmin()) arrived(tour);
         return detail(tour, user);
@@ -904,7 +937,9 @@ public class TourRequestService {
                         tour.getStatus() != DRAFT && !points.findByArea_IdOrderBySeqAsc(area.getId()).isEmpty(),
                         floorPhotos.findByArea_IdOrderByIdAsc(area.getId()).stream().map(FloorPhoto::getId).toList(),
                         floorPhotos.findByArea_IdOrderByIdAsc(area.getId()).stream().filter(FloorPhoto::isViaLink).map(FloorPhoto::getId).toList(),
-                        spatialReady(area)))
+                        spatialReady(area),
+                        planHistory != null && planHistory.previous(area.getId(), area.getPlanObjectKey()) != null,
+                        planHistory != null && planHistory.next(area.getId(), area.getPlanObjectKey()) != null))
                 .toList();
         var scan = deliveredScan(tour);
         return new Detail(tour.getId(), tour.getName(), tour.getNotes(), effectiveStatus(tour).name(),
@@ -951,7 +986,9 @@ public class TourRequestService {
             // The ones that came in through a gallery link: the link may delete only these.
             List<Long> linkPhotos,
             // The team has the floor's spatial context: the customer sees that the tour is being made.
-            boolean spatialReady) {}
+            boolean spatialReady,
+            // An earlier or a newer plan to switch to (undo / redo).
+            boolean canUndoPlan, boolean canRedoPlan) {}
     public record Detail(Long id, String name, String notes, String status, Instant createdAt,
             String ownerName, String ownerEmail, List<AreaResponse> areas,
             Long scanId, String scanName, Long projectId, int areasToPlan) {}

@@ -101,6 +101,12 @@ public class GalleryLinkController {
                 TourRequestController.body(request, TourRequestService.MAX_PLAN_BYTES), s.owner()));
     }
 
+    @PostMapping("/api/gallery/{token}/areas/{areaId}/plan/{direction:back|forward}")
+    public TourRequestService.Detail stepPlan(@PathVariable String token, @PathVariable Long areaId, @PathVariable String direction) {
+        var s = scope(token);
+        return visible(tours.stepPlan(s.spaceId(), areaId, "forward".equals(direction), s.owner()));
+    }
+
     @DeleteMapping("/api/gallery/{token}/areas/{areaId}/plan")
     public TourRequestService.Detail removePlan(@PathVariable String token, @PathVariable Long areaId) {
         var s = scope(token);

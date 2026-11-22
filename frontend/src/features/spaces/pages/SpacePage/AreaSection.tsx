@@ -36,6 +36,8 @@ type Props = {
  onRemove: (area: TourArea) => void
  /** Takes only the plan off this floor; the floor and its photos stay. */
  onRemovePlan: (area: TourArea) => void
+ /** Undo (forward = false) or redo a plan change. */
+ onStepPlan: (area: TourArea, forward: boolean) => void
  /**
   * Operator mode (customer page in the admin desk). The operator only marks spots (a button beside the floor's name) and can delete
   * photos until the tour is delivered: no floor or plan editing, no customer to-do, no photo taking. Omit for the customer view.
@@ -68,7 +70,7 @@ function imageIn(data: DataTransfer | null): File | undefined {
 
 
 /** One floor: its own to-do, then the flat plan on the left and that floor's photos on the right. */
-export default function AreaSection({ tour, area, entries, version, busy, readOnly = false, primary, selected, waiting, srcOf, onSelect, onFiles, onDelete, onCamera, onPlan, onSketch, onRemove, onRemovePlan, admin, send, removable = true, floorPhotos }: Props) {
+export default function AreaSection({ tour, area, entries, version, busy, readOnly = false, primary, selected, waiting, srcOf, onSelect, onFiles, onDelete, onCamera, onPlan, onSketch, onRemove, onRemovePlan, onStepPlan, admin, send, removable = true, floorPhotos }: Props) {
  const status = tour.status
  const state = floorState(status, area)
  /** Photos can be added, replaced and deleted. */
@@ -209,13 +211,19 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
       <p>Add this floor&rsquo;s plan. A JPG, PNG or WebP image works, and so does a clear photo of a hand-drawn sketch: mark the rooms, doors and stairs.</p>
      </div>
      : <p className="area-quiet">This floor has no plan.</p>}
+    {planOpen && (area.canUndoPlan || area.canRedoPlan) && <div className="area-plan-history" role="group" aria-label="Plan history">
+     <button type="button" className="area-plan-step" disabled={busy || !area.canUndoPlan} title="Back to the previous plan" aria-label="Back to the previous plan"
+      onClick={() => onStepPlan(area, false)}><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+     <button type="button" className="area-plan-step" disabled={busy || !area.canRedoPlan} title="Forward to the newer plan" aria-label="Forward to the newer plan"
+      onClick={() => onStepPlan(area, true)}><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+    </div>}
    </div>
    {/* The operator sees photos only once there are some: no empty section and no title. */}
    {showSpatial && <div className="area-spatial on-dark">
     <Suspense fallback={<Spinner block label="Loading the spatial context" />}><SpatialContextViewer frames={spatial} bare /></Suspense>
    </div>}
    {making && <div className="area-making" role="status"><p>We are making your 3D tour</p></div>}
-   {(!admin || shown.length > 0 || (area.photos?.length ?? 0) > 0) && <div className="area-photos">
+   {(!admin || !!floorPhotos || shown.length > 0 || (area.photos?.length ?? 0) > 0) && <div className="area-photos">
     {!admin && !readOnly && !tourMade && !making && <p className="area-photos-lead">Once all your photos are in, we will make your 3D tour.</p>}
     {entries.length === 0
      // No spots yet: this side is the floor's own photo gallery, open straight away.
