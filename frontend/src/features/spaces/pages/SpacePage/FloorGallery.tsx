@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { Icon, Spinner } from '../../../../shared/ui'
+import { Button, Icon, Spinner } from '../../../../shared/ui'
 import { floorPhotoUrl, onGalleryLink, type TourArea, type TourDetail } from '../../../tours/api/tourRequests'
 import FileButton from './FileButton'
+import FloorCamera from './FloorCamera'
 import FloorPhotoViewer from './FloorPhotoViewer'
 
 const MAX_PHOTOS = 64
+/** A live camera in the page (needs HTTPS or localhost): offers Take photos next to Add photos. */
+const floorCameraSupported = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
 
 /** Progress of a batch of photos going to one floor: one at a time, with a preview of the current one. */
 export type FloorUpload = { done: number; total: number; preview: string | null }
@@ -38,6 +41,9 @@ export default function FloorGallery({ tour, area, busy, uploading, editable, ti
  const [columns, setColumns] = useState(8)
  const row = useRef<HTMLOListElement>(null)
  const hasPhotos = photos.length > 0
+ // The in-app camera: many photos in a row, sent together on Done. Not while a batch is still going up.
+ const [camera, setCamera] = useState(false)
+ const room = MAX_PHOTOS - photos.length
  const canDelete = (photoId: number) => editable && (!onGalleryLink() || !!area.linkPhotos?.includes(photoId))
  // The photo open in the viewer. If it goes (deleted), the one that took its place is shown; none left closes it.
  const [viewing, setViewing] = useState<{ id: number; index: number } | null>(null)
@@ -65,13 +71,18 @@ export default function FloorGallery({ tour, area, busy, uploading, editable, ti
   return () => observer.disconnect()
  }, [hasPhotos])
  // The uploading card takes a place in the row too, so "Show all" stays the last card of the first row.
- const room = columns - (uploading ? 1 : 0)
- const folded = !open && photos.length > room
- const visible = folded ? photos.slice(0, room - 1) : photos
+ const rowRoom = columns - (uploading ? 1 : 0)
+ const folded = !open && photos.length > rowRoom
+ const visible = folded ? photos.slice(0, rowRoom - 1) : photos
  return <div className="floor-gallery">
   <div className="area-photos-head">
    <h3>{title}{hasPhotos && <span className="desk-count">{photos.length}</span>}</h3>
-   {editable && <FileButton multiple icon="upload" disabled={busy || full} title={full ? `A floor can have at most ${MAX_PHOTOS} photos.` : undefined} onFiles={onAdd}>Add photos</FileButton>}
+   {editable && <div className="floor-gallery-add">
+    {floorCameraSupported && <Button variant="secondary" icon="camera" disabled={busy || full || !!uploading}
+     title={full ? `A floor can have at most ${MAX_PHOTOS} photos.` : uploading ? 'Wait for the photos being sent to finish.' : 'Take many photos in a row with the camera.'}
+     onClick={() => setCamera(true)}>Take photos</Button>}
+    <FileButton multiple icon="upload" disabled={busy || full} title={full ? `A floor can have at most ${MAX_PHOTOS} photos.` : undefined} onFiles={onAdd}>Add photos</FileButton>
+   </div>}
   </div>
   {hint && <p className="floor-gallery-hint">{hint}</p>}
   {uploading && <p className="floor-gallery-hint" aria-live="polite"><Spinner size={14} /> Uploading photo {Math.min(uploading.done + 1, uploading.total)} of {uploading.total}</p>}
@@ -95,7 +106,7 @@ export default function FloorGallery({ tour, area, busy, uploading, editable, ti
       title="Delete this photo" onClick={() => onDelete(photoId)}><Icon name="trash" size={15} /></button>}
     </div>
    </li>)}
-   {photos.length > room && <li className="frame-cell">
+   {photos.length > rowRoom && <li className="frame-cell">
     <button type="button" className="frame frame-more" aria-expanded={open} onClick={() => setOpen(!open)}>
      {folded ? <><strong>+{photos.length - visible.length}</strong><span>Show all</span></> : <span>Show less</span>}
     </button>
@@ -104,5 +115,6 @@ export default function FloorGallery({ tour, area, busy, uploading, editable, ti
   : null}
   {shown !== null && <FloorPhotoViewer urls={photos.map(id => floorPhotoUrl(tour.id, id))} index={shownIndex} title={title}
    canDelete={canDelete(shown)} busy={busy} onIndex={next => setViewing({ id: photos[next], index: next })} onDelete={() => onDelete(shown)} onClose={closeViewer} />}
+  {camera && <FloorCamera title={title} room={room} onDone={files => onAdd(files.slice(0, Math.max(0, room)))} onClose={() => setCamera(false)} />}
  </div>
 }

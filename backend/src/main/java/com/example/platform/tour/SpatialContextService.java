@@ -216,10 +216,19 @@ public class SpatialContextService {
             runs.deleteAll(all);
             return files;
         });
-        // A leftover file only costs storage, so a failed cleanup must not fail the request.
-        for (var key : keys) {
-            try { r2.deleteObject(b -> b.bucket(bucket).key(key)); } catch (SdkException ignored) { }
-        }
+        // The files go in the background, up to 1000 per request, so the answer comes at once.
+        // A leftover file only costs storage, so a failed cleanup is only logged.
+        uploads.submit(() -> {
+            for (int from = 0; from < keys.size(); from += 1000) {
+                var batch = keys.subList(from, Math.min(from + 1000, keys.size())).stream()
+                        .map(key -> software.amazon.awssdk.services.s3.model.ObjectIdentifier.builder().key(key).build()).toList();
+                try {
+                    r2.deleteObjects(request -> request.bucket(bucket).delete(d -> d.objects(batch).quiet(true)));
+                } catch (SdkException failure) {
+                    log.warn("Could not delete {} spatial context files", batch.size(), failure);
+                }
+            }
+        });
         return transaction.execute(status -> result(area(tourId, areaId), null, List.of()));
     }
 

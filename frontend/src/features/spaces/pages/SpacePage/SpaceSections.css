@@ -233,7 +233,7 @@
 .photo-viewer-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left)); }
 .photo-viewer-count { font-family: var(--mono); font-size: 14px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: rgb(246 245 242 / .72); }
 .photo-viewer-actions { display: flex; align-items: center; gap: 8px; }
-.photo-viewer-stage { flex: 1; min-height: 0; display: grid; place-items: center; padding: 0 max(72px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)); }
+.photo-viewer-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 0 max(72px, env(safe-area-inset-right)) max(72px, env(safe-area-inset-bottom)); }
 .photo-viewer-stage img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 12px; user-select: none; }
 .photo-viewer-step { position: absolute; top: 50%; translate: 0 -50%; }
 .photo-viewer-prev { left: max(16px, env(safe-area-inset-left)); }
