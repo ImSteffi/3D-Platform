@@ -68,6 +68,7 @@ public class SpatialContextRun {
 interface SpatialContextRunRepository extends JpaRepository<SpatialContextRun, Long> {
     List<SpatialContextRun> findByArea_IdOrderByIdDesc(Long areaId);
     boolean existsByArea_IdAndStatus(Long areaId, SpatialContextRun.Status status);
+    List<SpatialContextRun> findByStatus(SpatialContextRun.Status status);
 }
 
 interface SpatialContextFrameRepository extends JpaRepository<SpatialContextFrame, Long> {

@@ -3,7 +3,7 @@ import { Button, ConfirmDialog, InlineError, Spinner, StatusPill } from '../../.
 import { getSpatialContext, startSpatialContext, type SpatialContext as Result } from '../../api/tourRequests'
 import './SpatialContext.css'
 
-const POLL_MS = 8000
+const POLL_MS = 4000
 const NONE: number[] = []
 
 const errorText = (reason: unknown, fallback: string) => reason instanceof Error && reason.message ? reason.message : fallback
@@ -67,17 +67,20 @@ export default function SpatialContext({ tourId, areaId, photoCount, onReady }: 
 
  return <div className="spatial">
   <div className="spatial-row">
-   {running && <StatusPill><Spinner size={12} /> Spatial context running</StatusPill>}
+   {running && <StatusPill><Spinner size={12} /> {result.phase === 'UPLOADING'
+    ? `Uploading photos ${result.uploaded}/${result.total}`
+    : 'Atlas is placing the photos'}</StatusPill>}
    {failed && <StatusPill tone="red">Spatial context failed</StatusPill>}
    {result && !running && label && <Button variant="secondary" icon="cube" disabled={!result.configured} title={result.configured ? undefined : 'WLT_API_KEY is not set on the server.'}
     onClick={() => { setStartError(''); setConfirming(true) }}>{label}</Button>}
   </div>
   {failed && result.error && <p className="spatial-error">{result.error}</p>}
+  {running && <p className="spatial-note">This runs on the server: you can close this page and come back later.</p>}
   {result && !result.configured && !running && <p className="spatial-note">Not set up on this server: WLT_API_KEY is missing.</p>}
   {loadError && <InlineError>{loadError}</InlineError>}
 
   {confirming && <ConfirmDialog title={updating ? 'Update spatial context?' : 'Generate spatial context?'} confirmLabel={label ?? 'Generate Spatial Context'}
-   busy={starting} busyLabel="Uploading photos…" error={startError} onConfirm={() => { void start() }} onCancel={() => setConfirming(false)}>
+   busy={starting} busyLabel="Starting…" error={startError} onConfirm={() => { void start() }} onCancel={() => setConfirming(false)}>
    <p>{updating && <>{fresh.length === 1 ? 'One new photo was' : <><strong className="num">{fresh.length}</strong> new photos were</>} added. </>}
     This floor&rsquo;s <strong className="num">{photoCount}</strong> {photoCount === 1 ? 'photo goes' : 'photos go'} to World Labs Atlas, which places each camera and estimates depth. It spends Atlas credits.</p>
   </ConfirmDialog>}

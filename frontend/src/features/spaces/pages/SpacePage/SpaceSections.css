@@ -81,6 +81,7 @@
 .area-plan-empty.is-over { border-color: var(--amber); border-style: solid; background: var(--amber-soft); }
 .area-plan-empty p { max-width: 42ch; font-size: 14px; color: var(--ink-2); }
 .area-plan-empty .area-actions { justify-content: center; margin-top: var(--s-1); }
+.area-plan .area-paste-note { justify-self: center; margin: 0 4px 8px; font-size: 13px; color: var(--danger); }
 .area-plan-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--control); color: var(--ink); }
 .area-photos { min-width: 0; }
 .area-photos h3 { font-size: 15px; }

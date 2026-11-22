@@ -318,6 +318,10 @@ export type SpatialFrame = {
 export type SpatialContext = {
  runId: number | null
  status: 'NONE' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
+ /** While running: our photos going to Atlas, or Atlas working on them. Runs on the server. */
+ phase: 'UPLOADING' | 'PROCESSING' | null
+ uploaded: number
+ total: number
  error: string | null
  createdAt: string | null
  finishedAt: string | null
