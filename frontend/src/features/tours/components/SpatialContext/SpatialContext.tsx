@@ -75,7 +75,6 @@ export default function SpatialContext({ tourId, areaId, photoCount, onReady }: 
     onClick={() => { setStartError(''); setConfirming(true) }}>{label}</Button>}
   </div>
   {failed && result.error && <p className="spatial-error">{result.error}</p>}
-  {running && <p className="spatial-note">This runs on the server: you can close this page and come back later.</p>}
   {result && !result.configured && !running && <p className="spatial-note">Not set up on this server: WLT_API_KEY is missing.</p>}
   {loadError && <InlineError>{loadError}</InlineError>}
 
