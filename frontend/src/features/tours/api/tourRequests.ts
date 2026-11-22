@@ -339,10 +339,14 @@ export type SpatialContext = {
  frames: SpatialFrame[]
  /** Gallery photos added after this run: not in it yet. */
  newPhotoIds?: number[]
+ /** Photos the run used that were deleted since: it should be made again. */
+ removedPhotos?: number
 }
 const spatialUrl = (id: number, areaId: number) => `${adminRoot}/${id}/areas/${areaId}/spatial-context`
 export const getSpatialContext = (id: number, areaId: number) => get<SpatialContext>(spatialUrl(id, areaId))
 export const startSpatialContext = (id: number, areaId: number) => send<SpatialContext>('POST', spatialUrl(id, areaId))
+/** Deletes the floor's spatial context, to generate it again from the right photos. */
+export const deleteSpatialContext = (id: number, areaId: number) => send<SpatialContext>('DELETE', spatialUrl(id, areaId))
 
 /* Admin: a space the team starts for a customer, named after the address. */
 export const adminCreateSpaceForUser = (userId: number, name: string) =>

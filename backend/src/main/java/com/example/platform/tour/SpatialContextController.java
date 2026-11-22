@@ -28,6 +28,12 @@ public class SpatialContextController {
         return service.status(id, areaId, authentication);
     }
 
+    /** Deletes the floor's spatial context, so it can be generated again from the right photos. */
+    @DeleteMapping
+    public SpatialContextService.Result delete(@PathVariable Long id, @PathVariable Long areaId, Authentication authentication) {
+        return service.delete(id, areaId, authentication);
+    }
+
     /** kind = image | depth | confidence. Served from our storage, same origin, so WebGL can use it. */
     @GetMapping("/runs/{runId}/frames/{index}/{kind}")
     public ResponseEntity<byte[]> file(@PathVariable Long id, @PathVariable Long areaId, @PathVariable Long runId,

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Icon, Spinner } from '../../../../shared/ui'
 import { floorPhotoUrl, onGalleryLink, type TourArea, type TourDetail } from '../../../tours/api/tourRequests'
 import FileButton from './FileButton'
+import FloorPhotoViewer from './FloorPhotoViewer'
 
 const MAX_PHOTOS = 64
 
@@ -37,6 +38,22 @@ export default function FloorGallery({ tour, area, busy, uploading, editable, ti
  const [columns, setColumns] = useState(8)
  const row = useRef<HTMLOListElement>(null)
  const hasPhotos = photos.length > 0
+ const canDelete = (photoId: number) => editable && (!onGalleryLink() || !!area.linkPhotos?.includes(photoId))
+ // The photo open in the viewer. If it goes (deleted), the one that took its place is shown; none left closes it.
+ const [viewing, setViewing] = useState<{ id: number; index: number } | null>(null)
+ const shown = viewing ? (photos.includes(viewing.id) ? viewing.id : photos[Math.min(viewing.index, photos.length - 1)] ?? null) : null
+ if (viewing && shown === null) setViewing(null)
+ const shownIndex = shown === null ? -1 : photos.indexOf(shown)
+ function closeViewer() {
+  const id = shown
+  setViewing(null)
+  // Back to the thumbnail it was opened from (or the one now in its place), else the "Show all" card.
+  window.requestAnimationFrame(() => {
+   const list = row.current
+   const target = list?.querySelector<HTMLElement>(`[data-photo-id="${id}"]`) ?? list?.querySelector<HTMLElement>('.frame-more')
+   target?.focus()
+  })
+ }
  useEffect(() => {
   const list = row.current
   if (!list) return
@@ -53,8 +70,8 @@ export default function FloorGallery({ tour, area, busy, uploading, editable, ti
  const visible = folded ? photos.slice(0, room - 1) : photos
  return <div className="floor-gallery">
   <div className="area-photos-head">
-   <h3>{title}</h3>
-   {editable && !full && <FileButton multiple icon="upload" disabled={busy} onFiles={onAdd}>Add photos</FileButton>}
+   <h3>{title}{hasPhotos && <span className="desk-count">{photos.length}</span>}</h3>
+   {editable && <FileButton multiple icon="upload" disabled={busy || full} title={full ? `A floor can have at most ${MAX_PHOTOS} photos.` : undefined} onFiles={onAdd}>Add photos</FileButton>}
   </div>
   {hint && <p className="floor-gallery-hint">{hint}</p>}
   {uploading && <p className="floor-gallery-hint" aria-live="polite"><Spinner size={14} /> Uploading photo {Math.min(uploading.done + 1, uploading.total)} of {uploading.total}</p>}
@@ -67,12 +84,14 @@ export default function FloorGallery({ tour, area, busy, uploading, editable, ti
    </li>}
    {visible.map((photoId, index) => <li key={photoId} className="frame-cell">
     <div className="frame-box">
-     <div className={`frame frame--taken skeleton-bg${fresh?.includes(photoId) ? ' frame--new' : ''}`} title={fresh?.includes(photoId) ? 'New: not in the spatial context yet' : undefined}>
+     <button type="button" data-photo-id={photoId} className={`frame frame--taken frame-open skeleton-bg${fresh?.includes(photoId) ? ' frame--new' : ''}`}
+      title={fresh?.includes(photoId) ? 'New: not in the spatial context yet' : undefined} aria-label={`Open photo ${index + 1} of ${photos.length}`}
+      onClick={() => setViewing({ id: photoId, index: photos.indexOf(photoId) })}>
       <img src={floorPhotoUrl(tour.id, photoId)} alt="" loading="lazy" decoding="async" draggable={false}
        // A signed link can fail once right after an upload: try again a moment later.
        onError={event => { const img = event.currentTarget; if (!img.dataset.retried) { img.dataset.retried = '1'; window.setTimeout(() => { img.src = floorPhotoUrl(tour.id, photoId) + '?retry=1' }, 1500) } }} />
-     </div>
-     {editable && (!onGalleryLink() || area.linkPhotos?.includes(photoId)) && <button type="button" className="frame-delete" disabled={busy} aria-label={`Delete photo ${index + 1}`}
+     </button>
+     {canDelete(photoId) && <button type="button" className="frame-delete" disabled={busy} aria-label={`Delete photo ${index + 1}`}
       title="Delete this photo" onClick={() => onDelete(photoId)}><Icon name="trash" size={15} /></button>}
     </div>
    </li>)}
@@ -83,6 +102,7 @@ export default function FloorGallery({ tour, area, busy, uploading, editable, ti
    </li>}
   </ol>
   : null}
-  {full && editable && <p className="floor-gallery-hint">This floor has the most photos we can use ({MAX_PHOTOS}).</p>}
+  {shown !== null && <FloorPhotoViewer urls={photos.map(id => floorPhotoUrl(tour.id, id))} index={shownIndex} title={title}
+   canDelete={canDelete(shown)} busy={busy} onIndex={next => setViewing({ id: photos[next], index: next })} onDelete={() => onDelete(shown)} onClose={closeViewer} />}
  </div>
 }

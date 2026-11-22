@@ -186,7 +186,7 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
     {area.hasPlan && <Button variant="quiet" icon="copy" disabled={busy} onClick={pasteFromClipboard}>Paste from clipboard</Button>}
     {area.hasPlan && <Button variant="quiet" icon="edit" disabled={busy} onClick={() => onSketch(area)}>{hasDrawing ? 'Edit drawing' : 'Draw floor plan'}</Button>}
     {area.hasPlan && <Button variant="quiet" icon="trash" disabled={busy} onClick={() => onRemovePlan(area)}>Remove plan</Button>}
-    {removable && <Button variant="quiet" icon="trash" disabled={busy} onClick={() => onRemove(area)}>Remove</Button>}
+    {removable && <Button variant="quiet" icon="trash" disabled={busy} onClick={() => onRemove(area)}>Remove floor</Button>}
    </div>}
   </header>
 

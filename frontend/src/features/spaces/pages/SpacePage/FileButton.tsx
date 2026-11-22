@@ -13,10 +13,12 @@ type Props = {
  block?: boolean
  /** File types the picker offers. Default: images, including iPhone HEIC. */
  accept?: string
+ /** Tooltip, for example why it is disabled. */
+ title?: string
 }
 
 /** A Button that opens the device's image picker. */
-export default function FileButton({ children, onFiles, multiple, disabled, variant = 'secondary', size, icon, block, accept = imagePickerAccept }: Props) {
+export default function FileButton({ children, onFiles, multiple, disabled, variant = 'secondary', size, icon, block, accept = imagePickerAccept, title }: Props) {
  const input = useRef<HTMLInputElement>(null)
  return <>
   <input ref={input} type="file" hidden tabIndex={-1} accept={accept} multiple={multiple} disabled={disabled} onChange={event => {
@@ -24,6 +26,6 @@ export default function FileButton({ children, onFiles, multiple, disabled, vari
    event.target.value = ''
    if (files.length) onFiles(files)
   }} />
-  <Button variant={variant} size={size} icon={icon} block={block} disabled={disabled} onClick={() => input.current?.click()}>{children}</Button>
+  <Button variant={variant} size={size} icon={icon} block={block} disabled={disabled} title={title} onClick={() => input.current?.click()}>{children}</Button>
  </>
 }

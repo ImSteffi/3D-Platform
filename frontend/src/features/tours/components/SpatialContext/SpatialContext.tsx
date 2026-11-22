@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button, ConfirmDialog, InlineError, Spinner, StatusPill } from '../../../../shared/ui'
-import { getSpatialContext, startSpatialContext, type SpatialContext as Result } from '../../api/tourRequests'
+import { deleteSpatialContext, getSpatialContext, startSpatialContext, type SpatialContext as Result } from '../../api/tourRequests'
 import './SpatialContext.css'
 
 const POLL_MS = 4000
@@ -18,8 +18,8 @@ export type SpatialState = {
 
 /**
  * Operator only: run Atlas spatial context on one floor's photos and follow it. The result itself is shown
- * in the floor card. Once there is one, the button only comes back as "Update spatial context" when new photos
- * were added since, so a run is never repeated on the same photos.
+ * in the floor card. Once there is one, the button only comes back as "Re-generate spatial context" when photos
+ * were added or deleted since, so a run is never repeated on the same photos.
  */
 export default function SpatialContext({ tourId, areaId, photoCount, onReady }: { tourId: number; areaId: number; photoCount: number
  onReady?: (state: SpatialState) => void }) {
@@ -28,6 +28,9 @@ export default function SpatialContext({ tourId, areaId, photoCount, onReady }: 
  const [confirming, setConfirming] = useState(false)
  const [starting, setStarting] = useState(false)
  const [startError, setStartError] = useState('')
+ const [deleting, setDeleting] = useState(false)
+ const [removing, setRemoving] = useState(false)
+ const [deleteError, setDeleteError] = useState('')
  const running = result?.status === 'RUNNING'
 
  useEffect(() => {
@@ -52,18 +55,27 @@ export default function SpatialContext({ tourId, areaId, photoCount, onReady }: 
   finally { setStarting(false) }
  }
 
+ async function remove() {
+  setRemoving(true); setDeleteError('')
+  try { setResult(await deleteSpatialContext(tourId, areaId)); setDeleting(false) }
+  catch (reason) { setDeleteError(errorText(reason, 'That did not go through. Please try again.')) }
+  finally { setRemoving(false) }
+ }
+
  const done = result?.status === 'SUCCEEDED'
  const failed = result?.status === 'FAILED'
  const frames = done ? result.frames : null
  const fresh = done ? result.newPhotoIds ?? NONE : NONE
  useEffect(() => { onReady?.({ frames, fresh }) }, [frames, fresh, onReady])
- if (photoCount === 0) return null
+ const removed = done ? result.removedPhotos ?? 0 : 0
+ // Nothing to show without photos, unless there is a spatial context left to delete.
+ if (photoCount === 0 && (!result || result.status === 'NONE')) return null
 
  const label = !result || result.status === 'NONE' ? 'Generate Spatial Context'
   : failed ? 'Try again'
-  : done && fresh.length ? 'Update spatial context'
+  : done && (fresh.length || removed) && photoCount > 0 ? 'Re-generate spatial context'
   : null
- const updating = done && fresh.length > 0
+ const updating = done && (fresh.length > 0 || removed > 0)
 
  return <div className="spatial">
   <div className="spatial-row">
@@ -73,15 +85,21 @@ export default function SpatialContext({ tourId, areaId, photoCount, onReady }: 
    {failed && <StatusPill tone="red">Spatial context failed</StatusPill>}
    {result && !running && label && <Button variant="secondary" icon="cube" disabled={!result.configured} title={result.configured ? undefined : 'WLT_API_KEY is not set on the server.'}
     onClick={() => { setStartError(''); setConfirming(true) }}>{label}</Button>}
+   {result && (done || failed) && <Button variant="quiet" icon="trash" onClick={() => { setDeleteError(''); setDeleting(true) }}>Delete spatial context</Button>}
   </div>
   {failed && result.error && <p className="spatial-error">{result.error}</p>}
   {result && !result.configured && !running && <p className="spatial-note">Not set up on this server: WLT_API_KEY is missing.</p>}
   {loadError && <InlineError>{loadError}</InlineError>}
 
-  {confirming && <ConfirmDialog title={updating ? 'Update spatial context?' : 'Generate spatial context?'} confirmLabel={label ?? 'Generate Spatial Context'}
+  {confirming && <ConfirmDialog title={updating ? 'Re-generate spatial context?' : 'Generate spatial context?'} confirmLabel={label ?? 'Generate Spatial Context'}
    busy={starting} busyLabel="Starting…" error={startError} onConfirm={() => { void start() }} onCancel={() => setConfirming(false)}>
-   <p>{updating && <>{fresh.length === 1 ? 'One new photo was' : <><strong className="num">{fresh.length}</strong> new photos were</>} added. </>}
+   <p>{updating && fresh.length > 0 && <>{fresh.length === 1 ? 'One new photo was' : <><strong className="num">{fresh.length}</strong> new photos were</>} added. </>}
+    {updating && removed > 0 && <>{removed === 1 ? 'One photo was' : <><strong className="num">{removed}</strong> photos were</>} deleted. </>}
     This floor&rsquo;s <strong className="num">{photoCount}</strong> {photoCount === 1 ? 'photo goes' : 'photos go'} to World Labs Atlas, which places each camera and estimates depth. It spends Atlas credits.</p>
+  </ConfirmDialog>}
+  {deleting && <ConfirmDialog title="Delete spatial context?" confirmLabel="Delete spatial context" busy={removing} busyLabel="Deleting…" error={deleteError}
+   onConfirm={() => { void remove() }} onCancel={() => setDeleting(false)}>
+   <p>This floor&rsquo;s spatial context and its stored cameras and depth maps are deleted. The photos stay. Generate it again once the photos are right; that spends Atlas credits.</p>
   </ConfirmDialog>}
  </div>
 }

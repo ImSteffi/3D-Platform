@@ -189,6 +189,40 @@ public class SpatialContextService {
         });
     }
 
+    /**
+     * Deletes the floor's spatial context: every run with its stored cameras, depth and confidence maps.
+     * A finished context cannot lose single photos (Atlas places them all together), so after removing
+     * wrong photos the team deletes it and generates it again.
+     */
+    public Result delete(Long tourId, Long areaId, Authentication authentication) {
+        admin(authentication);
+        var keys = transaction.execute(status -> {
+            area(tourId, areaId);
+            var all = runs.findByArea_IdOrderByIdDesc(areaId);
+            if (!all.isEmpty() && all.get(0).getStatus() == SpatialContextRun.Status.RUNNING)
+                throw error(409, "Spatial context is still running for this floor. Delete it once it has finished.");
+            var files = new ArrayList<String>();
+            for (var run : all) {
+                var entries = frames.findByRun_IdOrderByFrameIndexAsc(run.getId());
+                for (var frame : entries) {
+                    if (frame.getImageObjectKey() != null) files.add(frame.getImageObjectKey());
+                    if (frame.getDepthObjectKey() != null) files.add(frame.getDepthObjectKey());
+                    if (frame.getConfidenceObjectKey() != null) files.add(frame.getConfidenceObjectKey());
+                }
+                // Frames first: they are loaded, and Hibernate must not flush them pointing at a deleted run.
+                frames.deleteAll(entries);
+            }
+            frames.flush();
+            runs.deleteAll(all);
+            return files;
+        });
+        // A leftover file only costs storage, so a failed cleanup must not fail the request.
+        for (var key : keys) {
+            try { r2.deleteObject(b -> b.bucket(bucket).key(key)); } catch (SdkException ignored) { }
+        }
+        return transaction.execute(status -> result(area(tourId, areaId), null, List.of()));
+    }
+
     /** One stored output file of a finished run: image, depth or confidence. */
     public File file(Long tourId, Long areaId, Long runId, int frameIndex, String kind, Authentication authentication) {
         admin(authentication);
@@ -273,10 +307,14 @@ public class SpatialContextService {
 
     private Result result(TourArea area, SpatialContextRun run, List<SpatialContextFrame> entries) {
         int photos = sources(area.getId()).size();
-        if (run == null) return new Result(null, "NONE", null, null, null, null, 0, 0, photos, atlas.configured(), List.of(), List.of());
+        if (run == null) return new Result(null, "NONE", null, null, null, null, 0, 0, photos, atlas.configured(), List.of(), List.of(), 0);
         // Gallery photos added after this run started: the spatial context does not include them yet.
-        var fresh = floorPhotos.findByArea_IdOrderByIdAsc(area.getId()).stream()
+        var gallery = floorPhotos.findByArea_IdOrderByIdAsc(area.getId());
+        var fresh = gallery.stream()
                 .filter(photo -> photo.getCreatedAt().isAfter(run.getCreatedAt())).map(FloorPhoto::getId).toList();
+        // Photos deleted since: the run used more photos than are left from before it.
+        int before = photos - fresh.size();
+        int removed = run.getStatus() == SpatialContextRun.Status.SUCCEEDED ? Math.max(0, entries.size() - before) : 0;
         var base = "/api/admin/tour-requests/" + area.getTourRequest().getId() + "/areas/" + area.getId()
                 + "/spatial-context/runs/" + run.getId() + "/frames/";
         var done = run.getStatus() == SpatialContextRun.Status.SUCCEEDED;
@@ -291,7 +329,7 @@ public class SpatialContextService {
         String phase = run.getStatus() != SpatialContextRun.Status.RUNNING ? null
                 : run.getOperationId() == null ? "UPLOADING" : "PROCESSING";
         return new Result(run.getId(), run.getStatus().name(), phase, run.getError(), run.getCreatedAt(), run.getFinishedAt(),
-                uploading.getOrDefault(run.getId(), 0), entries.size(), photos, atlas.configured(), list, fresh);
+                uploading.getOrDefault(run.getId(), 0), entries.size(), photos, atlas.configured(), list, fresh, removed);
     }
 
     /** One photo going to Atlas: a spot photo (with its point) or a floor gallery photo (no point). */
@@ -349,5 +387,7 @@ public class SpatialContextService {
     public record Result(Long runId, String status, String phase, String error, Instant createdAt, Instant finishedAt,
             int uploaded, int total, int photoCount, boolean configured, List<FrameResult> frames,
             // Gallery photos newer than this run, so the team knows to update it.
-            List<Long> newPhotoIds) {}
+            List<Long> newPhotoIds,
+            // Photos the run used that have been deleted since.
+            int removedPhotos) {}
 }

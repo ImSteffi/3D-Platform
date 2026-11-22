@@ -16,7 +16,7 @@ const FLY_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ShiftRig
 /**
  * Point cloud of every photo's depth plus one textured frustum per photo; the strip below jumps to a photo's camera.
  * `bare`: only the point cloud, no photos (no frustums, no strip), for the floor card.
- * Drag to orbit, scroll to zoom, and fly with WASD once the view has been clicked.
+ * Click to lock the pointer and look around (Esc lets go; dragging also works), scroll to move, fly with WASD.
  */
 export default function SpatialContextViewer({ frames, bare = false }: { frames: SpatialFrame[]; bare?: boolean }) {
  const host = useRef<HTMLDivElement>(null)
@@ -61,29 +61,52 @@ export default function SpatialContextViewer({ frames, bare = false }: { frames:
   let viewPlaced = false
   const canvas = renderer.domElement
   canvas.tabIndex = 0
-  canvas.setAttribute('aria-label', 'Spatial context. Drag to look around, W A S D to move.')
+  canvas.setAttribute('aria-label', 'Spatial context. Click to look around with the mouse (Esc lets go), or drag; W A S D to move.')
   const keyDown = (event: KeyboardEvent) => { if (FLY_KEYS.has(event.code)) { event.preventDefault(); held.add(event.code); flight = null; viewPlaced = true } }
   const keyUp = (event: KeyboardEvent) => { held.delete(event.code) }
   const blur = () => held.clear()
   canvas.addEventListener('keydown', keyDown)
   canvas.addEventListener('keyup', keyUp)
   canvas.addEventListener('blur', blur)
-  let drag: { x: number; y: number } | null = null
+  // A mouse click locks the pointer (FPS look, Esc lets go); dragging stays as the fallback (touch, or no pointer lock).
+  const locked = () => document.pointerLockElement === canvas
+  const canLock = typeof canvas.requestPointerLock === 'function'
+  let drag: { x: number; y: number; moved: number; mouse: boolean } | null = null
   const pointerDown = (event: PointerEvent) => {
    canvas.focus({ preventScroll: true })
-   canvas.setPointerCapture(event.pointerId)
-   drag = { x: event.clientX, y: event.clientY }
    flight = null
    viewPlaced = true
+   if (locked()) return
+   canvas.setPointerCapture(event.pointerId)
+   drag = { x: event.clientX, y: event.clientY, moved: 0, mouse: event.pointerType === 'mouse' }
   }
   const pointerMove = (event: PointerEvent) => {
+   if (locked()) {
+    // Mouse right looks right, mouse up looks up; clamp spikes some browsers report on lock.
+    const dx = Math.max(-150, Math.min(150, event.movementX)), dy = Math.max(-150, Math.min(150, event.movementY))
+    yaw -= dx * 0.003
+    pitch = Math.max(-1.5, Math.min(1.5, pitch - dy * 0.003))
+    look()
+    return
+   }
    if (!drag) return
-   yaw += (event.clientX - drag.x) * 0.004
-   pitch = Math.max(-1.5, Math.min(1.5, pitch + (event.clientY - drag.y) * 0.004))
-   drag = { x: event.clientX, y: event.clientY }
+   const dx = event.clientX - drag.x, dy = event.clientY - drag.y
+   yaw += dx * 0.004
+   pitch = Math.max(-1.5, Math.min(1.5, pitch + dy * 0.004))
+   drag = { ...drag, x: event.clientX, y: event.clientY, moved: drag.moved + Math.abs(dx) + Math.abs(dy) }
    look()
   }
-  const pointerUp = () => { drag = null }
+  const pointerUp = (event: PointerEvent) => {
+   const click = drag && drag.mouse && drag.moved < 5
+   drag = null
+   if (!click || event.type !== 'pointerup' || !canLock || locked()) return
+   // Refused (iframe without allow-pointer-lock, too soon after Esc, ...): dragging keeps working.
+   try { Promise.resolve(canvas.requestPointerLock()).catch(() => {}) } catch { /* no pointer lock here */ }
+  }
+  const lockChange = () => { if (!locked()) drag = null }
+  const lockError = () => { drag = null }
+  document.addEventListener('pointerlockchange', lockChange)
+  document.addEventListener('pointerlockerror', lockError)
   // Scroll moves forward and back along the view.
   const wheel = (event: WheelEvent) => {
    event.preventDefault()
@@ -233,6 +256,9 @@ export default function SpatialContextViewer({ frames, bare = false }: { frames:
    canvas.removeEventListener('pointerup', pointerUp)
    canvas.removeEventListener('pointercancel', pointerUp)
    canvas.removeEventListener('wheel', wheel)
+   document.removeEventListener('pointerlockchange', lockChange)
+   document.removeEventListener('pointerlockerror', lockError)
+   if (locked()) document.exitPointerLock()
    disposables.forEach(item => item.dispose())
    renderer.dispose()
    renderer.domElement.remove()
@@ -246,10 +272,10 @@ export default function SpatialContextViewer({ frames, bare = false }: { frames:
    {loading && <Spinner block label="Building the point cloud" />}
    {failed && <p className="spatial-stage-error">{failed}</p>}
   </div>
-  {bare ? <p className="spatial-hint spatial-hint--bare">Drag to look around. Click the view, then fly with W A S D where you look; hold Shift to go faster.</p> : <>
+  {bare ? <p className="spatial-hint spatial-hint--bare">Click the view to look around with the mouse, fly with W A S D (Shift = faster), Esc to let go. On touch, drag to look.</p> : <>
   <div className="spatial-strip-head">
    <span className="num">{current === null ? `${usable.length} cameras` : `${current + 1} of ${usable.length}`}</span>
-   <span className="spatial-hint">Drag to look around, fly with W A S D (Shift faster). Pick a photo to look from its camera.</span>
+   <span className="spatial-hint">Click the view to look around with the mouse, fly with W A S D (Shift faster), Esc to let go. Pick a photo to look from its camera.</span>
   </div>
   <ol className="spatial-strip">
    {usable.map((frame, position) => <li key={frame.index}>
