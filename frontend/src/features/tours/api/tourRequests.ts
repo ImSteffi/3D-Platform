@@ -383,3 +383,23 @@ export type AdminAnalytics = {
  sources: AdminCount[]; devices: AdminCount[]; regions: AdminCount[]
 }
 export const getAdminAnalytics = () => get<AdminAnalytics>('/api/admin/analytics')
+
+/* Admin: a space's combined 3D tour, its floors' 3DGS joined by teleports the team places. */
+/** Where people stand and look: eye position and heading in degrees. */
+export type TourPose = { areaId: number; position: [number, number, number]; yaw: number }
+/** A portal: a ring at `position` on `from` leads to `arrive`; a ring at `arrive` leads back to `back`. */
+export type Teleport = { id: string; from: number; position: [number, number, number]; to: number; arrive: TourPose; back?: TourPose | null; label: string
+ /** The second ring's own name; empty shows the floor it leads to (as for `label` on the first ring). */
+ backLabel?: string }
+export type SpaceTourDefinition = { start: TourPose | null; scenes: Record<string, string>; teleports: Teleport[] }
+export type SpaceTour = { publicId: string; definition: SpaceTourDefinition; updatedAt: string }
+const spaceTourUrl = (id: number) => `${adminRoot}/${id}/space-tour`
+/** The saved tour, or null when the space has none yet. */
+export async function getSpaceTour(id: number): Promise<SpaceTour | null> {
+ const response = await fetch(spaceTourUrl(id), { credentials: 'same-origin', cache: 'no-store' })
+ await check(response)
+ return response.status === 204 ? null : response.json()
+}
+export const saveSpaceTour = (id: number, definition: SpaceTourDefinition) => send<SpaceTour>('PUT', spaceTourUrl(id), definition)
+/** The page that shows a combined tour; its address is what gets shared. */
+export const spaceTourPath = (publicId: string) => `/tour-viewer/tour.html?tour=${encodeURIComponent(publicId)}`

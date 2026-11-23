@@ -13,6 +13,7 @@ import { prepareImages } from '../../../tours/api/prepareImage'
 import type { FloorUpload } from './FloorGallery'
 import AreaSection from './AreaSection'
 import TourAnalytics from './TourAnalytics'
+import Tour3DPanel from './Tour3DPanel'
 import { entriesOf, floorState, message, needsYou, pad, plural, type Entry, type SpaceProps } from './spaceModel'
 import './SpaceSections.css'
 
@@ -43,8 +44,10 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
 
  // Adding a plan
  const [adding, setAdding] = useState(false)
- /** The floor cards or, in their place, the tours' analytics. */
- const [analytics, setAnalytics] = useState(false)
+ /** The floor cards or, in their place, the tours' analytics or (team only) the 3D panel. */
+ const [view, setView] = useState<'plans' | 'analytics' | '3d'>('plans')
+ const plans = view === 'plans'
+ const toggle = (next: 'analytics' | '3d') => setView(current => current === next ? 'plans' : next)
  const [name, setName] = useState('')
  const [kind, setKind] = useState<AreaKind>('FLOOR')
  const [saving, setSaving] = useState(false)
@@ -208,25 +211,29 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
     </div>
     <InlineError>{addError}</InlineError>
    </Panel> : <div className="add-plan">
-    {!analytics && <Button variant="secondary" icon="plus" disabled={full} onClick={() => setAdding(true)}>Add plan</Button>}
-    {!gallery && <Button variant={analytics ? 'primary' : 'secondary'} icon={analytics ? 'layers' : 'eye'} aria-pressed={analytics} onClick={() => setAnalytics(on => !on)}>{analytics ? 'Floor plans' : 'Analytics'}</Button>}
-    {full && !analytics && <p className="row-reason">A space can have up to {MAX_AREAS} plans.</p>}
+    {plans
+     ? <Button variant="secondary" icon="plus" disabled={full} onClick={() => setAdding(true)}>Add plan</Button>
+     : <Button variant="secondary" icon="layers" onClick={() => setView('plans')}>Floor plans</Button>}
+    {!gallery && <Button variant={view === 'analytics' ? 'primary' : 'secondary'} icon="eye" aria-pressed={view === 'analytics'} onClick={() => toggle('analytics')}>Analytics</Button>}
+    {admin && !gallery && <Button variant={view === '3d' ? 'primary' : 'secondary'} icon="cube" aria-pressed={view === '3d'} onClick={() => toggle('3d')}>3D panel</Button>}
+    {full && plans && <p className="row-reason">A space can have up to {MAX_AREAS} plans.</p>}
    </div>}
    {draft && <div className="sections-next">
     {draft && !admin && !gallery && <Button variant="quiet" icon="trash" disabled={busy} onClick={() => setDeletingSpace(true)}>Delete space</Button>}
    </div>}
   </div>}
 
-  {analytics && <TourAnalytics tour={tour} />}
+  {view === 'analytics' && <TourAnalytics tour={tour} />}
+  {view === '3d' && <Tour3DPanel tour={tour} />}
   {/* One section per floor */}
-  {!analytics && states.map(({ area }) => <AreaSection key={area.id} tour={tour} area={area} entries={entries.filter(entry => entry.area.id === area.id)} version={version}
+  {plans && states.map(({ area }) => <AreaSection key={area.id} tour={tour} area={area} entries={entries.filter(entry => entry.area.id === area.id)} version={version}
    busy={busy} readOnly={sectionsOnly} primary={area.id === primaryArea} selected={selected} waiting={claimed} srcOf={srcOf}
    onSelect={entry => setSelected(entry.point.id === selected ? null : entry.point.id)}
    onFiles={(files, entry) => addFiles(area, files, entry)} onDelete={entry => { setDeleteError(''); setPhotoToDelete(entry) }}
    onCamera={entry => setCamera(entry?.point.id ?? null)}
    onPlan={plan} onSketch={area => guarded(area, 'draw', () => setSketching(area))} onRemove={removePlan} onRename={(area, name) => run(() => rename(area.id, name))} onStepPlan={(area, forward) => guarded(area, 'replace', () => { void run(() => stepPlan(tour.id, area.id, forward), true) })} onRemovePlan={area => guarded(area, 'unplan', () => { void run(() => dropPlan(tour.id, area.id), true).then(done => { if (done) forgetSketch(sketchKey(area.id)) }) })} removable={!gallery && (draft || tour.areas.length > 1)}
    floorPhotos={{ uploading: floorUploads[area.id] ?? null, onAdd: files => { void addFloorPhotos(area, files) }, onDelete: photoId => { void run(() => deleteFloorPhoto(tour.id, photoId)) } }} admin={admin ? { markTo: `/review/${tour.id}` } : undefined} />)}
-  {!analytics && tour.areas.length === 0 && <Panel><p className="sections-none">{sectionsOnly ? 'This space has no floor plans.'
+  {plans && tour.areas.length === 0 && <Panel><p className="sections-none">{sectionsOnly ? 'This space has no floor plans.'
    : 'No floors yet. Click Add plan for each floor or building, then upload a photo of its floor plan or draw it by hand.'}</p></Panel>}
 
   {pendingChange && <ConfirmDialog title={pendingChange.what === 'remove' ? 'Remove this floor?' : 'Change this floor plan?'}

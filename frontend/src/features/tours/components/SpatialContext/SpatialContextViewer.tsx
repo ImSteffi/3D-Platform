@@ -272,7 +272,7 @@ export default function SpatialContextViewer({ frames, bare = false }: { frames:
    {loading && <Spinner block label="Building the point cloud" />}
    {failed && <p className="spatial-stage-error">{failed}</p>}
   </div>
-  {bare ? <p className="spatial-hint spatial-hint--bare">Click the view to look around with the mouse, fly with W A S D (Shift = faster), Esc to let go. On touch, drag to look.</p> : <>
+  {bare ? null : <>
   <div className="spatial-strip-head">
    <span className="num">{current === null ? `${usable.length} cameras` : `${current + 1} of ${usable.length}`}</span>
    <span className="spatial-hint">Click the view to look around with the mouse, fly with W A S D (Shift faster), Esc to let go. Pick a photo to look from its camera.</span>

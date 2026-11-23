@@ -1,11 +1,8 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Button, Icon, Panel, Spinner } from '../../../../shared/ui'
 import { loadSketch, sketchKey } from '../../../tours/components/PlanSketcher/sketchStorage'
 import PlanView from '../../../tours/components/PlanView/PlanView'
-import { onGalleryLink, planUrl, type SpatialFrame, type TourArea, type TourDetail } from '../../../tours/api/tourRequests'
-import SpatialContext, { type SpatialState } from '../../../tours/components/SpatialContext/SpatialContext'
-// three.js loads only when a spatial context is shown.
-const SpatialContextViewer = lazy(() => import('../../../tours/components/SpatialContext/SpatialContextViewer'))
+import { onGalleryLink, planUrl, type TourArea, type TourDetail } from '../../../tours/api/tourRequests'
 import FileButton from './FileButton'
 import { planPickerAccept } from '../../../tours/api/prepareImage'
 import FloorGallery, { type FloorUpload } from './FloorGallery'
@@ -100,15 +97,10 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
  const shown = entries.filter(entry => entry.point.hasPhoto || !free(entry))
  const lead = primary ? 'primary' : 'secondary'
  const tourMade = tour.status === 'DELIVERED'
- const [spatial, setSpatial] = useState<SpatialFrame[] | null>(null)
- const [fresh, setFresh] = useState<number[]>([])
- const spatialReady = spatial !== null
- const onSpatial = useCallback((state: SpatialState) => { setSpatial(state.frames); setFresh(state.fresh) }, [])
- // Team only: once a floor has its spatial context and no tour yet, it takes the right side and the photos go below.
- const showSpatial = !!admin && !tourMade && spatial !== null && spatial.length > 0
  // The customer's side: once the team has the spatial context, the tour is on its way.
+ // (The team's spatial context and 3D generation live in the 3D panel, not here.)
  const making = !admin && !tourMade && !!area.spatialReady
- const wide = showSpatial || making
+ const wide = making
 
  // A floor plan pasted from the clipboard: the paste button, or Ctrl/Cmd+V while the plan box is focused or hovered.
  const [pasteNote, setPasteNote] = useState<string | null>(null)
@@ -234,16 +226,13 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
     </div>}
    </div>
    {/* The operator sees photos only once there are some: no empty section and no title. */}
-   {showSpatial && <div className="area-spatial on-dark">
-    <Suspense fallback={<Spinner block label="Loading the spatial context" />}><SpatialContextViewer frames={spatial} bare /></Suspense>
-   </div>}
    {making && <div className="area-making" role="status"><p>We are making your 3D tour</p></div>}
    {(!admin || !!floorPhotos || shown.length > 0 || (area.photos?.length ?? 0) > 0) && <div className="area-photos">
     {!admin && !readOnly && !tourMade && !making && <p className="area-photos-lead">Once all your photos are in, we will make your 3D tour.</p>}
     {entries.length === 0
      // No spots yet: this side is the floor's own photo gallery, open straight away.
      ? floorPhotos || (area.photos?.length ?? 0) > 0
-      ? <FloorGallery tour={tour} area={area} fresh={admin ? fresh : undefined} version={version} busy={busy} uploading={floorPhotos?.uploading ?? null}
+      ? <FloorGallery tour={tour} area={area} version={version} busy={busy} uploading={floorPhotos?.uploading ?? null}
         editable={!!floorPhotos && open && !tourMade} title="Photos" hint={state === 'no-plan' || state === 'plan-added' || state === 'marking' ? undefined : title}
         onAdd={files => floorPhotos?.onAdd(files)} onDelete={photoId => floorPhotos?.onDelete(photoId)} />
       : readOnly
@@ -285,17 +274,11 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
       })}
       </ol>
       {/* Photos added before the spots were marked stay with the floor. */}
-      {(area.photos?.length ?? 0) > 0 && <FloorGallery tour={tour} area={area} fresh={admin ? fresh : undefined} version={version} busy={busy} uploading={floorPhotos?.uploading ?? null}
+      {(area.photos?.length ?? 0) > 0 && <FloorGallery tour={tour} area={area} version={version} busy={busy} uploading={floorPhotos?.uploading ?? null}
        editable={!!floorPhotos && open && !tourMade} title="Other photos" onAdd={files => floorPhotos?.onAdd(files)} onDelete={photoId => floorPhotos?.onDelete(photoId)} />}
       {send && <div className="area-send">{send}</div>}
      </>}
    </div>}
   </div>
-  {/* Team only, once the floor has photos. Does nothing yet: the generation API gets connected here later. */}
-  {admin && (shown.length > 0 || (area.photos?.length ?? 0) > 0) && <div className="area-foot">
-   {!tourMade && <SpatialContext tourId={tour.id} areaId={area.id} photoCount={entries.filter(entry => entry.point.hasPhoto).length + (area.photos?.length ?? 0)} onReady={onSpatial} />}
-   {/* Does nothing yet: the generation API gets connected here later. Needs the spatial context first. */}
-   {!tourMade && <Button icon="cube" disabled={!spatialReady} title={spatialReady ? undefined : 'Generate the spatial context first.'}>Generate 3D-Tour</Button>}
-  </div>}
  </Panel>
 }

@@ -1,0 +1,42 @@
+/* The team's 3D panel: one section, a card per floor with its spatial context, then the 3DGS button. */
+.panel3d-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: var(--s-4); margin-top: var(--s-5); }
+.panel3d-card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid var(--hair); border-radius: var(--r-card); background: rgba(255, 255, 255, .6); }
+.panel3d-stage { display: flex; flex-direction: column; height: 320px; padding: 10px; background: #111; color: #f6f5f2; }
+.panel3d-stage .spatial-viewer { flex: 1; min-height: 0; }
+.panel3d-stage .spatial-stage { min-height: 0; }
+.panel3d-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: 30ch; margin: auto; font-size: 13px; line-height: 1.45; color: rgba(246, 245, 242, .7); text-align: center; }
+.panel3d-empty-title { font-size: 15px; font-weight: 600; color: #f6f5f2; }
+.panel3d-card-body { display: flex; flex-direction: column; gap: var(--s-3); padding: var(--s-4); }
+.panel3d-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); }
+.panel3d-card-head h3 { min-width: 0; font-size: 17px; overflow-wrap: anywhere; }
+.panel3d-count { flex: none; font-size: 13px; color: var(--ink-2); }
+.panel3d-count .num { color: var(--ink); font-weight: 500; }
+.panel3d-card .spatial { margin-top: 0; }
+.panel3d-none { margin-top: var(--s-4); }
+@media (max-width: 640px) {
+ .panel3d-stage { min-height: 240px; }
+}
+/* The 3DGS itself: the tour viewer, filling the card's stage. */
+.panel3d-splat { display: block; flex: 1; width: 100%; min-height: 0; border: 0; border-radius: 12px; background: #111; }
+/* 3DGS / Spatial context: right under the stage. */
+.panel3d-switch { display: flex; gap: 4px; margin: 12px var(--s-4) 0; padding: 4px; border-radius: 999px; background: rgb(0 0 0 / .06); }
+.panel3d-switch button { flex: 1; min-height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: none; font: inherit; font-size: 14px; font-weight: 500; color: var(--ink-2); cursor: pointer; transition: background-color 160ms var(--ease, ease), color 160ms var(--ease, ease); }
+.panel3d-switch button:hover:not([aria-pressed='true']) { color: var(--ink); }
+.panel3d-switch button[aria-pressed='true'] { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / .12); }
+.panel3d-switch button:focus-visible { outline: 2px solid #111; outline-offset: 1px; }
+/* The card's buttons: one row, as tall as a button in both views, so switching never changes the card's size. */
+.panel3d-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 48px; }
+.panel3d-actions .btn { letter-spacing: .04em; }
+.panel3d-spatial[hidden] { display: none; }
+.panel3d-spatial .spatial { margin-top: 0; }
+@media (max-width: 640px) {
+ .panel3d-stage { height: 260px; }
+ .panel3d-actions > .btn { width: 100%; }
+}
+/* Short notices over the card's stage. */
+.panel3d-stage { position: relative; }
+.panel3d-notice { position: absolute; left: 50%; bottom: 20px; z-index: 1; transform: translateX(-50%); max-width: calc(100% - 40px); padding: 8px 14px; border-radius: 12px;
+ background: rgb(20 21 22 / .88); color: #fff; font-size: 13px; text-align: center; }
+/* Cards in one row line up: the buttons sit at the bottom. */
+.panel3d-card-body { flex: 1; }
+.panel3d-actions { margin-top: auto; }

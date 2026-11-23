@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 viewer-dist
+
+# Local test scenes, never committed
+public/dev-scenes/

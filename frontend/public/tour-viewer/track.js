@@ -1,9 +1,15 @@
 // Reports this tour view to the platform, without personal data: no cookies and nothing stored in
 // the browser. Sent: which space and floor (?space=<id>&floor=<id>), where it is shown, the time zone,
 // and how long the tour was watched.
+// A combined tour (?tour=) learns its space and floor once loaded (boot.js); a floor reached by teleport is the
+// same visit, so it is not counted again. The team's tour editor (&edit=1) is never counted.
 const params = new URLSearchParams(location.search);
-const space = Number(params.get("space"));
-const floor = Number(params.get("floor")) || null;
+let space = Number(params.get("space"));
+let floor = Number(params.get("floor")) || null;
+const tourReady = () => new Promise((resolve) => {
+  if (window.__tenzoTour) return resolve(window.__tenzoTour);
+  window.addEventListener("tenzo-tour", (event) => resolve(event.detail), { once: true });
+});
 
 /** Inside the platform itself, on another site (iframe), or opened from the link. */
 function sourceOf() {
@@ -20,6 +26,12 @@ function timeZone() {
 }
 
 async function track() {
+  if (params.get("edit") === "1") return;
+  if (params.get("tour")) {
+    const found = await tourReady();
+    if (found.continued) return;
+    space = found.space; floor = found.floor;
+  }
   if (!Number.isInteger(space) || space <= 0) return;
   const response = await fetch("/api/public/tour-views", {
     method: "POST",

@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Icon } from '../../../../shared/ui'
 
-/** The viewer page: the tour itself comes from ?scene=<folder>. */
-const viewerPath = '/tour-viewer/tour.html'
-
 type Kind = 'url' | 'iframe'
 
-/** The floor's 3D tour. URL and IFRAME copy the link or an iframe snippet to the clipboard. */
-export default function TourEmbed({ title, scene, spaceId, floorId }: { title: string; scene: string; spaceId: number; floorId: number }) {
+/** A 3D tour page in a frame. URL and IFRAME copy its link or an iframe snippet to the clipboard. */
+export default function TourEmbed({ title, path }: { title: string; path: string }) {
  const [copied, setCopied] = useState<Kind | null>(null)
- // The address says which space and floor this is, so its views are counted there.
- const path = `${viewerPath}?scene=${encodeURIComponent(scene)}&space=${spaceId}&floor=${floorId}`
  const url = window.location.origin + path
  const iframe = `<iframe src="${url}" title="${title.replace(/"/g, '&quot;')}" allow="fullscreen; xr-spatial-tracking; pointer-lock" style="width:100%;height:70vh;border:0"></iframe>`
 
