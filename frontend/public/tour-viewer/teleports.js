@@ -3,12 +3,15 @@
 // Taken by walking into a ring, by clicking it, or, while the mouse is captured, by clicking with the ring in the middle.
 // Edit mode (the team's tour editor) adds placing a spot with a click, reading the current view, and moving the camera.
 
-const RING_RADIUS = 0.45;
-const RING_POINTS = 32;
-/** Walking within this distance (metres, along the floor) of a ring's centre takes it. */
-const TRIGGER = 0.5;
-/** A ring only works once people have been this far from it, so arriving next to one never bounces straight back. */
-const ARM = 1.1;
+/** A ring's radius in metres unless the team set its size. */
+export const RING_RADIUS = 0.45;
+const RING_POINTS = 40;
+/** Walking within this distance (metres, along the floor) of a ring's edge takes it. */
+const TRIGGER_MARGIN = 0.05;
+/** A ring only works once people have been this far beyond its edge, so arriving in one never bounces straight back. */
+const ARM_MARGIN = 0.65;
+/** The name's letter height as a share of the ring's radius: it lies on the floor inside the ring. */
+const LABEL_SCALE = 0.26;
 const SVG = "http://www.w3.org/2000/svg";
 /** Eye height above the floor in walk mode (hover height 0.2 plus eye height 1.2, set in index.js). */
 const EYE = 1.4;
@@ -23,11 +26,13 @@ export function portalEnds(teleports, floorId) {
   const ends = [];
   for (const t of teleports || []) {
     const back = t.back ?? { areaId: t.from, position: [t.position[0], t.position[1] + EYE, t.position[2]], yaw: 0 };
-    if (floorId === null || t.from === floorId) ends.push({ id: t.id, teleport: t.id, position: t.position, target: t.arrive, label: t.label });
+    if (floorId === null || t.from === floorId)
+      ends.push({ id: t.id, teleport: t.id, position: t.position, target: t.arrive, label: t.label, radius: t.radius ?? RING_RADIUS });
     if (floorId === null || t.to === floorId) {
       const [x, y, z] = t.arrive.position;
       // Each ring has its own name; without one it shows the floor it leads to.
-      ends.push({ id: `${t.id}~back`, teleport: t.id, position: [x, y - EYE, z], target: back, label: t.backLabel || "" });
+      ends.push({ id: `${t.id}~back`, teleport: t.id, position: [x, y - EYE, z], target: back, label: t.backLabel || "",
+        radius: t.backRadius ?? RING_RADIUS });
     }
   }
   return ends;
@@ -49,13 +54,13 @@ export function attachTeleports(viewer, canvas, { edit = false, onTake, onPick, 
       filter: drop-shadow(0 0 6px rgb(0 0 0 / .45)); transition: fill 160ms ease; }
     #tour-teleports .tp:hover .tp-ring { fill: rgb(255 255 255 / .32); }
     #tour-teleports .tp--selected .tp-ring { stroke: #f2a31b; fill: rgb(242 163 27 / .28); }
-    #tour-teleports .tp-pill { fill: rgb(20 21 22 / .78); pointer-events: auto; cursor: pointer; }
-    #tour-teleports .tp-text { fill: #fff; font: 600 14px system-ui, -apple-system, "Segoe UI", sans-serif; text-anchor: middle;
+    #tour-teleports .tp-pill { fill: rgb(20 21 22 / .78); pointer-events: none; }
+    #tour-teleports .tp-text { fill: #fff; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-weight: 600; text-anchor: middle;
       dominant-baseline: central; pointer-events: none; }
     #tour-fade { position: fixed; inset: 0; z-index: 80; background: #000; opacity: 0; pointer-events: none; transition: opacity 260ms ease; }
     #tour-fade.is-on { opacity: 1; }
     body.tour-placing, body.tour-placing * { cursor: crosshair !important; }
-    body.tour-placing #tenzo-stock-enter { display: none !important; }
+    body.tour-placing #tenzo-stock-enter, body.tour-looking #tenzo-stock-enter { display: none !important; }
   `;
   document.head.appendChild(style);
   const overlay = document.createElementNS(SVG, "svg");
@@ -82,13 +87,15 @@ export function attachTeleports(viewer, canvas, { edit = false, onTake, onPick, 
       g.setAttribute("class", "tp" + (spec.selected ? " tp--selected" : ""));
       const ring = document.createElementNS(SVG, "path");
       ring.setAttribute("class", "tp-ring");
+      // The name: drawn flat on the floor in the ring's middle (see draw()), so it stays put and shrinks with distance.
+      const label = document.createElementNS(SVG, "g");
       const pill = document.createElementNS(SVG, "rect");
       pill.setAttribute("class", "tp-pill");
-      pill.setAttribute("rx", "12");
       const text = document.createElementNS(SVG, "text");
       text.setAttribute("class", "tp-text");
       text.textContent = spec.label || "Teleport";
-      g.append(ring, pill, text);
+      label.append(pill, text);
+      g.append(ring, label);
       g.addEventListener("click", (event) => {
         event.stopPropagation();
         if (placing) return;
@@ -96,8 +103,8 @@ export function attachTeleports(viewer, canvas, { edit = false, onTake, onPick, 
         else take(spec.id);
       });
       overlay.appendChild(g);
-      const marker = { ...spec, armed: false, g, ring, text, pill };
-      marker.armed = distanceTo(marker) > ARM;
+      const marker = { ...spec, radius: spec.radius ?? RING_RADIUS, armed: false, g, ring, label, text, pill, sized: false };
+      marker.armed = distanceTo(marker) > marker.radius + ARM_MARGIN;
       return marker;
     });
   }
@@ -122,8 +129,9 @@ export function attachTeleports(viewer, canvas, { edit = false, onTake, onPick, 
     const eye = cameraEntity()?.getPosition();
     if (!c?.queryRay || !eye) return (marker.blocked = false);
     const [cx, cy, cz] = marker.position;
-    const targets = [[cx, cy + 0.25, cz], [cx + RING_RADIUS * 0.8, cy + 0.25, cz], [cx - RING_RADIUS * 0.8, cy + 0.25, cz],
-      [cx, cy + 0.25, cz + RING_RADIUS * 0.8], [cx, cy + 0.25, cz - RING_RADIUS * 0.8]];
+    const reach = marker.radius * 0.8;
+    const targets = [[cx, cy + 0.25, cz], [cx + reach, cy + 0.25, cz], [cx - reach, cy + 0.25, cz],
+      [cx, cy + 0.25, cz + reach], [cx, cy + 0.25, cz - reach]];
     marker.blocked = targets.every(([tx, ty, tz]) => {
       const dx = tx - eye.x, dy = ty - eye.y, dz = tz - eye.z;
       const len = Math.hypot(dx, dy, dz);
@@ -153,38 +161,56 @@ export function attachTeleports(viewer, canvas, { edit = false, onTake, onPick, 
       const srcH = Math.max(1, device.clientRect?.height || canvas.clientHeight || 1);
       overlay.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
       Object.assign(overlay.style, { left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${rect.height}px` });
+      // Along the floor: the view's right and its forward, without tilt. The name lies on the floor along these,
+      // reading upright to whoever looks at it, and shrinks with distance like the ring.
+      const entity = cameraEntity();
+      const right = entity.right, forward = entity.forward;
+      const rLen = Math.hypot(right.x, right.z) || 1, fLen = Math.hypot(forward.x, forward.z) || 1;
+      const ux = right.x / rLen, uz = right.z / rLen, fx = forward.x / fLen, fz = forward.z / fLen;
       for (const marker of markers) {
         const [cx, cy, cz] = marker.position;
+        const radius = marker.radius;
         const points = [];
         for (let i = 0; i < RING_POINTS; i++) {
           const a = (i / RING_POINTS) * Math.PI * 2;
-          const p = project(cx + Math.cos(a) * RING_RADIUS, cy, cz + Math.sin(a) * RING_RADIUS, camera, rect, srcW, srcH);
+          const p = project(cx + Math.cos(a) * radius, cy, cz + Math.sin(a) * radius, camera, rect, srcW, srcH);
           if (!p) { points.length = 0; break; }
           points.push(p);
         }
-        const top = project(cx, cy, cz, camera, rect, srcW, srcH);
-        if (!points.length || !top || hidden(marker, performance.now())) { marker.g.style.display = "none"; marker.screen = null; continue; }
+        const centre = project(cx, cy, cz, camera, rect, srcW, srcH);
+        const step = 0.05;
+        const along = project(cx + ux * step, cy, cz + uz * step, camera, rect, srcW, srcH);
+        const away = project(cx + fx * step, cy, cz + fz * step, camera, rect, srcW, srcH);
+        if (!points.length || !centre || !along || !away || hidden(marker, performance.now())) {
+          marker.g.style.display = "none"; marker.screen = null; continue;
+        }
         marker.g.style.display = "";
         marker.screen = points;
         marker.ring.setAttribute("d", "M" + points.map((p) => p.map((n) => n.toFixed(1)).join(" ")).join("L") + "Z");
-        // Labels shrink with distance, within reason.
-        const size = Math.max(11, Math.min(15, 15 - (distanceTo(marker) || 0) * 0.4));
-        marker.text.setAttribute("x", top[0].toFixed(1));
-        marker.text.setAttribute("y", top[1].toFixed(1));
-        marker.text.style.fontSize = `${size}px`;
-        const width = marker.text.getComputedTextLength() + 20;
-        marker.pill.setAttribute("x", (top[0] - width / 2).toFixed(1));
-        marker.pill.setAttribute("y", (top[1] - (size + 12) / 2).toFixed(1));
-        marker.pill.setAttribute("width", width.toFixed(1));
-        marker.pill.setAttribute("height", (size + 12).toFixed(1));
+        // The name in centimetres on the floor: x along the view's right, y towards the viewer (so the text stands upright).
+        if (!marker.sized) {
+          const size = radius * 100 * LABEL_SCALE;
+          marker.text.style.fontSize = `${size}px`;
+          const width = Math.min(marker.text.getComputedTextLength() + size * 0.9, radius * 100 * 1.7);
+          marker.pill.setAttribute("x", (-width / 2).toFixed(2));
+          marker.pill.setAttribute("y", (-size * 0.85).toFixed(2));
+          marker.pill.setAttribute("width", width.toFixed(2));
+          marker.pill.setAttribute("height", (size * 1.7).toFixed(2));
+          marker.pill.setAttribute("rx", (size * 0.85).toFixed(2));
+          marker.sized = true;
+        }
+        const k = 1 / (step * 100);
+        const a = (along[0] - centre[0]) * k, b = (along[1] - centre[1]) * k;
+        const c = -(away[0] - centre[0]) * k, d = -(away[1] - centre[1]) * k;
+        marker.label.setAttribute("transform", `matrix(${a.toFixed(4)} ${b.toFixed(4)} ${c.toFixed(4)} ${d.toFixed(4)} ${centre[0].toFixed(1)} ${centre[1].toFixed(1)})`);
       }
     }
     // Walking into a ring takes it (not while editing, where rings are picked to change them).
     if (!edit && !taking) {
       for (const marker of markers) {
         const d = distanceTo(marker);
-        if (d > ARM) marker.armed = true;
-        else if (marker.armed && d < TRIGGER) { take(marker.id); break; }
+        if (d > marker.radius + ARM_MARGIN) marker.armed = true;
+        else if (marker.armed && d < marker.radius + TRIGGER_MARGIN) { take(marker.id); break; }
       }
     }
     requestAnimationFrame(draw);
@@ -224,15 +250,15 @@ export function attachTeleports(viewer, canvas, { edit = false, onTake, onPick, 
     }
   }
 
-  /** Puts the eye at a pose (eye position, heading in degrees) and keeps walking from there. */
+  /** Puts the eye at a pose (eye position, heading and up/down angle in degrees) and keeps walking from there. */
   function setPose(next) {
     const cam = pose();
     if (!cam || !next?.position) return;
     cam.position.set(next.position[0], next.position[1], next.position[2]);
-    cam.angles.set(0, next.yaw || 0, 0);
+    cam.angles.set(next.pitch || 0, next.yaw || 0, 0);
     viewer.cameraManager.snap();
     app.renderNextFrame = true;
-    markers.forEach((marker) => { marker.armed = distanceTo(marker) > ARM; });
+    markers.forEach((marker) => { marker.armed = distanceTo(marker) > marker.radius + ARM_MARGIN; });
   }
 
   function reveal() {
@@ -243,7 +269,7 @@ export function attachTeleports(viewer, canvas, { edit = false, onTake, onPick, 
   function getPose() {
     const cam = pose();
     if (!cam) return null;
-    return { position: [cam.position.x, cam.position.y, cam.position.z], yaw: cam.angles.y };
+    return { position: [cam.position.x, cam.position.y, cam.position.z], yaw: cam.angles.y, pitch: cam.angles.x };
   }
 
   /** The floor straight below a point, or null. */
@@ -271,6 +297,12 @@ export function attachTeleports(viewer, canvas, { edit = false, onTake, onPick, 
   }
 
   /** Edit mode: the next click on the view picks a floor spot instead of starting to walk. */
+  /** Edit mode: the start screen steps aside so the team can drag to look around, without placing anything. */
+  function setLooking(on) {
+    document.body.classList.toggle("tour-looking", on);
+    if (on) { canvas.tabIndex = 0; canvas.focus({ preventScroll: true }); }
+  }
+
   function setPlacing(on) {
     placing = on;
     document.body.classList.toggle("tour-placing", on);
@@ -293,5 +325,5 @@ export function attachTeleports(viewer, canvas, { edit = false, onTake, onPick, 
   // Capture phase, so the walk controls never see a placing click.
   window.addEventListener("click", placeClick, true);
 
-  return { setMarkers, setPose, getPose, floorBelow, setPlacing, reveal };
+  return { setMarkers, setPose, getPose, floorBelow, setPlacing, setLooking, reveal };
 }

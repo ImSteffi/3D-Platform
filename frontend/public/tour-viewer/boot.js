@@ -30,7 +30,8 @@ async function loadTour() {
   // Arrived through a portal: at=<the end people went into>, so they land at its other end, on this floor.
   const via = at ? portalEnds(tour.teleports, null).find((end) => end.id === at && end.target.areaId === floorId) : null;
   continued = !!via;
-  arrival = via ? via.target : tour.start?.areaId === floorId ? tour.start : null;
+  // Through a teleport: its landing spot. Opened directly: the floor's own start point, else the tour's.
+  arrival = via ? via.target : tour.spawns?.[String(floorId)] ?? (tour.start?.areaId === floorId ? tour.start : null);
   // track.js counts the view: one per visit, not one per floor reached by teleport.
   window.__tenzoTour = { space: tour.spaceId, floor: floorId, continued };
   window.dispatchEvent(new CustomEvent("tenzo-tour", { detail: window.__tenzoTour }));
@@ -83,6 +84,7 @@ function attachTourLayer(viewer, canvas) {
       const data = event.data || {};
       if (data.type === "tour-edit-markers") layer.setMarkers(data.markers);
       else if (data.type === "tour-edit-place") layer.setPlacing(!!data.on);
+      else if (data.type === "tour-edit-look") layer.setLooking(!!data.on);
       else if (data.type === "tour-edit-pose") layer.setPose(data.pose);
       else if (data.type === "tour-edit-get-pose") {
         const pose = layer.getPose();

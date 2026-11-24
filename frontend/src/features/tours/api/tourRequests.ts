@@ -385,13 +385,18 @@ export type AdminAnalytics = {
 export const getAdminAnalytics = () => get<AdminAnalytics>('/api/admin/analytics')
 
 /* Admin: a space's combined 3D tour, its floors' 3DGS joined by teleports the team places. */
-/** Where people stand and look: eye position and heading in degrees. */
-export type TourPose = { areaId: number; position: [number, number, number]; yaw: number }
+/** Where people stand and look: eye position, heading and up/down angle in degrees (pitch 0 is level). */
+export type TourPose = { areaId: number; position: [number, number, number]; yaw: number; pitch?: number | null }
 /** A portal: a ring at `position` on `from` leads to `arrive`; a ring at `arrive` leads back to `back`. */
 export type Teleport = { id: string; from: number; position: [number, number, number]; to: number; arrive: TourPose; back?: TourPose | null; label: string
  /** The second ring's own name; empty shows the floor it leads to (as for `label` on the first ring). */
- backLabel?: string }
-export type SpaceTourDefinition = { start: TourPose | null; scenes: Record<string, string>; teleports: Teleport[] }
+ backLabel?: string
+ /** Each ring's radius in metres (first ring, then the way back); unset is the viewer's default 0.45. */
+ radius?: number | null
+ backRadius?: number | null }
+export type SpaceTourDefinition = { start: TourPose | null; scenes: Record<string, string>; teleports: Teleport[]
+ /** Where people start on each floor (by floor id) when they open it directly, not through a teleport. */
+ spawns?: Record<string, TourPose> }
 export type SpaceTour = { publicId: string; definition: SpaceTourDefinition; updatedAt: string }
 const spaceTourUrl = (id: number) => `${adminRoot}/${id}/space-tour`
 /** The saved tour, or null when the space has none yet. */

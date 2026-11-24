@@ -46,3 +46,16 @@
 .te-list-input { flex: 1; min-width: 0; margin: 4px; padding: 7px 10px; border: 1px solid rgb(255 255 255 / .25); border-radius: 8px; background: rgb(0 0 0 / .3);
  color: #fff; font: inherit; font-size: 14px; }
 .te-list-input:focus-visible { outline: 2px solid #f2a31b; outline-offset: 0; }
+
+/* Editing a teleport: its name and its circle's size, shown live on the ring. */
+.te-list-edit { display: flex; flex: 1; flex-direction: column; gap: 8px; padding: 8px; }
+.te-list-edit .te-list-input { margin: 0; }
+.te-size { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; font-size: 13px; color: rgb(246 245 242 / .8); }
+.te-size input { width: 100%; accent-color: #f2a31b; }
+.te-size-value { min-width: 4ch; text-align: right; font-variant-numeric: tabular-nums; color: #fff; }
+.te-list-edit-btns { display: flex; justify-content: flex-end; gap: 6px; }
+.te-text-btn { min-height: 30px; padding: 0 12px; border: 0; border-radius: 8px; background: rgb(255 255 255 / .1); color: #fff; font: inherit; font-size: 13px; cursor: pointer; }
+.te-text-btn:hover { background: rgb(255 255 255 / .18); }
+.te-text-btn--primary { background: #f2a31b; color: #111; font-weight: 600; }
+.te-text-btn--primary:hover { background: #f5b23d; }
+.te-text-btn:focus-visible { outline: 2px solid #f2a31b; outline-offset: 1px; }

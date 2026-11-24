@@ -33,19 +33,22 @@ public class SpaceTourController {
 
     public SpaceTourController(JdbcTemplate db) { this.db = db; }
 
-    /** Where people stand and look: eye position and heading (degrees). */
-    public record Pose(Long areaId, List<Double> position, Double yaw) {}
+    /** Where people stand and look: eye position, heading and up/down angle (degrees; pitch 0 is level). */
+    public record Pose(Long areaId, List<Double> position, Double yaw, Double pitch) {}
     /**
      * A portal between two spots: a ring at `position` on floor `from` takes people to `arrive` on floor `to`, and a ring
      * there takes them back to `back` (at the first ring). Older teleports have no `back`: the viewer then lands people on `position`.
      * Each ring has its own name (`label` on the first, `backLabel` on the second); empty means the name of the floor it leads to.
+     * And its own size: `radius` and `backRadius` in metres (null: the default 0.45).
      */
-    public record Teleport(String id, Long from, List<Double> position, Long to, Pose arrive, Pose back, String label, String backLabel) {}
-    public record Definition(Pose start, Map<String, String> scenes, List<Teleport> teleports) {}
+    public record Teleport(String id, Long from, List<Double> position, Long to, Pose arrive, Pose back, String label, String backLabel,
+            Double radius, Double backRadius) {}
+    /** spawns: where people start on each floor (by floor id) when they open it directly, not through a teleport. */
+    public record Definition(Pose start, Map<String, String> scenes, List<Teleport> teleports, Map<String, Pose> spawns) {}
     public record Saved(String publicId, Definition definition, String updatedAt) {}
 
     public record Floor(Long areaId, String name, String scene) {}
-    public record PublicTour(String name, Long spaceId, Pose start, List<Floor> floors, List<Teleport> teleports) {}
+    public record PublicTour(String name, Long spaceId, Pose start, List<Floor> floors, List<Teleport> teleports, Map<String, Pose> spawns) {}
 
     @GetMapping("/api/admin/tour-requests/{id}/space-tour")
     public ResponseEntity<Saved> get(@PathVariable Long id) {
@@ -93,8 +96,10 @@ public class SpaceTourController {
         var shown = floors.stream().map(Floor::areaId).collect(java.util.stream.Collectors.toSet());
         var teleports = definition.teleports().stream().filter(t -> shown.contains(t.from()) && shown.contains(t.to())).toList();
         var start = definition.start() != null && shown.contains(definition.start().areaId()) ? definition.start() : null;
+        var spawns = new LinkedHashMap<String, Pose>();
+        if (definition.spawns() != null) definition.spawns().forEach((floor, pose) -> { if (shown.contains(pose.areaId())) spawns.put(floor, pose); });
         return ResponseEntity.ok().cacheControl(CacheControl.noCache())
-                .body(new PublicTour((String) rows.getFirst()[2], spaceId, start, floors, teleports));
+                .body(new PublicTour((String) rows.getFirst()[2], spaceId, start, floors, teleports, spawns));
     }
 
     /** The reason a save was refused, as the editor shows it. */
@@ -130,7 +135,16 @@ public class SpaceTourController {
     private static Pose pose(Pose value, HashSet<Long> areas, String what) {
         if (value == null) return null;
         if (value.areaId() == null || !areas.contains(value.areaId())) throw bad(what + " is on a floor of another space.");
-        return new Pose(value.areaId(), point(value.position(), what), yaw(value.yaw()));
+        var pitch = value.pitch() == null ? 0d : value.pitch();
+        if (!Double.isFinite(pitch)) throw bad(what + " has an invalid up/down angle.");
+        return new Pose(value.areaId(), point(value.position(), what), yaw(value.yaw()), Math.max(-89, Math.min(89, pitch)));
+    }
+
+    /** A ring's radius in metres, kept to sizes that make sense indoors; null keeps the default. */
+    private static Double radius(Double value) {
+        if (value == null) return null;
+        if (!Double.isFinite(value)) throw bad("A teleport's size is not valid.");
+        return Math.max(0.2, Math.min(3, value));
     }
 
     /** Checks every floor id against the space and every number against sane bounds. */
@@ -157,8 +171,15 @@ public class SpaceTourController {
             if (label.length() > 60 || backLabel.length() > 60) throw bad("A teleport name can be at most 60 characters.");
             var back = pose(t.back(), areas, "A teleport's way back");
             if (back != null && !back.areaId().equals(t.from())) throw bad("A teleport's way back must be on the floor it starts on.");
-            teleports.add(new Teleport(t.id(), t.from(), point(t.position(), "A teleport"), t.to(), arrive, back, label, backLabel));
+            teleports.add(new Teleport(t.id(), t.from(), point(t.position(), "A teleport"), t.to(), arrive, back, label, backLabel,
+                    radius(t.radius()), radius(t.backRadius())));
         }
-        return new Definition(pose(body.start(), areas, "The start point"), scenes, teleports);
+        var spawns = new LinkedHashMap<String, Pose>();
+        if (body.spawns() != null) body.spawns().forEach((key, value) -> {
+            var spawn = pose(value, areas, "A floor's start point");
+            if (spawn == null || !String.valueOf(spawn.areaId()).equals(key)) throw bad("A start point belongs to another floor.");
+            spawns.put(key, spawn);
+        });
+        return new Definition(pose(body.start(), areas, "The start point"), scenes, teleports, spawns);
     }
 }
