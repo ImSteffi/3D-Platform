@@ -23,6 +23,8 @@ public class SecurityConfig {
                                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/public/views/**").permitAll()
                                 // Combined 3D tours: the random public id is the permission (SpaceTourController).
                                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/public/space-tours/*").permitAll()
+                                // Finished 3DGS files for the tour viewer: the random id in the address is the permission (SplatController).
+                                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/public/splats/**").permitAll()
                                 // Tour pages report their views; they can be on any site, without a session.
                                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/public/tour-views", "/api/public/tour-views/*/time").permitAll()
                                 .requestMatchers("/api/admin/**").hasRole("PLATFORM_ADMIN")

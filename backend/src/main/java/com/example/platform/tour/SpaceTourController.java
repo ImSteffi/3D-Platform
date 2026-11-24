@@ -82,8 +82,12 @@ public class SpaceTourController {
         if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         var spaceId = (Long) rows.getFirst()[0];
         var definition = (Definition) rows.getFirst()[1];
-        var floors = db.query("SELECT id, name FROM tour_areas WHERE tour_request_id = ? ORDER BY id",
-                (rs, i) -> new Floor(rs.getLong(1), rs.getString(2), definition.scenes().get(String.valueOf(rs.getLong(1)))), spaceId)
+        // Each floor's newest finished 3DGS; the scene saved with the teleports only when there is none (local test scenes).
+        var floors = db.query("""
+                SELECT a.id, a.name, (SELECT s.public_id::text FROM splat_runs s WHERE s.area_id = a.id AND s.status = 'SUCCEEDED'
+                ORDER BY s.id DESC LIMIT 1) FROM tour_areas a WHERE a.tour_request_id = ? ORDER BY a.id""",
+                (rs, i) -> new Floor(rs.getLong(1), rs.getString(2), rs.getString(3) != null ? "/api/public/splats/" + rs.getString(3)
+                        : definition.scenes().get(String.valueOf(rs.getLong(1)))), spaceId)
                 .stream().filter(floor -> floor.scene() != null).toList();
         // Floors removed since (or without a 3DGS) drop out, and so do the teleports and start point on them.
         var shown = floors.stream().map(Floor::areaId).collect(java.util.stream.Collectors.toSet());

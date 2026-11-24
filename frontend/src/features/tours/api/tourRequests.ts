@@ -403,3 +403,26 @@ export async function getSpaceTour(id: number): Promise<SpaceTour | null> {
 export const saveSpaceTour = (id: number, definition: SpaceTourDefinition) => send<SpaceTour>('PUT', spaceTourUrl(id), definition)
 /** The page that shows a combined tour; its address is what gets shared. */
 export const spaceTourPath = (publicId: string) => `/tour-viewer/tour.html?tour=${encodeURIComponent(publicId)}`
+
+/* Admin: a floor's 3DGS, made by Atlas posedImages2Splats from its spatial context and converted for the tour viewer. */
+export type SplatStatus = {
+ areaId: number
+ status: 'NONE' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
+ /** While running: our files going to Atlas, Atlas making it, or our server preparing it for the viewer. */
+ phase: 'UPLOADING' | 'PROCESSING' | 'CONVERTING' | null
+ error: string | null
+ /** Files uploaded to Atlas so far, of all, while UPLOADING. */
+ uploaded: number
+ total: number
+ /** The folder the tour viewer loads (?scene=), once it is made. */
+ scene: string | null
+ splatCount: number | null
+ createdAt: string | null
+ finishedAt: string | null
+ configured: boolean
+ /** Failed after Atlas finished: trying again only converts the kept result, without Atlas credits. */
+ retryFree: boolean
+}
+export const getSplats = (id: number) => get<SplatStatus[]>(`${adminRoot}/${id}/splats`)
+/** Spends Atlas credits, unless it only converts a kept result again (retryFree). */
+export const startSplats = (id: number, areaId: number) => send<SplatStatus>('POST', `${adminRoot}/${id}/areas/${areaId}/splats`)

@@ -1,3 +1,5 @@
 .env
 # Local test accounts, never committed
 .dev/
+# The 3DGS converter's installed packages (npm ci in backend/splat-tools)
+backend/splat-tools/node_modules/

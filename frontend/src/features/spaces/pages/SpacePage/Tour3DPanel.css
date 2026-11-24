@@ -40,3 +40,5 @@
 /* Cards in one row line up: the buttons sit at the bottom. */
 .panel3d-card-body { flex: 1; }
 .panel3d-actions { margin-top: auto; }
+.panel3d-notice { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.panel3d-notice--error { background: rgb(120 24 24 / .92); }

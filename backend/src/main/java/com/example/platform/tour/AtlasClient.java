@@ -90,6 +90,46 @@ public class AtlasClient {
         return id;
     }
 
+    /**
+     * Submits posedImages2Splats (a 3D Gaussian splat from posed RGB-D frames) and returns the operation id.
+     * Each frame is {imageAsset, camera, depth: {depthAsset, confidenceAsset}}, as images2PosedRGBD returns them.
+     */
+    public String submitSplats(tools.jackson.databind.node.ArrayNode posedFrames, String idempotencyKey) {
+        var body = JSON.createObjectNode();
+        body.set("posedFrames", posedFrames);
+        var operation = post("/tasks:posedImages2Splats", body, idempotencyKey);
+        var id = text(operation, "id");
+        if (id == null) throw new AtlasException("Atlas did not return an operation id.");
+        return id;
+    }
+
+    /** Downloads an output asset straight into a file, so large outputs (a 3DGS) never sit in memory. */
+    public void downloadTo(JsonNode assetRef, java.nio.file.Path target) {
+        var url = text(assetRef, "url");
+        if (url != null) {
+            var response = sendFile(HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMinutes(15)).GET().build(), target);
+            if (response.statusCode() / 100 == 2) return;
+        }
+        var id = text(assetRef, "assetId");
+        if (id == null) throw new AtlasException("Atlas returned an output without an asset id.");
+        var readUrl = text(post("/assets/" + id + ":createReadUrl", JSON.createObjectNode(), null), "readUrl");
+        if (readUrl == null) throw new AtlasException("Atlas did not return a read URL.");
+        var response = sendFile(HttpRequest.newBuilder(URI.create(readUrl)).timeout(Duration.ofMinutes(15)).GET().build(), target);
+        if (response.statusCode() / 100 != 2)
+            throw new AtlasException("Downloading an Atlas output failed (HTTP " + response.statusCode() + ").");
+    }
+
+    private HttpResponse<java.nio.file.Path> sendFile(HttpRequest request, java.nio.file.Path target) {
+        try {
+            return http.send(request, HttpResponse.BodyHandlers.ofFile(target));
+        } catch (IOException error) {
+            throw new AtlasException("Could not download from Atlas: " + error.getMessage());
+        } catch (InterruptedException error) {
+            Thread.currentThread().interrupt();
+            throw new AtlasException("Interrupted while downloading from Atlas.");
+        }
+    }
+
     public JsonNode operation(String id) {
         return read(withKey(HttpRequest.newBuilder(URI.create(baseUrl + "/operations/" + id)).GET()).build());
     }
