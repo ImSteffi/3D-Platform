@@ -7,6 +7,7 @@ import SpatialContext, { type SpatialState } from '../../../tours/components/Spa
 import type { ConvertWhat } from './splatConvert'
 import { entriesOf } from './spaceModel'
 import TourEditor from './TourEditor'
+import SharePanel from './SharePanel'
 import './Tour3DPanel.css'
 
 // three.js loads only when a spatial context is shown.
@@ -37,40 +38,6 @@ type CardProps = {
  /** Starts (or retries) the 3DGS at Atlas; resolves to an error message, or '' when it started. */
  onGenerate: () => Promise<string>
  onConvert: (what: ConvertWhat) => void
-}
-
-/** The code that shows a floor's 3DGS on another website. */
-const embedCode = (url: string, name: string) =>
- `<iframe src="${url}" title="${name.replace(/"/g, '&quot;')}" style="width:100%;height:600px;border:0;border-radius:16px" loading="lazy" allow="fullscreen; xr-spatial-tracking; pointer-lock" allowfullscreen></iframe>`
-
-/** Share: the floor's 3DGS as a link and as an iframe, each with a copy button. */
-function SharePanel({ url, name }: { url: string; name: string }) {
- const [copied, setCopied] = useState<'url' | 'iframe' | null>(null)
- const [error, setError] = useState('')
- const timer = useRef<number | undefined>(undefined)
- useEffect(() => () => window.clearTimeout(timer.current), [])
- const code = embedCode(url, name)
- async function copy(kind: 'url' | 'iframe') {
-  try {
-   await navigator.clipboard.writeText(kind === 'url' ? url : code)
-   setError('')
-   setCopied(kind)
-   window.clearTimeout(timer.current)
-   timer.current = window.setTimeout(() => setCopied(null), 2000)
-  } catch { setError('Your browser did not let us copy. Select the text and copy it by hand.') }
- }
- return <div className="panel3d-share">
-  {(['url', 'iframe'] as const).map(kind => <div key={kind} className="panel3d-share-row">
-   <span className="panel3d-share-label">{kind === 'url' ? 'URL' : 'IFRAME'}</span>
-   <div className="panel3d-share-field">
-    <input readOnly value={kind === 'url' ? url : code} aria-label={kind === 'url' ? `Link to the 3DGS of ${name}` : `Iframe code for the 3DGS of ${name}`}
-     onFocus={event => event.currentTarget.select()} />
-    <Button variant="secondary" icon={copied === kind ? 'check' : 'copy'} onClick={() => { void copy(kind) }}>{copied === kind ? 'Copied' : 'Copy'}</Button>
-   </div>
-  </div>)}
-  {error && <p className="panel3d-share-error" role="alert">{error}</p>}
-  <span className="visually-hidden" role="status">{copied === 'url' ? 'Link copied' : copied === 'iframe' ? 'Iframe code copied' : ''}</span>
- </div>
 }
 
 /** What a 3DGS being made says, by step. */
@@ -178,8 +145,8 @@ function FloorCard({ tour, area, photoCount, splat, converting, busyElsewhere, c
     </div>
     {action}
     {scene && showing === '3dgs' && <Button variant="secondary" icon="share" aria-expanded={sharing} onClick={() => setSharing(open => !open)}>Share</Button>}
+    {scene && showing === '3dgs' && sharing && <SharePanel url={new URL(src, window.location.origin).href} name={area.name} />}
    </div>
-   {scene && showing === '3dgs' && sharing && <SharePanel url={new URL(src, window.location.origin).href} name={area.name} />}
   </div>
 
   {confirming && <ConfirmDialog title={splat?.retryFree ? 'Fetch the 3DGS again?' : 'Generate the 3DGS?'}

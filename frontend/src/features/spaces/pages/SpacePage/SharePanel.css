@@ -1,0 +1,4 @@
+/* Share: two copy buttons, in the same row as the Share button that opened them. */
+.panel3d-share { display: contents; }
+.panel3d-share-btns { display: contents; }
+.panel3d-share-error { flex-basis: 100%; font-size: 13px; color: var(--red-ink, #9b1c1c); }

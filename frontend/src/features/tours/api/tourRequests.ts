@@ -46,6 +46,8 @@ export type TourArea = {
  linkPhotos?: number[]
  /** The team has made this floor's spatial context: its tour is being made. */
  spatialReady?: boolean
+ /** The floor's 3D tour in the tour viewer (a path on this site), once its 3DGS is ready. */
+ tour3d?: string | null
  /** An earlier or a newer plan to switch to (undo / redo). */
  canUndoPlan?: boolean
  canRedoPlan?: boolean

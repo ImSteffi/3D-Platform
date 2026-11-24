@@ -6,6 +6,7 @@ import { onGalleryLink, planUrl, type TourArea, type TourDetail } from '../../..
 import FileButton from './FileButton'
 import { planPickerAccept } from '../../../tours/api/prepareImage'
 import FloorGallery, { type FloorUpload } from './FloorGallery'
+import SharePanel from './SharePanel'
 import { floorState, pad, plural, type Entry } from './spaceModel'
 
 type Props = {
@@ -99,8 +100,10 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
  const tourMade = tour.status === 'DELIVERED'
  // The customer's side: once the team has the spatial context, the tour is on its way.
  // (The team's spatial context and 3D generation live in the 3D panel, not here.)
- const making = !admin && !tourMade && !!area.spatialReady
- const wide = making
+ const tour3d = !admin ? area.tour3d ?? null : null
+ const making = !admin && !tourMade && !!area.spatialReady && !tour3d
+ const wide = making || !!tour3d
+ const [sharing, setSharing] = useState(false)
 
  // A floor plan pasted from the clipboard: the paste button, or Ctrl/Cmd+V while the plan box is focused or hovered.
  const [pasteNote, setPasteNote] = useState<string | null>(null)
@@ -227,6 +230,15 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
    </div>
    {/* The operator sees photos only once there are some: no empty section and no title. */}
    {making && <div className="area-making" role="status"><p>We are making your 3D tour</p></div>}
+   {tour3d && <div className="area-tour3d">
+    <div className="area-tour3d-stage">
+     <iframe title={`3D tour of ${area.name}`} allow="fullscreen; xr-spatial-tracking; pointer-lock" allowFullScreen src={tour3d} />
+    </div>
+    <div className="area-tour3d-actions">
+     <Button variant="secondary" icon="share" aria-expanded={sharing} onClick={() => setSharing(open => !open)}>Share</Button>
+     {sharing && <SharePanel url={new URL(tour3d, window.location.origin).href} name={area.name} />}
+    </div>
+   </div>}
    {(!admin || !!floorPhotos || shown.length > 0 || (area.photos?.length ?? 0) > 0) && <div className="area-photos">
     {!admin && !readOnly && !tourMade && !making && <p className="area-photos-lead">Once all your photos are in, we will make your 3D tour.</p>}
     {entries.length === 0

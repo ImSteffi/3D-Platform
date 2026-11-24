@@ -45,12 +45,3 @@
 /* A 3DGS shown before its voxels exist: it can only be flown through. */
 .panel3d-badge { position: absolute; left: 20px; top: 20px; z-index: 1; margin: 0; padding: 5px 12px; border-radius: 999px; background: rgb(20 21 22 / .78);
  color: rgb(246 245 242 / .9); font-size: 12px; pointer-events: none; }
-/* Share: the 3DGS as a link and as an iframe. */
-.panel3d-share { display: flex; flex-direction: column; gap: 10px; }
-.panel3d-share-row { display: flex; flex-direction: column; gap: 4px; }
-.panel3d-share-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; color: var(--ink-2); }
-.panel3d-share-field { display: flex; gap: var(--s-2); }
-.panel3d-share-field input { flex: 1; min-width: 0; height: 38px; padding: 0 12px; border: 1px solid var(--hair-strong); border-radius: 19px; background: rgba(255, 255, 255, .78);
- color: var(--ink); font-family: var(--mono); font-size: 12px; letter-spacing: -.02em; text-overflow: ellipsis; }
-.panel3d-share-field input:focus-visible { outline: none; border-color: var(--ink); background: #fff; box-shadow: 0 0 0 1px var(--ink); }
-.panel3d-share-error { font-size: 13px; color: var(--red-ink, #9b1c1c); }

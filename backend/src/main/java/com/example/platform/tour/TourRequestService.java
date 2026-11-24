@@ -74,6 +74,35 @@ public class TourRequestService {
     @org.springframework.beans.factory.annotation.Autowired
     void setSpatialRuns(SpatialContextRunRepository spatialRuns) { this.spatialRuns = spatialRuns; }
 
+    // Set by Spring; absent in unit tests, where no floor has a 3DGS.
+    private org.springframework.jdbc.core.JdbcTemplate db;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setDb(org.springframework.jdbc.core.JdbcTemplate db) { this.db = db; }
+
+    /**
+     * Each floor's 3D tour in the tour viewer (by floor id): the floor's newest 3DGS ready for the viewer, joined by the
+     * space's teleports once they are saved. The viewer and its files are public, so the path is also the link to share.
+     */
+    private java.util.Map<Long, String> tours3d(Long tourId) {
+        var found = new java.util.HashMap<Long, String>();
+        if (db == null) return found;
+        var spaceTour = db.query("SELECT public_id::text FROM space_tours WHERE tour_request_id = ?", (rs, i) -> rs.getString(1), tourId)
+                .stream().findFirst().orElse(null);
+        db.query("""
+                SELECT a.id, (SELECT s.public_id::text FROM splat_runs s WHERE s.area_id = a.id AND s.status = 'SUCCEEDED' AND s.sog_ready
+                ORDER BY s.id DESC LIMIT 1) FROM tour_areas a WHERE a.tour_request_id = ?""", rs -> {
+            var splat = rs.getString(2);
+            if (splat == null) return;
+            long areaId = rs.getLong(1);
+            found.put(areaId, spaceTour != null
+                    ? "/tour-viewer/tour.html?tour=" + spaceTour + "&floor=" + areaId
+                    : "/tour-viewer/tour.html?scene=" + java.net.URLEncoder.encode("/api/public/splats/" + splat, java.nio.charset.StandardCharsets.UTF_8)
+                        + "&space=" + tourId + "&floor=" + areaId);
+        }, tourId);
+        return found;
+    }
+
     private boolean spatialReady(TourArea area) {
         return spatialRuns != null && spatialRuns.existsByArea_IdAndStatus(area.getId(), SpatialContextRun.Status.SUCCEEDED);
     }
@@ -938,6 +967,7 @@ public class TourRequestService {
         boolean showPoints = viewer.isPlatformAdmin()
                 || (tour.getStatus() != DRAFT && tour.getStatus() != SUBMITTED);
         var all = areas.findByTourRequest_IdOrderByIdAsc(tour.getId());
+        var tours3d = tours3d(tour.getId());
         var entries = all.stream().map(area ->
                 new AreaResponse(area.getId(), area.getName(), area.getKind().name(), area.getCaptureGroup(),
                         area.getPlanObjectKey() != null, area.getMarkerDotSize(), area.getMarkerLineLength(),
@@ -951,7 +981,8 @@ public class TourRequestService {
                         floorPhotos.findByArea_IdOrderByIdAsc(area.getId()).stream().filter(FloorPhoto::isViaLink).map(FloorPhoto::getId).toList(),
                         spatialReady(area),
                         planHistory != null && planHistory.previous(area.getId(), area.getPlanObjectKey()) != null,
-                        planHistory != null && planHistory.next(area.getId(), area.getPlanObjectKey()) != null))
+                        planHistory != null && planHistory.next(area.getId(), area.getPlanObjectKey()) != null,
+                        tours3d.get(area.getId())))
                 .toList();
         var scan = deliveredScan(tour);
         return new Detail(tour.getId(), tour.getName(), tour.getNotes(), effectiveStatus(tour).name(),
@@ -1000,7 +1031,9 @@ public class TourRequestService {
             // The team has the floor's spatial context: the customer sees that the tour is being made.
             boolean spatialReady,
             // An earlier or a newer plan to switch to (undo / redo).
-            boolean canUndoPlan, boolean canRedoPlan) {}
+            boolean canUndoPlan, boolean canRedoPlan,
+            // The floor's 3D tour in the tour viewer (a path on this site), once its 3DGS is ready; else null.
+            String tour3d) {}
     public record Detail(Long id, String name, String notes, String status, Instant createdAt,
             String ownerName, String ownerEmail, List<AreaResponse> areas,
             Long scanId, String scanName, Long projectId, int areasToPlan) {}
