@@ -24,7 +24,7 @@ type Props = {
 }
 
 /** Eye height above the floor in walk mode (the viewer's hover height plus eye height). */
-const EYE = 1.5
+const EYE = 1.4
 const newId = () => Math.random().toString(36).slice(2, 10)
 
 /**

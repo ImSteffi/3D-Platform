@@ -86520,7 +86520,7 @@ class WalkController {
     /**
      * Total capsule height in meters (default: human proportion)
      */
-    capsuleHeight = 1.5;
+    capsuleHeight = 1.4; // Tenzo: 1.5 by default; a lower walker (eyes 1.4 m above the floor).
     /**
      * Capsule radius in meters
      */
@@ -86528,7 +86528,7 @@ class WalkController {
     /**
      * Camera height from the bottom of the capsule in meters
      */
-    eyeHeight = 1.3;
+    eyeHeight = 1.2; // Tenzo: 1.3 by default; with the 0.2 m hover the eyes are 1.4 m above the floor.
     /**
      * Gravity acceleration in m/s^2
      */

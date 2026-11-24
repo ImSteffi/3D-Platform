@@ -10,8 +10,8 @@ const TRIGGER = 0.5;
 /** A ring only works once people have been this far from it, so arriving next to one never bounces straight back. */
 const ARM = 1.1;
 const SVG = "http://www.w3.org/2000/svg";
-/** Eye height above the floor in walk mode (hover height plus eye height). */
-const EYE = 1.5;
+/** Eye height above the floor in walk mode (hover height 0.2 plus eye height 1.2, set in index.js). */
+const EYE = 1.4;
 
 /**
  * Every teleport is a portal with a ring at each end. Its first end is at `position` on floor `from` and takes people
