@@ -62,7 +62,8 @@ function attachTourLayer(viewer, canvas) {
   });
   if (tour) {
     const ends = portalEnds(tour.teleports, floorId);
-    layer.setMarkers(ends.map((end) => ({ id: end.id, position: end.position, label: end.label || floorName(end.target.areaId) })));
+    layer.setMarkers(ends.map((end) => ({ id: end.id, position: end.position, radius: end.radius,
+      label: end.label || floorName(end.target.areaId) })));
     // The floors a ring here leads to start loading while people look around, so the jump is quick.
     setTimeout(() => {
       const targets = new Set(ends.map((end) => end.target.areaId).filter((id) => id !== floorId));
