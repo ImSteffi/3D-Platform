@@ -86986,6 +86986,11 @@ class CameraManager {
         controllers.fly.fov = resetCamera.fov;
         controllers.fly.collision = collision;
         controllers.walk.collision = collision;
+        // Tenzo: a teleport to another floor swaps the walls the camera walks between.
+        this.setCollision = (value) => {
+            controllers.fly.collision = value;
+            controllers.walk.collision = value;
+        };
         const walkSource = new WalkSource();
         const flySource = new FlySource();
         const sourcesByMode = {
@@ -91148,6 +91153,7 @@ class Viewer {
         }
         // wait for the model to load
         Promise.all([gsplatLoad, skyboxLoad, collisionLoad]).then((results) => {
+            this.gsplatEntity = results[0];
             const gsplatComponent = results[0].gsplat;
             const collision = results[2];
             // get scene bounding box
@@ -92928,6 +92934,24 @@ const initCanvas = (global) => {
     app._allowResize = false;
     apply();
 };
+/**
+ * Tenzo: shows another scene in the running viewer (a teleport to another floor), keeping the page, the walk and
+ * the captured pointer. The new 3DGS and its voxels load first; then they replace the old ones at once.
+ */
+const swapScene = async (viewer, contentUrl, collisionUrl) => {
+    const { app } = viewer.global;
+    const [entity, collision] = await Promise.all([
+        loadGsplat(app, { contentUrl, contents: fetch(contentUrl), contentFilename: 'scene.sog' }, () => { }),
+        loadVoxelCollision(collisionUrl)
+    ]);
+    const old = viewer.gsplatEntity;
+    viewer.gsplatEntity = entity;
+    old?.destroy();
+    viewer.inputController.collision = collision;
+    viewer.cameraManager.setCollision?.(collision);
+    if (viewer.navCursor) viewer.navCursor.collision = collision;
+    app.renderNextFrame = true;
+};
 const main = async (canvas, settingsJson, config) => {
     // migrate legacy `retinaDisplay` preference (inverted) to `performanceMode`
     const legacyRetina = localStorage.getItem('retinaDisplay');
@@ -93053,4 +93077,4 @@ const main = async (canvas, settingsJson, config) => {
 };
 console.log(`SuperSplat Viewer v${version} | Engine v${version$1} (${revision})`);
 
-export { main };
+export { main, swapScene };

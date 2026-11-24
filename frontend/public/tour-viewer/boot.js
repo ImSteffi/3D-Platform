@@ -1,4 +1,4 @@
-import { main } from "/tour-viewer/index.js";
+import { main, swapScene } from "/tour-viewer/index.js";
 import { attachStockSession } from "/tour-viewer/stock-session.js";
 import { attachTeleports, portalEnds } from "/tour-viewer/teleports.js";
 
@@ -55,15 +55,36 @@ function attachTourLayer(viewer, canvas) {
       const next = new URL(location.href);
       next.searchParams.set("floor", String(end.target.areaId));
       next.searchParams.set("at", end.id);
-      location.replace(next);
+      const scene = safeFolder(tour.floors.find((f) => f.areaId === end.target.areaId)?.scene);
+      try {
+        // The other floor loads into this page, so the walk and the captured mouse go on without a click.
+        if (!scene) throw new Error("No scene for that floor");
+        await swapScene(viewer, `${scene}/scene.sog`, `${scene}/scene.voxel.json`);
+      } catch (error) {
+        // Else the floor opens as its own page (one click to go on).
+        console.warn("Could not switch floors in place", error);
+        location.replace(next);
+        return;
+      }
+      floorId = end.target.areaId;
+      folder = scene;
+      history.replaceState(null, "", next);
+      showMarkers();
+      layer.setPose(end.target);
+      layer.reveal();
     },
     onPick: (point, pose) => toParent({ type: "tour-edit-picked", point, pose }),
     onSelect: (id) => toParent({ type: "tour-edit-select", id }),
   });
-  if (tour) {
+  /** This floor's rings. */
+  function showMarkers() {
     const ends = portalEnds(tour.teleports, floorId);
     layer.setMarkers(ends.map((end) => ({ id: end.id, position: end.position, radius: end.radius,
       label: end.label || floorName(end.target.areaId) })));
+    return ends;
+  }
+  if (tour) {
+    const ends = showMarkers();
     // The floors a ring here leads to start loading while people look around, so the jump is quick.
     setTimeout(() => {
       const targets = new Set(ends.map((end) => end.target.areaId).filter((id) => id !== floorId));
@@ -158,6 +179,8 @@ async function start() {
     },
   });
   document.body.classList.add("tour-paused");
+  // Through a teleport, the walk goes on without the start screen.
+  if (continued) session.resume();
   // Where people arrive (a teleport's arrival, or the tour's start). Set once the viewer has settled into walking,
   // which otherwise puts the camera back at the scene's own start.
   if (tourLayer && arrival) {

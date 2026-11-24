@@ -1,5 +1,8 @@
 // Only manages the embed's preview/start screen. SuperSplat owns input,
 // pointer capture, touch controls and camera movement on its native canvas.
+/** How far the view turns per pixel the mouse moves before the pointer is captured again after a teleport. */
+const LOOK_DEGREES_PER_PIXEL = 0.15;
+
 export function attachStockSession(viewer, canvas, { onActive, onReady } = {}) {
   const { state, events } = viewer.global;
   let ready = false;
@@ -67,6 +70,44 @@ export function attachStockSession(viewer, canvas, { onActive, onReady } = {}) {
     if (isTouch) setActive(true);
     // Desktop normally starts after pointer capture; unsupported embeds use native drag controls.
   };
+  // Arrived through a teleport: people were already walking, so no start screen. A new page cannot capture the
+  // pointer without a click, so until the first click the mouse turns the view as it moves (as the captured pointer
+  // did), and the first click captures it again.
+  const resume = () => {
+    if (!ready || active) return;
+    const isTouch = window.matchMedia("(pointer: coarse)").matches;
+    state.inputMode = isTouch ? "touch" : "desktop";
+    canvas.tabIndex = 0;
+    canvas.focus({ preventScroll: true });
+    state.gamingControls = false;
+    state.cameraMode = state.walkAllowed ? "walk" : "fly";
+    setActive(true);
+    if (isTouch) return;
+    const look = (event) => {
+      if (!active || document.pointerLockElement || event.buttons) return;
+      const camera = viewer.cameraManager?.camera;
+      if (!camera || (!event.movementX && !event.movementY)) return;
+      const pitch = Math.max(-89, Math.min(89, camera.angles.x - event.movementY * LOOK_DEGREES_PER_PIXEL));
+      camera.angles.set(pitch, camera.angles.y - event.movementX * LOOK_DEGREES_PER_PIXEL, 0);
+      viewer.cameraManager.snap();
+      viewer.global.app.renderNextFrame = true;
+    };
+    window.addEventListener("mousemove", look);
+    // Once the pointer is captured (or the walk stops), the viewer's own controls take over again.
+    const stopLook = () => window.removeEventListener("mousemove", look);
+    document.addEventListener("pointerlockchange", stopLook, { once: true });
+    canvas.addEventListener("pointerdown", () => {
+      if (!active || state.gamingControls) return;
+      entering = true;
+      try {
+        state.gamingControls = true;
+        ensureWalk();
+      } catch {
+        state.gamingControls = false;
+        entering = false;
+      }
+    }, { once: true, capture: true });
+  };
   // A same-origin parent may call this synchronously from its real Start click.
   // Do not use postMessage: pointer capture needs that original user activation.
   window.tenzoStartWalk = () => enter({ pointerType: "" });
@@ -97,7 +138,7 @@ export function attachStockSession(viewer, canvas, { onActive, onReady } = {}) {
   };
   if (viewer.inputController && state.loaded) firstFrame();
   else events.on("firstFrame", firstFrame);
-  return { close, isActive: () => active, isReady: () => ready };
+  return { close, resume, isActive: () => active, isReady: () => ready };
 }
 
 
