@@ -84,7 +84,7 @@ public class SpaceTourController {
         var definition = (Definition) rows.getFirst()[1];
         // Each floor's newest finished 3DGS; the scene saved with the teleports only when there is none (local test scenes).
         var floors = db.query("""
-                SELECT a.id, a.name, (SELECT s.public_id::text FROM splat_runs s WHERE s.area_id = a.id AND s.status = 'SUCCEEDED'
+                SELECT a.id, a.name, (SELECT s.public_id::text FROM splat_runs s WHERE s.area_id = a.id AND s.status = 'SUCCEEDED' AND s.sog_ready
                 ORDER BY s.id DESC LIMIT 1) FROM tour_areas a WHERE a.tour_request_id = ? ORDER BY a.id""",
                 (rs, i) -> new Floor(rs.getLong(1), rs.getString(2), rs.getString(3) != null ? "/api/public/splats/" + rs.getString(3)
                         : definition.scenes().get(String.valueOf(rs.getLong(1)))), spaceId)

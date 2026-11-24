@@ -31,6 +31,23 @@ public class SplatController {
         return splats.start(id, areaId, authentication);
     }
 
+    /** Atlas's .spz, for the team's browser to convert into the viewer's files. */
+    @GetMapping("/api/admin/tour-requests/{id}/areas/{areaId}/splats/source.spz")
+    public ResponseEntity<InputStreamResource> source(@PathVariable long id, @PathVariable long areaId, Authentication authentication) {
+        var object = splats.source(id, areaId, authentication);
+        var response = ResponseEntity.ok().cacheControl(CacheControl.noStore()).contentType(MediaType.APPLICATION_OCTET_STREAM);
+        var length = object.response().contentLength();
+        if (length != null) response.contentLength(length);
+        return response.body(new InputStreamResource(object));
+    }
+
+    /** A file the team's browser converted: scene.sog, then scene.voxel.bin and scene.voxel.json. */
+    @PutMapping("/api/admin/tour-requests/{id}/areas/{areaId}/splats/files/{file:.+}")
+    public SplatService.Status upload(@PathVariable long id, @PathVariable long areaId, @PathVariable String file,
+            jakarta.servlet.http.HttpServletRequest request, Authentication authentication) throws java.io.IOException {
+        return splats.upload(id, areaId, file, request.getInputStream(), request.getContentLengthLong(), authentication);
+    }
+
     /** Public: a finished 3DGS's files never change, so browsers keep them. */
     @GetMapping("/api/public/splats/{publicId}/{file:.+}")
     public ResponseEntity<InputStreamResource> file(@PathVariable String publicId, @PathVariable String file) {

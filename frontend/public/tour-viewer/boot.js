@@ -112,13 +112,15 @@ async function loadSettings() {
 async function start() {
   await loadTour();
   if (!folder) throw new Error("No tour given");
+  // A 3DGS can be shown before its voxels exist: then it opens in fly mode, without walking or teleports.
+  const hasVoxels = await fetch(`${folder}/scene.voxel.json`).then((response) => response.ok).catch(() => false);
   const config = {
     poster: null,
     skyboxUrl: null,
     contentUrl: `${folder}/scene.sog`,
     contentFilename: "scene.sog",
     contents: fetch(`${folder}/scene.sog`),
-    collisionUrl: `${folder}/scene.voxel.json`,
+    collisionUrl: hasVoxels ? `${folder}/scene.voxel.json` : undefined,
     noui: false,
     noanim: true,
     nofx: false,
@@ -134,10 +136,10 @@ async function start() {
   if (!viewer.inputController || !viewer.global.state.loaded) {
     await new Promise((resolve) => viewer.global.events.once("firstFrame", resolve));
   }
-  if (!viewer.global.state.walkAllowed) {
-    throw new Error("Collision unavailable");
-  }
-  const tourLayer = tour || editing ? attachTourLayer(viewer, canvas) : null;
+  // Teleports stand on the floor and hide behind walls, so they need the voxels; without them the 3DGS is only flown through.
+  const walkable = viewer.global.state.walkAllowed;
+  if (hasVoxels && !walkable) console.warn("The voxels did not load: showing the 3DGS in fly mode.");
+  const tourLayer = walkable && (tour || editing) ? attachTourLayer(viewer, canvas) : null;
   // Phones have no Escape key: a pause button brings back the start screen, where the viewer's own buttons work.
   const pause = document.createElement("button");
   pause.type = "button";

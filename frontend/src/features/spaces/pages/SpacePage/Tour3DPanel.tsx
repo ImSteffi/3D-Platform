@@ -1,7 +1,10 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, ConfirmDialog, Panel, Spinner } from '../../../../shared/ui'
-import { getSpaceTour, getSplats, startSplats, type SpaceTour, type SplatStatus, type TourArea, type TourDetail } from '../../../tours/api/tourRequests'
+import {
+ getSpaceTour, getSplats, splatSourceUrl, startSplats, uploadSplatFile, type SpaceTour, type SplatStatus, type TourArea, type TourDetail,
+} from '../../../tours/api/tourRequests'
 import SpatialContext, { type SpatialState } from '../../../tours/components/SpatialContext/SpatialContext'
+import type { ConvertWhat } from './splatConvert'
 import { entriesOf } from './spaceModel'
 import TourEditor from './TourEditor'
 import './Tour3DPanel.css'
@@ -12,26 +15,34 @@ const SpatialContextViewer = lazy(() => import('../../../tours/components/Spatia
 const SPLAT_POLL_MS = 10_000
 
 type View = '3dgs' | 'spatial'
+/** A conversion running in this browser: which floor, what it makes, and the step it is on. */
+type Converting = { areaId: number; what: ConvertWhat; step: string }
 
 type CardProps = {
  tour: TourDetail
  area: TourArea
  photoCount: number
- /** The floor's 3DGS: none, being made, failed or made (with the folder the viewer loads). */
+ /** The floor's 3DGS: none, being made, failed, made (Atlas's file stored), visible (sogReady) or walkable (voxelsReady). */
  splat: SplatStatus | null
+ /** This floor's conversion running in this browser, if any; another floor's blocks starting one here. */
+ converting: Converting | null
+ busyElsewhere: boolean
+ /** The last conversion of this floor that failed, with what it was making. */
+ convertError: { what: ConvertWhat; message: string } | null
  /** The space's saved teleports, if any: the card's 3DGS then shows them and they work. */
  tourId: string | null
  /** Changes when teleports were edited, so the 3DGS loads them again. */
  version: number
  onEdit: () => void
- /** Starts (or retries) the 3DGS; resolves to an error message, or '' when it started. */
+ /** Starts (or retries) the 3DGS at Atlas; resolves to an error message, or '' when it started. */
  onGenerate: () => Promise<string>
+ onConvert: (what: ConvertWhat) => void
 }
 
 /** What a 3DGS being made says, by step. */
 function splatProgress(splat: SplatStatus) {
  if (splat.phase === 'UPLOADING') return splat.total > 0 ? `Sending the photos to Atlas: ${splat.uploaded} of ${splat.total} files` : 'Sending the photos to Atlas…'
- if (splat.phase === 'CONVERTING') return 'Preparing the 3DGS for the viewer…'
+ if (splat.phase === 'STORING') return 'Fetching the 3DGS from Atlas…'
  return 'Atlas is making the 3DGS. This takes about 15 to 30 minutes.'
 }
 
@@ -45,7 +56,7 @@ function spatialMessage(photoCount: number, status: SpatialState['status']) {
 }
 
 /** One floor: its 3DGS or spatial context, the switch between them, and the buttons that make or edit them. */
-function FloorCard({ tour, area, photoCount, splat, tourId, version, onEdit, onGenerate }: CardProps) {
+function FloorCard({ tour, area, photoCount, splat, converting, busyElsewhere, convertError, tourId, version, onEdit, onGenerate, onConvert }: CardProps) {
  const [spatial, setSpatial] = useState<SpatialState>({ frames: null, fresh: [], status: 'LOADING' })
  const onReady = useCallback((state: SpatialState) => setSpatial(state), [])
  const frames = spatial.frames
@@ -53,13 +64,16 @@ function FloorCard({ tour, area, photoCount, splat, tourId, version, onEdit, onG
  const scene = splat?.scene ?? null
  const making = splat?.status === 'RUNNING'
  const failed = splat?.status === 'FAILED'
+ /** Atlas's 3DGS is stored, but this browser has not made the viewer's file yet. */
+ const awaitingSog = splat?.status === 'SUCCEEDED' && !splat.sogReady
+ const walkable = !!splat?.voxelsReady
  const [view, setView] = useState<View>('3dgs')
  const showing: View = scene ? view : 'spatial'
  const src = tourId
   ? `/tour-viewer/tour.html?tour=${encodeURIComponent(tourId)}&floor=${area.id}`
   : `/tour-viewer/tour.html?scene=${encodeURIComponent(scene ?? '')}&space=${tour.id}&floor=${area.id}`
  const message = spatialMessage(photoCount, spatial.status)
- // Making a 3DGS spends Atlas credits, so it is confirmed first (a retry that only converts again is free).
+ // Making a 3DGS spends Atlas credits, so it is confirmed first (fetching a finished result again is free).
  const [confirming, setConfirming] = useState(false)
  const [starting, setStarting] = useState(false)
  const [startError, setStartError] = useState('')
@@ -70,10 +84,34 @@ function FloorCard({ tour, area, photoCount, splat, tourId, version, onEdit, onG
   if (problem) setStartError(problem); else setConfirming(false)
  }
 
+ // What the stage says on top of its picture: the 3DGS being made, converted in this browser, or failing.
+ const notice = converting ? { text: converting.step, busy: true }
+  : making && splat ? { text: splatProgress(splat), busy: true }
+  : awaitingSog && !convertError ? { text: busyElsewhere ? 'Waiting for the other floor to finish preparing…' : 'Preparing the 3DGS for the viewer…', busy: true }
+  : convertError ? { text: convertError.message, error: true }
+  : failed && splat ? { text: splat.error ?? 'Making the 3DGS failed.', error: true }
+  : null
+
+ let action = null
+ if (scene && showing === 'spatial') action = null
+ else if (converting?.what === 'voxels') action = <Button variant="primary" icon="cube" loading disabled>Generating voxels</Button>
+ else if (scene && walkable) action = <Button variant="primary" icon="edit" onClick={onEdit}>Edit 3DGS</Button>
+ // Visible in fly mode; the voxels add walking and teleports.
+ else if (scene) action = <Button variant="primary" icon="cube" disabled={busyElsewhere} title={busyElsewhere ? 'Another floor is being converted in this browser.' : undefined}
+  onClick={() => onConvert('voxels')}>{convertError?.what === 'voxels' ? 'TRY VOXELS AGAIN' : 'GENERATE VOXELS'}</Button>
+ else if (awaitingSog) action = convertError
+  ? <Button variant="primary" icon="cube" disabled={busyElsewhere} onClick={() => onConvert('sog')}>TRY AGAIN</Button>
+  : <Button variant="primary" icon="cube" loading disabled>Preparing 3DGS</Button>
+ else if (making) action = <Button variant="primary" icon="cube" loading disabled>Making 3DGS</Button>
+ // No 3DGS yet: it is made from the spatial context, so the button waits for it.
+ else if (photoCount > 0) action = <Button variant="primary" icon="cube" disabled={!spatialReady || splat?.configured === false}
+  title={!spatialReady ? 'Generate the spatial context first.' : splat?.configured === false ? 'WLT_API_KEY is not set on the server.' : undefined}
+  onClick={() => { setStartError(''); setConfirming(true) }}>{failed ? 'TRY AGAIN' : 'GENERATE 3DGS'}</Button>
+
  return <article className="panel3d-card" aria-label={area.name}>
   <div className="panel3d-stage on-dark">
    {showing === '3dgs' && scene
-    ? <iframe key={`${version}-${scene}`} className="panel3d-splat" title={`3DGS of ${area.name}`} allow="fullscreen; xr-spatial-tracking; pointer-lock" src={src} />
+    ? <iframe key={`${version}-${scene}-${walkable}`} className="panel3d-splat" title={`3DGS of ${area.name}`} allow="fullscreen; xr-spatial-tracking; pointer-lock" src={src} />
     : spatialReady
     ? <Suspense fallback={<Spinner block label="Loading the spatial context" />}><SpatialContextViewer frames={frames} bare /></Suspense>
     : message
@@ -83,9 +121,10 @@ function FloorCard({ tour, area, photoCount, splat, tourId, version, onEdit, onG
      <p>{message.text}</p>
     </div>
     : <Spinner block label="Loading the spatial context" />}
-   {/* A 3DGS being made, or one that failed, says so over whatever the stage shows. */}
-   {!scene && making && <p className="panel3d-notice" role="status"><Spinner size={13} /> {splatProgress(splat)}</p>}
-   {!scene && failed && <p className="panel3d-notice panel3d-notice--error" role="alert">{splat.error ?? 'Making the 3DGS failed.'}</p>}
+   {notice && (!scene || showing === '3dgs') && <p className={`panel3d-notice${notice.error ? ' panel3d-notice--error' : ''}`} role={notice.error ? 'alert' : 'status'}>
+    {notice.busy && <Spinner size={13} />} {notice.text}
+   </p>}
+   {scene && !walkable && showing === '3dgs' && !notice && <p className="panel3d-badge">Fly mode: no voxels yet</p>}
   </div>
   {scene && <div className="panel3d-switch" role="group" aria-label="What to show">
    <button type="button" aria-pressed={showing === '3dgs'} onClick={() => setView('3dgs')}>3DGS</button>
@@ -102,22 +141,15 @@ function FloorCard({ tour, area, photoCount, splat, tourId, version, onEdit, onG
     <div className="panel3d-spatial" hidden={!!scene && showing === '3dgs'}>
      <SpatialContext tourId={tour.id} areaId={area.id} photoCount={photoCount} onReady={onReady} canDelete={showing === 'spatial' && !making} />
     </div>
-    {scene
-     ? showing === '3dgs' && <Button variant="primary" icon="edit" onClick={onEdit}>Edit 3DGS</Button>
-     : making
-     ? <Button variant="primary" icon="cube" loading disabled>Making 3DGS</Button>
-     // No 3DGS yet: it is made from the spatial context, so the button waits for it.
-     : photoCount > 0 && <Button variant="primary" icon="cube" disabled={!spatialReady || splat?.configured === false}
-      title={!spatialReady ? 'Generate the spatial context first.' : splat?.configured === false ? 'WLT_API_KEY is not set on the server.' : undefined}
-      onClick={() => { setStartError(''); setConfirming(true) }}>{failed ? 'TRY AGAIN' : 'GENERATE 3DGS'}</Button>}
+    {action}
    </div>
   </div>
 
-  {confirming && <ConfirmDialog title={splat?.retryFree ? 'Prepare the 3DGS again?' : 'Generate the 3DGS?'}
+  {confirming && <ConfirmDialog title={splat?.retryFree ? 'Fetch the 3DGS again?' : 'Generate the 3DGS?'}
    confirmLabel={splat?.retryFree ? 'Try again' : 'Generate 3DGS'} busy={starting} busyLabel="Starting…" error={startError}
    onConfirm={() => { void generate() }} onCancel={() => setConfirming(false)}>
    {splat?.retryFree
-    ? <p>Atlas already made this 3DGS; only preparing it for the viewer failed. Trying again uses the kept result and spends no Atlas credits.</p>
+    ? <p>Atlas already made this 3DGS; only fetching it failed. Trying again fetches it again and spends no Atlas credits.</p>
     : <p>This floor&rsquo;s spatial context ({frames?.length ?? 0} placed photos) goes to World Labs Atlas, which makes the 3DGS.
      It takes about 15 to 30 minutes and spends <strong>5,000 Atlas credits (about $5)</strong>; a failed run is free. It runs on the server, so you can leave this page.</p>}
   </ConfirmDialog>}
@@ -133,6 +165,7 @@ export default function Tour3DPanel({ tour }: { tour: TourDetail }) {
  }, [tour])
  const [splats, setSplats] = useState<SplatStatus[]>([])
  const anyMaking = splats.some(splat => splat.status === 'RUNNING')
+ const [refresh, setRefresh] = useState(0)
  useEffect(() => {
   let live = true
   let timer: number | undefined
@@ -141,12 +174,18 @@ export default function Tour3DPanel({ tour }: { tour: TourDetail }) {
    .catch(() => { if (live) timer = window.setTimeout(load, SPLAT_POLL_MS) })
   void load()
   return () => { live = false; window.clearTimeout(timer) }
- }, [tour.id, anyMaking])
+ }, [tour.id, anyMaking, refresh])
  const splatOf = (areaId: number) => splats.find(splat => splat.areaId === areaId) ?? null
- /** Each floor's finished 3DGS, by floor id: what the tour viewer and the teleport editor load. */
+ /** Each floor's visible 3DGS, by floor id: what the tour viewer loads. */
  const scenes = useMemo(() => {
   const found: Record<number, string> = {}
   for (const splat of splats) if (splat.scene) found[splat.areaId] = splat.scene
+  return found
+ }, [splats])
+ /** Floors that can be walked: the only ones teleports can be placed on and lead to. */
+ const walkableScenes = useMemo(() => {
+  const found: Record<number, string> = {}
+  for (const splat of splats) if (splat.scene && splat.voxelsReady) found[splat.areaId] = splat.scene
   return found
  }, [splats])
  async function generate(areaId: number) {
@@ -156,6 +195,56 @@ export default function Tour3DPanel({ tour }: { tour: TourDetail }) {
    return ''
   } catch (reason) { return reason instanceof Error ? reason.message : 'That did not go through. Please try again.' }
  }
+
+ // Conversions run in this browser, one at a time (each uses a lot of memory and the GPU).
+ const [converting, setConverting] = useState<Converting | null>(null)
+ const [convertErrors, setConvertErrors] = useState<Record<number, { what: ConvertWhat; message: string }>>({})
+ const running = useRef(false)
+ /** Floors prepared in this visit: the list may not show it yet, and a floor is never prepared twice. */
+ const prepared = useRef(new Set<number>())
+ const convert = useCallback(async (areaId: number, what: ConvertWhat) => {
+  if (running.current) return
+  running.current = true
+  setConvertErrors(current => { const next = { ...current }; delete next[areaId]; return next })
+  const step = (text: string) => setConverting({ areaId, what, step: text })
+  step('Starting…')
+  try {
+   const { convertSplat } = await import('./splatConvert')
+   const files = await convertSplat(splatSourceUrl(tour.id, areaId), what, step)
+   // The voxels' .bin goes first: the .json completes them.
+   const order = (name: string) => name.endsWith('.json') ? 1 : 0
+   for (const file of [...files].sort((a, b) => order(a.name) - order(b.name))) {
+    step(`Uploading ${file.name}…`)
+    await uploadSplatFile(tour.id, areaId, file.name, file.bytes)
+   }
+   if (what === 'sog') prepared.current.add(areaId)
+  } catch (reason) {
+   const message = reason instanceof Error ? reason.message : String(reason)
+   setConvertErrors(current => ({ ...current, [areaId]: { what, message: `${what === 'sog' ? 'Preparing the 3DGS' : 'Generating the voxels'} failed: ${message}` } }))
+  } finally {
+   running.current = false
+   setConverting(null)
+   setRefresh(n => n + 1)
+  }
+ }, [tour.id])
+ // A made 3DGS gets its viewer file right away, in this browser, without a button.
+ useEffect(() => {
+  if (converting) return
+  const next = splats.find(splat => splat.status === 'SUCCEEDED' && !splat.sogReady && !convertErrors[splat.areaId]
+   && !prepared.current.has(splat.areaId))
+  if (!next) return
+  // Started after this render, not inside it.
+  const timer = window.setTimeout(() => { void convert(next.areaId, 'sog') }, 0)
+  return () => window.clearTimeout(timer)
+ }, [splats, converting, convertErrors, convert])
+ // Closing the tab stops a conversion: ask first.
+ useEffect(() => {
+  if (!converting) return
+  const warn = (event: BeforeUnloadEvent) => { event.preventDefault() }
+  window.addEventListener('beforeunload', warn)
+  return () => window.removeEventListener('beforeunload', warn)
+ }, [converting])
+
  const [saved, setSaved] = useState<SpaceTour | null>(null)
  const [editing, setEditing] = useState<number | null>(null)
  const [version, setVersion] = useState(0)
@@ -177,9 +266,11 @@ export default function Tour3DPanel({ tour }: { tour: TourDetail }) {
    ? <p className="area-quiet panel3d-none">This space has no floors yet.</p>
    : <div className="panel3d-grid">
     {tour.areas.map(area => <FloorCard key={area.id} tour={tour} area={area} photoCount={counts[area.id] ?? 0} splat={splatOf(area.id)}
-     tourId={tourIdFor(area.id)} version={version} onEdit={() => setEditing(area.id)} onGenerate={() => generate(area.id)} />)}
+     converting={converting?.areaId === area.id ? converting : null} busyElsewhere={!!converting && converting.areaId !== area.id}
+     convertError={convertErrors[area.id] ?? null} tourId={tourIdFor(area.id)} version={version}
+     onEdit={() => setEditing(area.id)} onGenerate={() => generate(area.id)} onConvert={what => { void convert(area.id, what) }} />)}
    </div>}
-  {editing !== null && <TourEditor tour={tour} areaId={editing} scenes={scenes} saved={saved} onSaved={setSaved}
+  {editing !== null && <TourEditor tour={tour} areaId={editing} scenes={walkableScenes} saved={saved} onSaved={setSaved}
    onClose={() => { setEditing(null); setVersion(current => current + 1) }} />}
  </Panel>
 }

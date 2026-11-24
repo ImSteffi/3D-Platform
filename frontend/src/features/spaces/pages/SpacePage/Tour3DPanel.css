@@ -42,3 +42,6 @@
 .panel3d-actions { margin-top: auto; }
 .panel3d-notice { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .panel3d-notice--error { background: rgb(120 24 24 / .92); }
+/* A 3DGS shown before its voxels exist: it can only be flown through. */
+.panel3d-badge { position: absolute; left: 20px; top: 20px; z-index: 1; margin: 0; padding: 5px 12px; border-radius: 999px; background: rgb(20 21 22 / .78);
+ color: rgb(246 245 242 / .9); font-size: 12px; pointer-events: none; }

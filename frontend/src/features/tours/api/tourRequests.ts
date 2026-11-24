@@ -408,21 +408,31 @@ export const spaceTourPath = (publicId: string) => `/tour-viewer/tour.html?tour=
 export type SplatStatus = {
  areaId: number
  status: 'NONE' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
- /** While running: our files going to Atlas, Atlas making it, or our server preparing it for the viewer. */
- phase: 'UPLOADING' | 'PROCESSING' | 'CONVERTING' | null
+ /** While running: our files going to Atlas, Atlas making it, or our server storing its result. Once failed: STORING if Atlas had finished. */
+ phase: 'UPLOADING' | 'PROCESSING' | 'STORING' | null
  error: string | null
  /** Files uploaded to Atlas so far, of all, while UPLOADING. */
  uploaded: number
  total: number
  /** The folder the tour viewer loads (?scene=), once it is made. */
  scene: string | null
+ /** Made, and converted in a browser into the viewer's file: visible (fly mode). */
+ sogReady: boolean
+ /** Its voxels are made too: walking and teleports. */
+ voxelsReady: boolean
  splatCount: number | null
  createdAt: string | null
  finishedAt: string | null
  configured: boolean
- /** Failed after Atlas finished: trying again only converts the kept result, without Atlas credits. */
+ /** Failed after Atlas finished: trying again only fetches the result again, without Atlas credits. */
  retryFree: boolean
 }
 export const getSplats = (id: number) => get<SplatStatus[]>(`${adminRoot}/${id}/splats`)
 /** Spends Atlas credits, unless it only converts a kept result again (retryFree). */
 export const startSplats = (id: number, areaId: number) => send<SplatStatus>('POST', `${adminRoot}/${id}/areas/${areaId}/splats`)
+/** Atlas's .spz of a floor's made 3DGS, which the browser converts into the viewer's files. */
+export const splatSourceUrl = (id: number, areaId: number) => `${adminRoot}/${id}/areas/${areaId}/splats/source.spz`
+/** Uploads one converted file: scene.sog, or scene.voxel.bin then scene.voxel.json. */
+export const uploadSplatFile = (id: number, areaId: number, name: string, bytes: Uint8Array) =>
+ send<SplatStatus>('PUT', `${adminRoot}/${id}/areas/${areaId}/splats/files/${encodeURIComponent(name)}`, undefined,
+  new File([bytes as BlobPart], name, { type: name.endsWith('.json') ? 'application/json' : 'application/octet-stream' }))
