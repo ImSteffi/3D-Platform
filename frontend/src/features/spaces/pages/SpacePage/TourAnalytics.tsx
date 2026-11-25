@@ -1,11 +1,32 @@
 import { useEffect, useState } from 'react'
 import { Icon, InlineError, Panel, Spinner } from '../../../../shared/ui'
-import { analyticsCsvUrl, getTourAnalytics, type TourAnalytics as Stats, type TourDetail } from '../../../tours/api/tourRequests'
-import { Bars, Columns } from './AnalyticsCharts'
+import { analyticsCsvUrl, getTourAnalytics, type AnalyticsTotals, type TourAnalytics as Stats, type TourDetail } from '../../../tours/api/tourRequests'
+import { Bars, Sparkline } from './AnalyticsCharts'
 import { duration } from './analyticsFormat'
 
-const weekdayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const deviceNames: Record<string, string> = { phone: 'Phone', tablet: 'Tablet', computer: 'Computer', headset: 'VR headset', unknown: 'Unknown' }
+
+type Key = 'views' | 'visitors' | 'averageSeconds' | 'embeds'
+const metrics: { key: Key; label: string; hint: string }[] = [
+ { key: 'views', label: 'Views', hint: 'Times a tour was opened' },
+ { key: 'visitors', label: 'Visitors', hint: 'Different people per day' },
+ { key: 'averageSeconds', label: 'Average time', hint: 'Time spent in the tour' },
+ { key: 'embeds', label: 'Embeds', hint: 'Views through the iframe on other sites' },
+]
+
+/** The last 30 days against the 30 before them. */
+function Delta({ now, before }: { now: number; before: number }) {
+ if (now === 0 && before === 0) return <span className="analytics-delta">No change</span>
+ if (before === 0) return <span className="analytics-delta is-up">New</span>
+ const change = Math.round((now - before) / before * 100)
+ if (change === 0) return <span className="analytics-delta">No change</span>
+ return <span className={`analytics-delta ${change > 0 ? 'is-up' : 'is-down'}`}>
+  <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true" style={change < 0 ? { transform: 'rotate(180deg)' } : undefined}>
+   <path d="M6 10V2M2.5 5.5 6 2l3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+  <span className="visually-hidden">{change > 0 ? 'up' : 'down'} </span>{Math.abs(change)}%
+ </span>
+}
 
 /** Viewing stats of this space's tours. Views inside the platform itself are not counted. */
 export default function TourAnalytics({ tour }: { tour: TourDetail }) {
@@ -18,40 +39,36 @@ export default function TourAnalytics({ tour }: { tour: TourDetail }) {
   return () => { live = false }
  }, [tour.id])
 
- const t = stats?.totals
- const metrics = t ? [
-  { label: 'Views', value: t.views, hint: 'Times a tour was opened' },
-  { label: 'Visitors', value: t.visitors, hint: 'Different people per day' },
-  { label: 'Average time', value: duration(t.averageSeconds), hint: 'Time spent in the tour' },
-  { label: 'Embeds', value: t.embeds, hint: 'Views on other sites through the iframe' },
- ] : []
+ const show = (key: Key, totals: AnalyticsTotals) => key === 'averageSeconds' ? duration(totals.averageSeconds) : totals[key].toLocaleString()
+ const series = (key: Key) => stats?.days.map(day => day[key]) ?? []
 
- return <Panel as="section" className="analytics" aria-label="Analytics">
+ return <Panel as="section" className="analytics analytics--rich" aria-label="Analytics">
   <header className="analytics-head">
    <div>
     <h2>Analytics</h2>
+    <p>Last 30 days, compared with the 30 days before</p>
    </div>
-   {t && t.views > 0 && <a className="btn btn-secondary analytics-csv" href={analyticsCsvUrl(tour.id)} download><Icon name="download" size={16} /> Download CSV</a>}
+   {stats && stats.totals.views > 0 && <a className="btn btn-secondary analytics-csv" href={analyticsCsvUrl(tour.id)} download><Icon name="download" size={16} /> Download CSV</a>}
   </header>
   <InlineError>{error}</InlineError>
   {!stats && !error && <Spinner block label="Loading the analytics" />}
   {stats && <>
-   <dl className="analytics-grid">
-    {metrics.map(metric => <div key={metric.label} className="analytics-card">
-     <dt>{metric.label}</dt>
-     <dd className="num">{metric.value}</dd>
-     <p>{metric.hint}</p>
-    </div>)}
-   </dl>
-   {t?.views === 0 && <p className="analytics-quiet">No views yet. Share the tour&rsquo;s URL or IFRAME and the numbers appear here.</p>}
-   <Columns title="Views in the last 30 days" values={stats.days.map(day => day.views)}
-    labels={stats.days.map(day => new Date(day.day).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }))} every={7} />
-   <Bars title="Where views come from" rows={stats.sources} />
-   <div className="analytics-pair">
-    <Columns title="Time of day" values={stats.hours} labels={stats.hours.map((_, hour) => `${hour}:00`)} every={6} />
-    <Columns title="Day of the week" values={stats.weekdays} labels={weekdayNames} />
+   <div className="analytics-overview">
+    <dl className="analytics-kpis">
+     {metrics.map(m => <div key={m.key} className="analytics-kpi">
+      <dt className="analytics-kpi-label">{m.label}</dt>
+      <dd className="analytics-kpi-row">
+       <span className="num analytics-kpi-value">{show(m.key, stats.recent)}</span>
+       <Delta now={stats.recent[m.key]} before={stats.previous[m.key]} />
+      </dd>
+      <dd><Sparkline values={series(m.key)} /></dd>
+      <dd className="analytics-kpi-hint">{m.hint} · all time {show(m.key, stats.totals)}</dd>
+     </div>)}
+    </dl>
    </div>
+   {stats.totals.views === 0 && <p className="analytics-quiet">No views yet. Share the tour&rsquo;s URL or IFRAME and the numbers appear here.</p>}
    <div className="analytics-trio">
+    <Bars title="Where views come from" rows={stats.sources} />
     <Bars title="Devices" rows={stats.devices} name={label => deviceNames[label] ?? label} />
     <Bars title="Regions (time zone)" rows={stats.regions} />
    </div>

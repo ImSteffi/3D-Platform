@@ -5,4 +5,3 @@
 .aa-list a { font-weight: 600; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .aa-list .num { grid-row: 1 / span 2; grid-column: 2; align-self: center; }
 .aa-muted { grid-column: 1; font-size: 13px; color: var(--text-muted, #6b6b6b); }
-.admin-analytics .analytics-bars li { grid-template-columns: minmax(0, 15em) 1fr 4ch; }

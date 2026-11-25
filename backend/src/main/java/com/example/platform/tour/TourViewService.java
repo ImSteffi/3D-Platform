@@ -68,27 +68,27 @@ public class TourViewService {
     // ----- Reading
 
     public record Totals(long views, long visitors, long averageSeconds, long embeds) {}
-    public record Day(String day, long views, long visitors) {}
+    public record Day(String day, long views, long visitors, long averageSeconds, long embeds) {}
     public record Count(String label, long views) {}
     public record Stats(Totals totals, List<Day> days, List<Count> sources, List<Count> devices, List<Count> regions,
-            long[] hours, long[] weekdays) {}
+            long[] hours, long[] weekdays, Totals recent, Totals previous) {}
 
     /** Views by the platform's own people (the tour inside the app) are left out. */
     private static final String COUNTED = "tour_request_id = ? AND source <> 'app'";
 
     public Stats stats(long tourId) {
-        var totals = db.queryForObject("""
-                SELECT count(*), count(DISTINCT visitor), COALESCE(round(avg(seconds)), 0),
-                       count(*) FILTER (WHERE source = 'embed')
-                FROM tour_views WHERE %s""".formatted(COUNTED),
-                (row, n) -> new Totals(row.getLong(1), row.getLong(2), row.getLong(3), row.getLong(4)), tourId);
+        var totals = totals("TRUE", tourId);
+        // The last 30 days, and the 30 before them to compare with.
+        var recent = totals("started_at >= now() - interval '30 days'", tourId);
+        var previous = totals("started_at >= now() - interval '60 days' AND started_at < now() - interval '30 days'", tourId);
 
         var days = db.query("""
-                SELECT d::date, count(v.id), count(DISTINCT v.visitor)
+                SELECT d::date, count(v.id), count(DISTINCT v.visitor), COALESCE(round(avg(v.seconds)), 0),
+                       count(v.id) FILTER (WHERE v.source = 'embed')
                 FROM generate_series((now() AT TIME ZONE 'Europe/Tallinn')::date - 29, (now() AT TIME ZONE 'Europe/Tallinn')::date, interval '1 day') d
                 LEFT JOIN tour_views v ON (v.started_at AT TIME ZONE 'Europe/Tallinn')::date = d::date AND v.tour_request_id = ? AND v.source <> 'app'
                 GROUP BY d ORDER BY d""",
-                (row, n) -> new Day(row.getString(1), row.getLong(2), row.getLong(3)), tourId);
+                (row, n) -> new Day(row.getString(1), row.getLong(2), row.getLong(3), row.getLong(4), row.getLong(5)), tourId);
 
         var sources = counts("""
                 CASE WHEN referrer_host IS NOT NULL THEN referrer_host
@@ -106,7 +106,15 @@ public class TourViewService {
             weekdays[row.getInt(2) - 1] += row.getLong(3);
         }, tourId);
 
-        return new Stats(totals, days, sources, devices, regions, hours, weekdays);
+        return new Stats(totals, days, sources, devices, regions, hours, weekdays, recent, previous);
+    }
+
+    private Totals totals(String when, long tourId) {
+        return db.queryForObject("""
+                SELECT count(*), count(DISTINCT visitor), COALESCE(round(avg(seconds)), 0),
+                       count(*) FILTER (WHERE source = 'embed')
+                FROM tour_views WHERE %s AND %s""".formatted(COUNTED, when),
+                (row, n) -> new Totals(row.getLong(1), row.getLong(2), row.getLong(3), row.getLong(4)), tourId);
     }
 
     /** Daily numbers as CSV, for a report the customer can pass on. */

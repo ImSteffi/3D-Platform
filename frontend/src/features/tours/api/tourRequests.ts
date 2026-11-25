@@ -145,9 +145,11 @@ const adminRoot = '/api/admin/tour-requests'
 export const getTourRequests = () => get<TourSummary[]>(root)
 export const getTourRequest = (id: number) => get<TourDetail>(`${base(id)}`)
 export type AnalyticsCount = { label: string; views: number }
+export type AnalyticsTotals = { views: number; visitors: number; averageSeconds: number; embeds: number }
 export type TourAnalytics = {
- totals: { views: number; visitors: number; averageSeconds: number; embeds: number }
- days: { day: string; views: number; visitors: number }[]
+ /** All time; `recent` is the last 30 days and `previous` the 30 days before them. */
+ totals: AnalyticsTotals; recent: AnalyticsTotals; previous: AnalyticsTotals
+ days: { day: string; views: number; visitors: number; averageSeconds: number; embeds: number }[]
  sources: AnalyticsCount[]; devices: AnalyticsCount[]; regions: AnalyticsCount[]
  hours: number[]; weekdays: number[]
 }
