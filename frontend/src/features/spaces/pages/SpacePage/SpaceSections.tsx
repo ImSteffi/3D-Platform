@@ -13,7 +13,7 @@ import { prepareImages } from '../../../tours/api/prepareImage'
 import type { FloorUpload } from './FloorGallery'
 import AreaSection from './AreaSection'
 import TourAnalytics from './TourAnalytics'
-import Tour3DPanel from './Tour3DPanel'
+import { useTour3D } from './useTour3D'
 import { entriesOf, floorState, message, needsYou, pad, plural, type Entry, type SpaceProps } from './spaceModel'
 import './SpaceSections.css'
 
@@ -27,10 +27,12 @@ type Props = SpaceProps & {
  admin?: boolean
  /** The public gallery page (no account): no deleting the space or its floors. */
  gallery?: boolean
+ /** Team only: opens the space's share dialog (a button next to Analytics). */
+ onShare?: () => void
 }
 
 /** The space before delivery, as one page: the add-plan row, then one section per floor, each with its own to-do. */
-export default function SpaceSections({ tour, version, busy, run, fail, apply, sectionsOnly = false, admin = false, gallery = false }: Props) {
+export default function SpaceSections({ tour, version, busy, run, fail, apply, sectionsOnly = false, admin = false, gallery = false, onShare }: Props) {
  const addArea = admin ? adminAddArea : customerAddArea
  const uploadPlan = admin ? adminUploadPlan : customerUploadPlan
  const removeArea = admin ? adminRemoveArea : customerRemoveArea
@@ -44,10 +46,11 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
 
  // Adding a plan
  const [adding, setAdding] = useState(false)
- /** The floor cards or, in their place, the tours' analytics or (team only) the 3D panel. */
- const [view, setView] = useState<'plans' | 'analytics' | '3d'>('plans')
+ /** The floor cards or, in their place, the tours' analytics. */
+ const [view, setView] = useState<'plans' | 'analytics'>('plans')
  const plans = view === 'plans'
- const toggle = (next: 'analytics' | '3d') => setView(current => current === next ? 'plans' : next)
+ /** Team only: each floor's 3D, shown in its card. */
+ const three = useTour3D(tour, admin && !gallery && !sectionsOnly)
  const [name, setName] = useState('')
  const [kind, setKind] = useState<AreaKind>('FLOOR')
  const [saving, setSaving] = useState(false)
@@ -211,11 +214,10 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
     </div>
     <InlineError>{addError}</InlineError>
    </Panel> : <div className="add-plan">
-    {plans
-     ? <Button variant="secondary" icon="plus" disabled={full} onClick={() => setAdding(true)}>Add plan</Button>
-     : <Button variant="secondary" icon="layers" onClick={() => setView('plans')}>Floor plans</Button>}
-    {!gallery && <Button variant={view === 'analytics' ? 'primary' : 'secondary'} icon="eye" aria-pressed={view === 'analytics'} onClick={() => toggle('analytics')}>Analytics</Button>}
-    {admin && !gallery && <Button variant={view === '3d' ? 'primary' : 'secondary'} icon="cube" aria-pressed={view === '3d'} onClick={() => toggle('3d')}>3D panel</Button>}
+    {plans && <Button variant="secondary" icon="plus" disabled={full} onClick={() => setAdding(true)}>Add plan</Button>}
+    {!gallery && <Button variant={plans ? 'secondary' : 'primary'} icon={plans ? 'chart' : 'back'} aria-pressed={!plans}
+     onClick={() => setView(plans ? 'analytics' : 'plans')}>{plans ? 'Analytics' : 'Back to floors'}</Button>}
+    {onShare && !gallery && <Button variant="secondary" icon="share" onClick={onShare}>Share</Button>}
     {full && plans && <p className="row-reason">A space can have up to {MAX_AREAS} plans.</p>}
    </div>}
    {draft && <div className="sections-next">
@@ -224,7 +226,6 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
   </div>}
 
   {view === 'analytics' && <TourAnalytics tour={tour} />}
-  {view === '3d' && <Tour3DPanel tour={tour} />}
   {/* One section per floor */}
   {plans && states.map(({ area }) => <AreaSection key={area.id} tour={tour} area={area} entries={entries.filter(entry => entry.area.id === area.id)} version={version}
    busy={busy} readOnly={sectionsOnly} primary={area.id === primaryArea} selected={selected} waiting={claimed} srcOf={srcOf}
@@ -232,7 +233,7 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
    onFiles={(files, entry) => addFiles(area, files, entry)} onDelete={entry => { setDeleteError(''); setPhotoToDelete(entry) }}
    onCamera={entry => setCamera(entry?.point.id ?? null)}
    onPlan={plan} onSketch={area => guarded(area, 'draw', () => setSketching(area))} onRemove={removePlan} onRename={(area, name) => run(() => rename(area.id, name))} onStepPlan={(area, forward) => guarded(area, 'replace', () => { void run(() => stepPlan(tour.id, area.id, forward), true) })} onRemovePlan={area => guarded(area, 'unplan', () => { void run(() => dropPlan(tour.id, area.id), true).then(done => { if (done) forgetSketch(sketchKey(area.id)) }) })} removable={!gallery && (draft || tour.areas.length > 1)}
-   floorPhotos={{ uploading: floorUploads[area.id] ?? null, onAdd: files => { void addFloorPhotos(area, files) }, onDelete: photoId => { void run(() => deleteFloorPhoto(tour.id, photoId)) }, onDeleteAll: () => run(() => deleteFloorPhotos(tour.id, area.id)) }} admin={admin ? { markTo: `/review/${tour.id}` } : undefined} />)}
+   floorPhotos={{ uploading: floorUploads[area.id] ?? null, onAdd: files => { void addFloorPhotos(area, files) }, onDelete: photoId => { void run(() => deleteFloorPhoto(tour.id, photoId)) }, onDeleteAll: () => run(() => deleteFloorPhotos(tour.id, area.id)) }} admin={admin ? { markTo: `/review/${tour.id}` } : undefined} stage={three.stage(area)} />)}
   {plans && tour.areas.length === 0 && <Panel><p className="sections-none">{sectionsOnly ? 'This space has no floor plans.'
    : 'No floors yet. Click Add plan for each floor or building, then upload a photo of its floor plan or draw it by hand.'}</p></Panel>}
 
@@ -243,6 +244,7 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
     ? "Removing it deletes those spots and any photos on this floor."
     : "A new plan clears those spots and any photos on this floor, and we mark it again."} This cannot be undone.</p>
   </ConfirmDialog>}
+  {three.editor}
   {sketching && <PlanSketcher key={sketching.id} title={sketching.name} storageKey={sketchKey(sketching.id)}
    onSave={file => run(() => uploadPlan(tour.id, sketching.id, file), true)} onClose={() => setSketching(null)} />}
   {deletingSpace && <ConfirmDialog title="Delete this space?" confirmLabel="Delete space" busy={removing} error={deleteError}

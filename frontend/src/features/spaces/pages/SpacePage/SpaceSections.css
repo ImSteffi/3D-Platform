@@ -290,3 +290,25 @@
 .area-tour3d-stage iframe { flex: 1; width: 100%; min-height: 0; border: 0; border-radius: 12px; background: #111; }
 .area-tour3d-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 @media (max-width: 640px) { .area-tour3d-stage { height: 260px; } }
+
+/* Floor cards in the analytics page's style: a light tile with a hairline, calm head, quiet actions. */
+.panel.area { background: rgb(255 255 255 / .62); border: 0; box-shadow: 0 1px 2px rgb(23 25 27 / .04), 0 12px 32px -18px rgb(23 25 27 / .18), inset 0 0 0 1px var(--hair); border-radius: 18px; }
+.area-name h2 { font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
+.area-actions { align-items: center; }
+.area-actions .area-rename-btn, .area-menu-toggle { width: 40px; padding: 0; justify-content: center; }
+/* The floor's other actions: a small list under the "more" button. */
+.area-menu { position: relative; }
+.area-menu-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; display: grid; min-width: 230px; padding: 6px; border-radius: 14px; background: #fff;
+ box-shadow: 0 12px 32px -8px rgb(23 25 27 / .28), inset 0 0 0 1px var(--hair); }
+.area-menu-list[hidden] { display: none; }
+.area-menu-list .btn { justify-content: flex-start; width: 100%; border-radius: 10px; }
+.area-menu-list .area-menu-danger:hover:not(:disabled) { color: var(--red); }
+/* Team: the floor's 3D sits next to its plan, in the same card. */
+.area-tour3d--team .panel3d-card { flex: 1; border: 0; border-radius: var(--r-card); background: none; }
+.area-tour3d--team .panel3d-stage { height: 360px; border-radius: var(--r-card); }
+.area-tour3d--team .panel3d-switch { margin: 12px 0 0; }
+.area-tour3d--team .panel3d-card-body { padding: var(--s-3) 0 0; }
+.area-tour3d--team .panel3d-actions .btn { letter-spacing: 0; }
+@media (max-width: 640px) {
+ .area-tour3d--team .panel3d-stage { height: 260px; }
+}

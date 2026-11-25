@@ -25,3 +25,15 @@
 .space-skel-actions { display: flex; gap: var(--s-5); margin-left: auto; }
 .space-skel .area-head { display: flex; align-items: center; }
 .space-skel .space-skel-plan { width: 100%; }
+
+/* The space page holds many buttons at once: they are a size smaller here, so the plan, the 3D and the photos lead. */
+.page.space .btn:not(.btn-lg) { height: 36px; gap: 7px; padding: 0 15px; border-radius: 18px; font-size: 13px; }
+.page.space .btn.btn-quiet:not(.btn-lg) { padding: 0 11px; }
+.page.space .btn.btn-icon-only:not(.btn-lg), .page.space .btn.area-rename-btn, .page.space .btn.area-menu-toggle { width: 36px; padding: 0; }
+.page.space .btn:not(.btn-lg) svg { width: 15px; height: 15px; }
+.page.space .area-menu-list .btn:not(.btn-lg) { height: 34px; }
+/* Fingers need a little more room. */
+@media (pointer: coarse) {
+ .page.space .btn:not(.btn-lg) { height: 40px; border-radius: 20px; }
+ .page.space .btn.btn-icon-only:not(.btn-lg), .page.space .btn.area-rename-btn, .page.space .btn.area-menu-toggle { width: 40px; }
+}

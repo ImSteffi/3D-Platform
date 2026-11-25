@@ -49,6 +49,28 @@ type Props = {
  send?: ReactNode
  /** Photos added to this floor directly (no plan or spot needed). Omit to hide the floor gallery. */
  floorPhotos?: { uploading: FloorUpload | null; onAdd: (files: File[]) => void; onDelete: (photoId: number) => void; onDeleteAll: () => Promise<boolean> }
+ /** Team only: this floor's 3D (the 3DGS or its spatial context), shown next to the plan. */
+ stage?: ReactNode
+}
+
+/** A floor's less used actions (plan and floor changes) behind one quiet button, so the card's head stays calm. */
+function FloorMenu({ label, children }: { label: string; children: ReactNode }) {
+ const [open, setOpen] = useState(false)
+ const root = useRef<HTMLDivElement>(null)
+ useEffect(() => {
+  if (!open) return
+  const close = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false) }
+  const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setOpen(false); root.current?.querySelector<HTMLElement>('.area-menu-toggle')?.focus() } }
+  document.addEventListener('pointerdown', close)
+  document.addEventListener('keydown', escape)
+  return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', escape) }
+ }, [open])
+ return <div className="area-menu" ref={root}>
+  <Button variant="quiet" icon="more" className="area-menu-toggle" aria-label={label} title={label} aria-expanded={open} onClick={() => setOpen(current => !current)} />
+  {/* A click on an item runs it, then the list closes. The list stays in the page while closed, so a file picker
+      opened from it still delivers its file. */}
+  <div className="area-menu-list" role="group" aria-label={label} hidden={!open} onClick={() => setOpen(false)}>{children}</div>
+ </div>
 }
 
 const stateWords = { retake: 'needs a retake', taken: 'photo taken', next: 'next', todo: 'to do' }
@@ -70,7 +92,7 @@ function imageIn(data: DataTransfer | null): File | undefined {
 
 
 /** One floor: its own to-do, then the flat plan on the left and that floor's photos on the right. */
-export default function AreaSection({ tour, area, entries, version, busy, readOnly = false, primary, selected, waiting, srcOf, onSelect, onFiles, onDelete, onCamera, onPlan, onSketch, onRemove, onRemovePlan, onRename, onStepPlan, admin, send, removable = true, floorPhotos }: Props) {
+export default function AreaSection({ tour, area, entries, version, busy, readOnly = false, primary, selected, waiting, srcOf, onSelect, onFiles, onDelete, onCamera, onPlan, onSketch, onRemove, onRemovePlan, onRename, onStepPlan, admin, send, removable = true, floorPhotos, stage }: Props) {
  const status = tour.status
  const state = floorState(status, area)
  /** Photos can be added, replaced and deleted. */
@@ -102,7 +124,7 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
  // (The team's spatial context and 3D generation live in the 3D panel, not here.)
  const tour3d = !admin ? area.tour3d ?? null : null
  const making = !admin && !tourMade && !!area.spatialReady && !tour3d
- const wide = making || !!tour3d
+ const wide = making || !!tour3d || !!stage
  const [sharing, setSharing] = useState(false)
 
  // A floor plan pasted from the clipboard: the paste button, or Ctrl/Cmd+V while the plan box is focused or hovered.
@@ -191,12 +213,15 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
    </div>
    {admin && open && area.hasPlan && <Button variant="secondary" className="area-mark" to={admin.markTo}>{entries.length ? 'Edit spots' : 'Mark spots'}</Button>}
    {planOpen && <div className="area-actions">
-    {area.hasPlan && <FileButton variant="quiet" icon="upload" accept={planPickerAccept} disabled={busy} onFiles={files => onPlan(area, files[0])}>Replace plan</FileButton>}
-    {area.hasPlan && <Button variant="quiet" icon="copy" disabled={busy} onClick={pasteFromClipboard}>Paste from clipboard</Button>}
-    {area.hasPlan && <Button variant="quiet" icon="edit" disabled={busy} onClick={() => onSketch(area)}>{hasDrawing ? 'Edit drawing' : 'Draw floor plan'}</Button>}
-    {area.hasPlan && <Button variant="quiet" icon="trash" disabled={busy} onClick={() => onRemovePlan(area)}>Remove plan</Button>}
-    {open && !renaming && <Button variant="quiet" icon="edit" disabled={busy} onClick={() => { setName(area.name); setRenaming(true) }}>Rename floor</Button>}
-    {removable && <Button variant="quiet" icon="trash" disabled={busy} onClick={() => onRemove(area)}>Remove floor</Button>}
+    {open && !renaming && <Button variant="quiet" icon="edit" className="area-rename-btn" aria-label="Rename floor" title="Rename floor" disabled={busy}
+     onClick={() => { setName(area.name); setRenaming(true) }} />}
+    {(area.hasPlan || removable) && <FloorMenu label={`More for ${area.name}`}>
+     {area.hasPlan && <FileButton variant="quiet" icon="upload" accept={planPickerAccept} disabled={busy} onFiles={files => onPlan(area, files[0])}>Replace plan</FileButton>}
+     {area.hasPlan && <Button variant="quiet" icon="copy" disabled={busy} onClick={pasteFromClipboard}>Paste plan from clipboard</Button>}
+     {area.hasPlan && <Button variant="quiet" icon="edit" disabled={busy} onClick={() => onSketch(area)}>{hasDrawing ? 'Edit drawing' : 'Draw floor plan'}</Button>}
+     {area.hasPlan && <Button variant="quiet" icon="trash" disabled={busy} onClick={() => onRemovePlan(area)}>Remove plan</Button>}
+     {removable && <Button variant="quiet" icon="trash" className="area-menu-danger" disabled={busy} onClick={() => onRemove(area)}>Remove floor</Button>}
+    </FloorMenu>}
    </div>}
   </header>
 
@@ -229,6 +254,7 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
     </div>}
    </div>
    {/* The operator sees photos only once there are some: no empty section and no title. */}
+   {stage && <div className="area-tour3d area-tour3d--team">{stage}</div>}
    {making && <div className="area-making" role="status"><p>We are making your 3D tour</p></div>}
    {tour3d && <div className="area-tour3d">
     <div className="area-tour3d-stage">

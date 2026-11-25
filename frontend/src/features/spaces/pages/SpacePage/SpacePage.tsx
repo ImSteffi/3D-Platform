@@ -122,13 +122,14 @@ export default function SpacePage() {
     <h1>{tour.name}</h1>
     <p>{line}</p>
    </div>
-   {admin && <div className="space-admin-tools">
+   {/* Before delivery, Share sits next to Analytics; a delivered space has no such row, so it stays up here. */}
+   {admin && tour.status === 'DELIVERED' && <div className="space-admin-tools">
     <Button icon="share" onClick={() => setSharing(true)}>Share</Button>
    </div>}
   </header>
   <InlineError>{error}</InlineError>
   {/* One page per space. The old tab segments (plan, photos, tour, share) all land here; "share" opens the share cards. */}
-  {tour.status === 'DELIVERED' ? <DeliveredSpace {...props} share={tab === 'share'} /> : <SpaceSections {...props} admin={admin} />}
+  {tour.status === 'DELIVERED' ? <DeliveredSpace {...props} share={tab === 'share'} /> : <SpaceSections {...props} admin={admin} onShare={admin ? () => setSharing(true) : undefined} />}
   {sharing && <ShareDialog spaceId={tour.id} ownerName={tour.ownerName} onClose={() => setSharing(false)} />}
  </main>
 }
