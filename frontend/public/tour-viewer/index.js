@@ -92947,6 +92947,14 @@ const swapScene = async (viewer, contentUrl, collisionUrl) => {
     const old = viewer.gsplatEntity;
     viewer.gsplatEntity = entity;
     old?.destroy();
+    // The old floor's splats stay in memory (and on the GPU) until their asset is unloaded: without this every
+    // teleport to another floor kept one more whole 3DGS, until the tour started to stutter.
+    const current = entity.gsplat?.asset;
+    for (const asset of [...app.assets.list()]) {
+        if (asset.type !== 'gsplat' || asset === current || asset.id === current) continue;
+        asset.unload();
+        app.assets.remove(asset);
+    }
     viewer.inputController.collision = collision;
     viewer.cameraManager.setCollision?.(collision);
     if (viewer.navCursor) viewer.navCursor.collision = collision;
