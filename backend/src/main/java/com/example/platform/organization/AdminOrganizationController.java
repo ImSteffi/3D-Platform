@@ -14,9 +14,24 @@ import org.springframework.web.server.ResponseStatusException;
 public class AdminOrganizationController {
 
     private final OrganizationRepository organizations;
+    private final OrganizationRemovalService removal;
 
-    public AdminOrganizationController(OrganizationRepository organizations) {
+    public AdminOrganizationController(OrganizationRepository organizations, OrganizationRemovalService removal) {
         this.organizations = organizations;
+        this.removal = removal;
+    }
+
+    /** What deleting the organization would remove, shown before the team confirms. */
+    @GetMapping("/{id}/removal")
+    public OrganizationRemovalService.Removal removal(@PathVariable Long id) {
+        return removal.preview(id);
+    }
+
+    /** Deletes the organization, its people, their spaces and every file of them. Cannot be undone. */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        removal.delete(id);
     }
 
     @PutMapping("/{id}")

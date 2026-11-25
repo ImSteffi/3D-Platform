@@ -27,3 +27,9 @@ export const removeTeamMember = (id: number) => call<void>('DELETE', `/api/admin
 /** Admin only: give a customer a new name. */
 export const renameOrganization = (id: number, name: string) =>
  call<{ id: number; name: string }>('PUT', `/api/admin/organizations/${id}`, { name })
+
+/** What deleting an organization removes: its people, their spaces and everything in them. */
+export type OrganizationRemoval = { name: string; people: number; spaces: number; floors: number; photos: number; tours: number }
+export const getOrganizationRemoval = (id: number) => call<OrganizationRemoval>('GET', `/api/admin/organizations/${id}/removal`)
+/** Admin only: delete an organization for good, with its people, spaces and files. */
+export const deleteOrganization = (id: number) => call<void>('DELETE', `/api/admin/organizations/${id}`)

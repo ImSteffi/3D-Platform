@@ -1,11 +1,11 @@
 import BackLink from '../../../../shared/ui/BackLink/BackLink'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { useParams } from 'react-router'
-import { Button, EmptyState, Field, InlineError, Panel, Skeleton, SkeletonGroup } from '../../../../shared/ui'
+import { useNavigate, useParams } from 'react-router'
+import { Button, ConfirmDialog, EmptyState, Field, InlineError, Panel, Skeleton, SkeletonGroup } from '../../../../shared/ui'
 import DeskRowsSkeleton from '../../components/DeskRowsSkeleton'
 import { useShellMode } from '../../../../shared/layout/Backdrop'
 import { getOrganizations, type Organization } from '../../api/organizations'
-import { renameOrganization } from '../../api/team'
+import { deleteOrganization, getOrganizationRemoval, renameOrganization, type OrganizationRemoval } from '../../api/team'
 import { getOrganizationUsers, type OrganizationUser } from '../../api/organizationUsers'
 import OrganizationSpaces from './OrganizationSpaces'
 import OrganizationTours from '../../../projects/components/OrganizationTours/OrganizationTours'
@@ -27,6 +27,22 @@ export default function OrganizationDetailsPage() {
  const [newName, setNewName] = useState('')
  const [renameError, setRenameError] = useState('')
  const [savingName, setSavingName] = useState(false)
+ const navigate = useNavigate()
+ const [removal, setRemoval] = useState<OrganizationRemoval | null>(null)
+ const [removing, setRemoving] = useState(false)
+ const [removeError, setRemoveError] = useState('')
+
+ async function askRemove() {
+  setRemoveError('')
+  try { setRemoval(await getOrganizationRemoval(id)) }
+  catch (reason) { setRenameError(reason instanceof Error ? reason.message : 'Could not check this organization. Try again.') }
+ }
+ async function removeOrganization() {
+  setRemoving(true); setRemoveError('')
+  try { await deleteOrganization(id); navigate('/users', { replace: true }) }
+  catch (reason) { setRemoveError(reason instanceof Error ? reason.message : 'Could not delete this organization. Try again.'); setRemoving(false) }
+ }
+ const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
  async function saveName(event: FormEvent<HTMLFormElement>) {
   event.preventDefault()
@@ -76,12 +92,19 @@ export default function OrganizationDetailsPage() {
       <div className="desk-form-actions">
        <Button type="submit" loading={savingName}>Save</Button>
        <Button variant="secondary" onClick={() => setRenaming(false)}>Cancel</Button>
+       <Button variant="danger" icon="trash" className="org-delete" onClick={() => { void askRemove() }}>Delete organization</Button>
       </div>
      </form>
      : <h1 className="desk-title">{organization?.name ?? 'Customer'}</h1>}
    </div>
-   {organization && !renaming && <Button variant="secondary" icon="edit" onClick={() => { setNewName(organization.name); setRenameError(''); setRenaming(true) }}>Rename</Button>}
+   {organization && !renaming && <Button variant="secondary" icon="edit" onClick={() => { setNewName(organization.name); setRenameError(''); setRenaming(true) }}>Edit</Button>}
   </header>
+
+  {removal && <ConfirmDialog title={`Delete ${removal.name}?`} confirmLabel="Delete organization" busy={removing} busyLabel="Deleting…"
+   error={removeError} onConfirm={() => { void removeOrganization() }} onCancel={() => setRemoval(null)}>
+   <p>This deletes {count(removal.people, 'person', 'people')}, {count(removal.spaces, 'space', 'spaces')}, {count(removal.floors, 'floor', 'floors')}, {count(removal.photos, 'photo', 'photos')} and {count(removal.tours, '3D tour', '3D tours')}, with all their files. Shared links and embeds stop working.</p>
+   <p>This cannot be undone.</p>
+  </ConfirmDialog>}
 
   <Panel padding="lg" className="desk-window">
    {loading ? <SkeletonGroup label="Loading customer">

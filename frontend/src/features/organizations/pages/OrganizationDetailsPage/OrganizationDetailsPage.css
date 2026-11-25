@@ -3,3 +3,5 @@
 .customer-page .empty-title { font-size: 17px; }
 .customer-page .empty-text { font-size: 14px; }
 .org-rename { display: grid; gap: var(--s-3); min-width: min(420px, 100%); margin-top: var(--s-2); }
+.org-rename .desk-form-actions { flex-wrap: wrap; }
+.org-delete { margin-left: auto; }
