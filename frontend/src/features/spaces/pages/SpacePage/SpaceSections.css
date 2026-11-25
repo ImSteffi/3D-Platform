@@ -116,6 +116,16 @@
 .frame-delete:active:not(:disabled) { transform: scale(.92); }
 .frame-delete:focus-visible { outline: 2px solid #fff; outline-offset: 0; box-shadow: 0 0 0 4px var(--ink); }
 @media (hover: none) { .frame-delete { opacity: 1; } }
+/* Save one photo: next to its delete button, or in its place when the photo cannot be deleted here. */
+.frame-download { position: absolute; bottom: 5px; right: 40px; z-index: 2; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: rgba(255, 255, 255, .92); color: var(--ink); box-shadow: 0 2px 6px rgba(23, 25, 27, .28); transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.frame-download--alone { right: 5px; }
+.frame-download::before { content: ''; position: absolute; inset: -6px; }
+.frame-download:hover { background: var(--ink); color: #fff; }
+.frame-download:active { transform: scale(.92); }
+.frame-download:focus-visible { outline: 2px solid #fff; outline-offset: 0; box-shadow: 0 0 0 4px var(--ink); }
+.floor-gallery-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); margin-top: var(--s-3); }
+.floor-gallery-delete-all { margin-left: auto; }
+.floor-gallery-delete-all:hover:not(:disabled) { color: var(--red); }
 
 @media (max-width: 1100px) {
  .todo-step:not(:last-child)::after { width: 14px; margin: 0 var(--s-2); }

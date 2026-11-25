@@ -48,7 +48,7 @@ type Props = {
  /** The request's send button, shown under this floor's photos. */
  send?: ReactNode
  /** Photos added to this floor directly (no plan or spot needed). Omit to hide the floor gallery. */
- floorPhotos?: { uploading: FloorUpload | null; onAdd: (files: File[]) => void; onDelete: (photoId: number) => void }
+ floorPhotos?: { uploading: FloorUpload | null; onAdd: (files: File[]) => void; onDelete: (photoId: number) => void; onDeleteAll: () => Promise<boolean> }
 }
 
 const stateWords = { retake: 'needs a retake', taken: 'photo taken', next: 'next', todo: 'to do' }
@@ -246,7 +246,7 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
      ? floorPhotos || (area.photos?.length ?? 0) > 0
       ? <FloorGallery tour={tour} area={area} version={version} busy={busy} uploading={floorPhotos?.uploading ?? null}
         editable={!!floorPhotos && open && !tourMade} title="Photos" hint={state === 'no-plan' || state === 'plan-added' || state === 'marking' ? undefined : title}
-        onAdd={files => floorPhotos?.onAdd(files)} onDelete={photoId => floorPhotos?.onDelete(photoId)} />
+        onAdd={files => floorPhotos?.onAdd(files)} onDelete={photoId => floorPhotos?.onDelete(photoId)} onDeleteAll={floorPhotos?.onDeleteAll} />
       : readOnly
       ? <p className="area-quiet">No photos were needed for this floor.</p>
       : <div className="area-status">
@@ -287,7 +287,7 @@ export default function AreaSection({ tour, area, entries, version, busy, readOn
       </ol>
       {/* Photos added before the spots were marked stay with the floor. */}
       {(area.photos?.length ?? 0) > 0 && <FloorGallery tour={tour} area={area} version={version} busy={busy} uploading={floorPhotos?.uploading ?? null}
-       editable={!!floorPhotos && open && !tourMade} title="Other photos" onAdd={files => floorPhotos?.onAdd(files)} onDelete={photoId => floorPhotos?.onDelete(photoId)} />}
+       editable={!!floorPhotos && open && !tourMade} title="Other photos" onAdd={files => floorPhotos?.onAdd(files)} onDelete={photoId => floorPhotos?.onDelete(photoId)} onDeleteAll={floorPhotos?.onDeleteAll} />}
       {send && <div className="area-send">{send}</div>}
      </>}
    </div>}

@@ -12,6 +12,8 @@ type Props = {
  busy: boolean
  onIndex: (index: number) => void
  onDelete: () => void
+ /** Saves the photo shown as a file. */
+ downloadUrl?: string
  onClose: () => void
 }
 
@@ -25,7 +27,7 @@ function retry(event: SyntheticEvent<HTMLImageElement>) {
 }
 
 /** One floor photo at a time, large, over a dark backdrop. Arrow keys step, Esc closes. */
-export default function FloorPhotoViewer({ urls, index, title, canDelete, busy, onIndex, onDelete, onClose }: Props) {
+export default function FloorPhotoViewer({ urls, index, title, canDelete, downloadUrl, busy, onIndex, onDelete, onClose }: Props) {
  const root = useRef<HTMLDivElement>(null)
  const count = urls.length
  const step = (by: number) => { if (count > 1) onIndex((index + by + count) % count) }
@@ -63,6 +65,7 @@ export default function FloorPhotoViewer({ urls, index, title, canDelete, busy, 
   <div className="photo-viewer-bar">
    <span className="photo-viewer-count" aria-live="polite">{index + 1} / {count}</span>
    <div className="photo-viewer-actions">
+    {downloadUrl && <Button variant="secondary" icon="download" href={downloadUrl} download>Download</Button>}
     {canDelete && <Button variant="secondary" icon="trash" disabled={busy} onClick={onDelete}>Delete</Button>}
     <Button variant="secondary" icon="close" aria-label="Close" title="Close (Esc)" onClick={onClose} />
    </div>

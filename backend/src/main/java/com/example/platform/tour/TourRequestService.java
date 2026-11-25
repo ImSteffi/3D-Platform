@@ -315,6 +315,92 @@ public class TourRequestService {
         return signedUrl(floorPhoto(accessible(id, user(authentication)), photoId).getObjectKey());
     }
 
+    /** The same photo, but saved as a file named after the space, the floor and its place on the floor. */
+    @Transactional(readOnly = true)
+    public String floorPhotoDownloadUrl(Long id, Long photoId, Authentication authentication) {
+        var photo = floorPhoto(accessible(id, user(authentication)), photoId);
+        var area = photo.getArea();
+        var all = floorPhotos.findByArea_IdOrderByIdAsc(area.getId());
+        int number = 1 + all.indexOf(photo);
+        var type = r2.headObject(b -> b.bucket(bucket).key(photo.getObjectKey())).contentType();
+        var name = photoFileName(area, number, type);
+        return signer.presignGetObject(GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofMinutes(10))
+                .getObjectRequest(GetObjectRequest.builder().bucket(bucket).key(photo.getObjectKey())
+                        .responseCacheControl("private, no-store")
+                        .responseContentDisposition(attachment(name)).build())
+                .build()).url().toString();
+    }
+
+    /** A floor's photos, in order, to be packed into one download. */
+    public record PhotoSet(String fileName, String folder, List<String> keys) {}
+
+    @Transactional(readOnly = true)
+    public PhotoSet floorPhotoSet(Long id, Long areaId, Authentication authentication) {
+        var area = area(accessible(id, user(authentication)), areaId);
+        var keys = floorPhotos.findByArea_IdOrderByIdAsc(areaId).stream().map(FloorPhoto::getObjectKey).toList();
+        if (keys.isEmpty()) throw error(404, "This floor has no photos.");
+        var folder = safeName(area.getTourRequest().getName() + " - " + area.getName());
+        return new PhotoSet(folder + ".zip", folder, keys);
+    }
+
+    /** Writes a floor's photos into one ZIP, read from storage one at a time. */
+    public void writePhotoZip(PhotoSet set, java.io.OutputStream output) throws java.io.IOException {
+        try (var zip = new java.util.zip.ZipOutputStream(output)) {
+            // Photos are compressed already: storing them as they are is as small and much quicker.
+            zip.setLevel(java.util.zip.Deflater.NO_COMPRESSION);
+            int number = 1;
+            for (var key : set.keys()) {
+                try (var object = r2.getObject(b -> b.bucket(bucket).key(key))) {
+                    zip.putNextEntry(new java.util.zip.ZipEntry(set.folder() + "/" + String.format("%02d", number)
+                            + extension(object.response().contentType())));
+                    object.transferTo(zip);
+                    zip.closeEntry();
+                }
+                number++;
+            }
+        }
+    }
+
+    @Transactional
+    public Detail deleteFloorPhotos(Long id, Long areaId, Authentication authentication) {
+        if (viaLink(authentication)) throw error(403, "Photos can only be deleted one at a time here.");
+        var user = user(authentication);
+        var tour = accessible(id, user);
+        requireNotDelivered(tour);
+        var area = area(tour, areaId);
+        var photos = floorPhotos.findByArea_IdOrderByIdAsc(area.getId());
+        var keys = photos.stream().map(FloorPhoto::getObjectKey).toList();
+        floorPhotos.deleteAll(photos);
+        floorPhotos.flush();
+        keys.forEach(this::discard);
+        return detail(tour, user);
+    }
+
+    private static String photoFileName(TourArea area, int number, String type) {
+        return safeName(area.getTourRequest().getName() + " - " + area.getName() + " - " + String.format("%02d", number)) + extension(type);
+    }
+
+    private static String extension(String type) {
+        if ("image/png".equals(type)) return ".png";
+        if ("image/webp".equals(type)) return ".webp";
+        return ".jpg";
+    }
+
+    /** A name that is safe as a file name everywhere: no slashes, quotes or control characters. */
+    static String safeName(String name) {
+        var clean = (name == null ? "" : name).replaceAll("[\\p{Cntrl}\\\\/:*?\"<>|]+", " ").replaceAll("\\s+", " ").strip();
+        if (clean.length() > 120) clean = clean.substring(0, 120).strip();
+        return clean.isEmpty() ? "Photos" : clean;
+    }
+
+    /** Content-Disposition for a download, with the real (UTF-8) name and a plain fallback for old browsers. */
+    static String attachment(String name) {
+        var plain = name.replaceAll("[^\\x20-\\x7E]", "_");
+        var encoded = java.net.URLEncoder.encode(name, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+        return "attachment; filename=\"" + plain + "\"; filename*=UTF-8''" + encoded;
+    }
+
     @Transactional
     public Detail deleteFloorPhoto(Long id, Long photoId, Authentication authentication) {
         var user = user(authentication);

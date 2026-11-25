@@ -377,6 +377,12 @@ export const addFloorPhoto = (id: number, areaId: number, file: File) =>
 export const deleteFloorPhoto = (id: number, photoId: number) =>
  send<TourDetail>('DELETE', `${base(id)}/floor-photos/${photoId}`)
 export const floorPhotoUrl = (id: number, photoId: number) => `${base(id)}/floor-photos/${photoId}`
+/** The same photo saved as a file, named after the space and the floor. */
+export const floorPhotoDownloadUrl = (id: number, photoId: number) => `${root}/${id}/floor-photos/${photoId}/download`
+/** All of a floor's photos in one ZIP. */
+export const floorPhotosZipUrl = (id: number, areaId: number) => `${root}/${id}/areas/${areaId}/photos/download`
+export const deleteFloorPhotos = (id: number, areaId: number) =>
+ send<TourDetail>('DELETE', `${root}/${id}/areas/${areaId}/photos`)
 
 /** The team's overview of the whole platform (Analytics page). */
 export type AdminCount = { label: string; count: number }

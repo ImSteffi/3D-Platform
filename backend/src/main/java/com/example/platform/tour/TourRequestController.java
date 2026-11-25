@@ -122,6 +122,28 @@ public class TourRequestController {
         return redirect(service.floorPhotoUrl(id, photoId, authentication));
     }
 
+    @GetMapping("/{id}/floor-photos/{photoId}/download")
+    public ResponseEntity<Void> downloadFloorPhoto(@PathVariable Long id, @PathVariable Long photoId, Authentication authentication) {
+        return redirect(service.floorPhotoDownloadUrl(id, photoId, authentication));
+    }
+
+    // All of a floor's photos as one ZIP, streamed: nothing is held in memory or stored.
+    @GetMapping("/{id}/areas/{areaId}/photos/download")
+    public ResponseEntity<org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody> downloadFloorPhotos(
+            @PathVariable Long id, @PathVariable Long areaId, Authentication authentication) {
+        var set = service.floorPhotoSet(id, areaId, authentication);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .header("Content-Type", "application/zip")
+                .header("Content-Disposition", TourRequestService.attachment(set.fileName()))
+                .body(output -> service.writePhotoZip(set, output));
+    }
+
+    @DeleteMapping("/{id}/areas/{areaId}/photos")
+    public TourRequestService.Detail deleteFloorPhotos(@PathVariable Long id, @PathVariable Long areaId,
+            Authentication authentication) {
+        return service.deleteFloorPhotos(id, areaId, authentication);
+    }
+
     @DeleteMapping("/{id}/floor-photos/{photoId}")
     public TourRequestService.Detail deleteFloorPhoto(@PathVariable Long id, @PathVariable Long photoId,
             Authentication authentication) {

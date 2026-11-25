@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Icon, Spinner } from '../../../../shared/ui'
-import { floorPhotoUrl, onGalleryLink, type TourArea, type TourDetail } from '../../../tours/api/tourRequests'
+import { Button, ConfirmDialog, Icon, Spinner } from '../../../../shared/ui'
+import { floorPhotoDownloadUrl, floorPhotosZipUrl, floorPhotoUrl, onGalleryLink, type TourArea, type TourDetail } from '../../../tours/api/tourRequests'
 import FileButton from './FileButton'
 import FloorCamera from './FloorCamera'
 import FloorPhotoViewer from './FloorPhotoViewer'
@@ -27,12 +27,14 @@ type Props = {
  hint?: string
  onAdd: (files: File[]) => void
  onDelete: (photoId: number) => void
+ /** Deletes every photo of this floor; resolves true once done. Not offered on a gallery link. */
+ onDeleteAll?: () => Promise<boolean>
  /** Team only: photos added after the spatial context was made. Shown first, outlined. */
  fresh?: number[]
 }
 
 /** A floor's own photos: added straight away, with or without a plan. Shown on the right of the floor card. */
-export default function FloorGallery({ tour, area, busy, uploading, editable, title, hint, onAdd, onDelete, fresh }: Props) {
+export default function FloorGallery({ tour, area, busy, uploading, editable, title, hint, onAdd, onDelete, onDeleteAll, fresh }: Props) {
  // New photos (not in the spatial context yet) come first so they are seen.
  const photos = fresh?.length ? [...(area.photos ?? []).filter(id => fresh.includes(id)), ...(area.photos ?? []).filter(id => !fresh.includes(id))] : area.photos ?? []
  const full = photos.length >= MAX_PHOTOS
@@ -45,6 +47,18 @@ export default function FloorGallery({ tour, area, busy, uploading, editable, ti
  const [camera, setCamera] = useState(false)
  const room = MAX_PHOTOS - photos.length
  const canDelete = (photoId: number) => editable && (!onGalleryLink() || !!area.linkPhotos?.includes(photoId))
+ // Saving photos is for people signed in to the space, not for someone sending photos through a gallery link.
+ const canDownload = !onGalleryLink()
+ const canDeleteAll = editable && !onGalleryLink() && !!onDeleteAll
+ const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
+ const [deletingAll, setDeletingAll] = useState(false)
+ async function deleteAll() {
+  if (!onDeleteAll) return
+  setDeletingAll(true)
+  const done = await onDeleteAll()
+  setDeletingAll(false)
+  if (done) { setConfirmDeleteAll(false); setOpen(false) }
+ }
  // The photo open in the viewer. If it goes (deleted), the one that took its place is shown; none left closes it.
  const [viewing, setViewing] = useState<{ id: number; index: number } | null>(null)
  const shown = viewing ? (photos.includes(viewing.id) ? viewing.id : photos[Math.min(viewing.index, photos.length - 1)] ?? null) : null
@@ -102,6 +116,8 @@ export default function FloorGallery({ tour, area, busy, uploading, editable, ti
        // A signed link can fail once right after an upload: try again a moment later.
        onError={event => { const img = event.currentTarget; if (!img.dataset.retried) { img.dataset.retried = '1'; window.setTimeout(() => { img.src = floorPhotoUrl(tour.id, photoId) + '?retry=1' }, 1500) } }} />
      </button>
+     {canDownload && <a className={`frame-download${canDelete(photoId) ? '' : ' frame-download--alone'}`} href={floorPhotoDownloadUrl(tour.id, photoId)} download
+      aria-label={`Download photo ${index + 1}`} title="Download this photo"><Icon name="download" size={15} /></a>}
      {canDelete(photoId) && <button type="button" className="frame-delete" disabled={busy} aria-label={`Delete photo ${index + 1}`}
       title="Delete this photo" onClick={() => onDelete(photoId)}><Icon name="trash" size={15} /></button>}
     </div>
@@ -113,8 +129,16 @@ export default function FloorGallery({ tour, area, busy, uploading, editable, ti
    </li>}
   </ol>
   : null}
+  {hasPhotos && (canDownload || canDeleteAll) && <div className="floor-gallery-tools">
+   {canDownload && <Button variant="quiet" icon="download" href={floorPhotosZipUrl(tour.id, area.id)} download>Download all</Button>}
+   {canDeleteAll && <Button variant="quiet" icon="trash" className="floor-gallery-delete-all" disabled={busy || !!uploading} onClick={() => setConfirmDeleteAll(true)}>Delete all</Button>}
+  </div>}
+  {confirmDeleteAll && <ConfirmDialog title={`Delete all ${photos.length} photos?`} confirmLabel="Delete all photos" busy={deletingAll}
+   onConfirm={() => { void deleteAll() }} onCancel={() => setConfirmDeleteAll(false)}>
+   <p>This deletes every photo of <strong>{title === 'Photos' ? area.name : title}</strong> for good. You cannot undo this.</p>
+  </ConfirmDialog>}
   {shown !== null && <FloorPhotoViewer urls={photos.map(id => floorPhotoUrl(tour.id, id))} index={shownIndex} title={title}
-   canDelete={canDelete(shown)} busy={busy} onIndex={next => setViewing({ id: photos[next], index: next })} onDelete={() => onDelete(shown)} onClose={closeViewer} />}
+   canDelete={canDelete(shown)} downloadUrl={canDownload ? floorPhotoDownloadUrl(tour.id, shown) : undefined} busy={busy} onIndex={next => setViewing({ id: photos[next], index: next })} onDelete={() => onDelete(shown)} onClose={closeViewer} />}
   {camera && <FloorCamera title={title} room={room} onDone={files => onAdd(files.slice(0, Math.max(0, room)))} onClose={() => setCamera(false)} />}
  </div>
 }
