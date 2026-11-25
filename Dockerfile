@@ -15,7 +15,6 @@ COPY backend/pom.xml backend/pom.xml
 RUN mvn -B -f backend/pom.xml dependency:go-offline
 
 COPY backend/src backend/src
-COPY --from=viewer-build /app/frontend/viewer-dist frontend/viewer-dist
 COPY --from=viewer-build /app/frontend/dist backend/src/main/resources/static
 
 RUN mvn -B -f backend/pom.xml package -DskipTests

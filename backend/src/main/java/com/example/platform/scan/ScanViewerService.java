@@ -132,14 +132,6 @@ public class ScanViewerService {
                 .filter(file -> file.getRelativePath().equals(path))
                 .findFirst().orElseThrow(ScanViewerService::notFound);
     }
-    public Download download(Long scanId, Authentication authentication) {
-        var scan = accessibleScan(scanId, authentication);
-        var entries = files.findByScan_IdOrderByIdAsc(scanId);
-        return new Download(scan.getId(), scan.getName(), java.util.List.copyOf(entries), manifest(scanId, authentication));
-    }
-
-    public record Download(Long id, String name, java.util.List<ScanFile> files, Manifest viewer) {}
-
     public ScanFile file(Long scanId, String path, Authentication authentication) {
         var scan = accessibleScan(scanId, authentication);
         // Exact database match only: the request never chooses a bucket or object key.

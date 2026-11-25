@@ -98,52 +98,8 @@ resolutions immediately, but already-issued R2 links can work until their one-ho
 expiry and already-loaded data cannot be revoked. The bucket stays private and
 R2 credentials stay on the server. Starting views overwrite the scan's own uploaded settings.json in R2. When no settings file was uploaded, the first save creates projects/{projectId}/scans/{scanId}/settings.json and records it in scan_files. Saves preserve other settings and update the file byte count. Legacy viewer-settings overrides remain readable and are deleted after the next successful admin save into the scan folder. Existing database-saved viewpoints remain a fallback. V11 grants only UPDATE(size_bytes); no new tables or columns are added.
 
-PUT /api/scans/{scanId}/viewer/starting-view is restricted to platform administrators and requires a CSRF token. Restart the backend after adding these endpoints. Share supports public URL/IFRAME links and a Shareable switch; Delete is administrator-only with a confirmation dialog. Download creates a standalone viewer ZIP.
+PUT /api/scans/{scanId}/viewer/starting-view is restricted to platform administrators and requires a CSRF token. Restart the backend after adding these endpoints. Share supports public URL/IFRAME links and a Shareable switch; Delete is administrator-only with a confirmation dialog.
 
-## Downloadable viewer ZIP
-
-Download is available for READY scans to platform administrators and members of the scan's organization. The browser starts an authenticated export job, waits for completion, then downloads the ZIP directly from private R2 using a 15-minute signed link. Large scene files are not converted to browser Blobs or buffered as a whole on the backend.
-
-Build the standalone viewer before starting or packaging the backend:
-
-    cd frontend
-    npm ci
-    npm run build:viewer
-    cd ..
-    ./backend/mvnw -f backend/pom.xml package
-
-The usual frontend build also runs build:viewer. Generated files live in frontend/viewer-dist (ignored by Git). Maven includes them in its classpath under viewer-export/bundle. Rebuild and restart the backend after upgrading the viewer or regenerating this bundle. Missing export assets produce an unavailable response rather than an incomplete download.
-
-Downloads are named 3D-viewer.zip. ZIPs include one bilingual README.html at the root with copyable iframe code and no live preview; the viewer folder includes the standalone application, editable theme.css, current settings.json, scene.json, third-party licenses and original scan files under data/. The standalone viewer uses relative paths and selects Walk mode when collision permits. It contains no platform API URLs or R2 credentials. Supported skybox/audio/poster references must point to files uploaded with the scan; export rewrites their paths and rejects missing or external dependencies.
-
-Instructions and the embed example are maintained in backend/src/main/resources/viewer-export. POST /api/scans/{scanId}/download requires CSRF and starts background preparation.
-GET /api/scans/{scanId}/download/{exportId} checks current membership and READY status
-on every poll and returns PREPARING, READY (with a signed URL) or FAILED.
-ZIP creation streams into R2 using an 8 MiB multipart buffer; a failed build aborts the
-multipart upload and preserves any valid completed content-addressed object for a later HEAD check. R2 remains private.
-Objects are stored at temporary-exports/scans/{scanId}/{contentHash}/3D-viewer.zip.
-Configure an R2 object lifecycle rule for the exact temporary-exports/ prefix to
-delete completed objects after one day; lifecycle deletion is asynchronous.
-Keep the multipart-abort lifecycle rule as a fallback if cleanup cannot reach R2.
-The application does not modify bucket lifecycle settings automatically.
-
-One export runs at a time with at most two queued. Concurrent starts for the same
-scan reuse its pending job. A later Download prepares a current snapshot and computes a
-SHA-256 fingerprint from settings, scene metadata, immutable source object keys/sizes,
-README and the actual packaged viewer resource bytes. HEAD checks the deterministic
-R2 key before generating a ZIP. Unchanged ZIPs are reused across backend restarts;
-missing or near-expiry ZIPs are rebuilt at the same key. Objects older than 22 hours
-are refreshed to leave room for job polling and signed-link lifetime before the
-one-day lifecycle can expire them. Settings, file identity or bundle changes produce
-a different key. Scene and media objects of READY scans remain immutable. settings.json is mutable and exported once from the captured settings snapshot, not streamed again from R2. No database
-cache table is used.
-Job state is in memory for up to one hour; after a backend restart the user retries
-Download. This queue/deduplication is per backend instance, not distributed.
-The frontend polls for up to 30 minutes and aborts polling when its card unmounts.
-Signed URLs already issued can work for their 15-minute lifetime even if access is
-revoked afterwards. Temporary ZIPs remain until lifecycle cleanup, including after
-scan deletion. No database migration is required.
-Zone.Identifier sidecar files are excluded from upload selection, generated bundle manifests and downloadable ZIPs. Windows may still add its own origin metadata after download/extraction; the server cannot prevent that.
 
 ## Hosted public sharing
 

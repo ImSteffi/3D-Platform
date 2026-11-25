@@ -87,10 +87,6 @@
 	<build>
         <resources>
             <resource><directory>src/main/resources</directory></resource>
-            <resource>
-                <directory>${project.basedir}/../frontend/viewer-dist</directory>
-                <targetPath>viewer-export/bundle</targetPath>
-            </resource>
         </resources>
 		<plugins>
 			<plugin>

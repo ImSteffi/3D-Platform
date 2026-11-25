@@ -3,7 +3,6 @@ import { Button, ConfirmDialog, Icon, InlineError, Panel, StatusPill } from '../
 import { useWorkspaceUser } from '../../../../shared/layout/WorkspaceLayout/WorkspaceContext'
 import { getSharingStatus, setShareable, sharingUrl, type SharingStatus } from '../../api/share'
 import { deleteScan } from '../../api/delete'
-import { downloadScan } from '../../api/download'
 import { formatFileSize } from '../../utils/sceneFiles'
 import SceneFileList from '../SceneFileList/SceneFileList'
 import { ScanViewerContext } from '../ScanViewer/ScanViewerContext'
@@ -12,7 +11,7 @@ import './ScanCard.css'
 
 type ScanCardProps = {
  onDeleted?: (scanId: number) => void
- /** Only the preview, the name and the status. Sharing, downloading and deleting stay on the space's own page. */
+ /** Only the preview, the name and the status. Sharing and deleting stay on the space's own page. */
  compact?: boolean
  scan: {
   id: number
@@ -27,7 +26,7 @@ type ScanCardProps = {
 const statusLabel = { READY: 'Ready', UPLOADING: 'Upload incomplete', FAILED: 'Failed' } as const
 const statusTone = { READY: 'green', UPLOADING: 'amber', FAILED: 'red' } as const
 
-/** One tour: preview, name, one primary action ("Walk through") and a quiet row for sharing, downloading and deleting. */
+/** One tour: preview, name, one primary action ("Walk through") and a quiet row for sharing and deleting. */
 export default function ScanCard({ scan, onDeleted, compact = false }: ScanCardProps) {
  const user = useWorkspaceUser()
  const openViewer = useContext(ScanViewerContext)
@@ -40,9 +39,6 @@ export default function ScanCard({ scan, onDeleted, compact = false }: ScanCardP
  const [sharing, setSharing] = useState(false)
  const [copied, setCopied] = useState<'URL' | 'IFRAME' | null>(null)
  const [actionError, setActionError] = useState('')
- const [downloading, setDownloading] = useState(false)
- const downloadRequest = useRef<AbortController | null>(null)
- useEffect(() => () => downloadRequest.current?.abort(), [])
  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
  useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current) }, [])
 
@@ -103,17 +99,6 @@ export default function ScanCard({ scan, onDeleted, compact = false }: ScanCardP
   finally { setSharing(false) }
  }
 
- async function download() {
-  if (deleting || deleteFailed || downloading || scan.status !== 'READY') return
-  setDownloading(true)
-  setActionError('')
-  const request = new AbortController()
-  downloadRequest.current = request
-  try { await downloadScan(scan.id, request.signal) }
-  catch (error) { if (!request.signal.aborted) setActionError(error instanceof Error ? error.message : 'Could not prepare the download. Try again.') }
-  finally { if (!request.signal.aborted) { downloadRequest.current = null; setDownloading(false) } }
- }
-
  if (deleted) return null
 
  const blocked = deleting || deleteFailed
@@ -167,12 +152,9 @@ export default function ScanCard({ scan, onDeleted, compact = false }: ScanCardP
     </div>}
 
     <div className="tour-card-quiet">
-     {ready && <Button variant="quiet" icon="download" loading={downloading} disabled={blocked}
-      onClick={() => { void download() }}>{downloading ? 'Preparing your copy' : 'Download a copy'}</Button>}
-     {user.platformAdmin && <Button variant="quiet" icon="trash" className="tour-card-delete" disabled={deleting || updatingShare || sharing || downloading}
+     {user.platformAdmin && <Button variant="quiet" icon="trash" className="tour-card-delete" disabled={deleting || updatingShare || sharing}
       onClick={() => { setActionError(''); setConfirmDelete(true) }}>{deleting ? 'Deleting' : 'Delete tour'}</Button>}
     </div>
-    {downloading && <p className="tour-card-note" role="status">Packing the files into one download. It starts by itself when it is ready, and large tours take a while.</p>}
 
     {!confirmDelete && <InlineError>{actionError}</InlineError>}
     <span className="visually-hidden" role="status">{copied === 'URL' ? 'Link copied' : copied === 'IFRAME' ? 'Embed code copied' : ''}</span>

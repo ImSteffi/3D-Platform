@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Button, Icon, InlineError, Panel, Skeleton, SkeletonGroup, type IconName } from '../../../../shared/ui'
-import { downloadScan } from '../../../scans/api/download'
 import { getSharingStatus, setShareable, sharingUrl, type SharingStatus } from '../../../scans/api/share'
 import './ShareCards.css'
 
@@ -16,7 +15,7 @@ function ShareCard({ icon, title, text, children }: { icon: IconName; title: str
  </Panel>
 }
 
-/** Three plain-word ways to share a delivered tour: a link, an embed code, a copy to keep. */
+/** Two plain-word ways to share a delivered tour: a link and an embed code. The tour itself is never handed out. */
 export default function ShareCards({ scanId, name }: { scanId: number; name: string }) {
  const [status, setStatus] = useState<SharingStatus | null>(null)
  const [loadFailed, setLoadFailed] = useState(false)
@@ -24,13 +23,9 @@ export default function ShareCards({ scanId, name }: { scanId: number; name: str
  const [switching, setSwitching] = useState(false)
  const [linkError, setLinkError] = useState('')
  const [copied, setCopied] = useState<'link' | 'embed' | null>(null)
- const [download, setDownload] = useState<'idle' | 'preparing' | 'started'>('idle')
- const [downloadError, setDownloadError] = useState('')
  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
- const downloadRequest = useRef<AbortController | null>(null)
  useEffect(() => () => {
   if (copyTimer.current) clearTimeout(copyTimer.current)
-  downloadRequest.current?.abort()
  }, [])
  useEffect(() => {
   const request = new AbortController()
@@ -59,27 +54,11 @@ export default function ShareCards({ scanId, name }: { scanId: number; name: str
    copyTimer.current = setTimeout(() => setCopied(null), 2000)
   } catch { setLinkError(kind === 'link' ? 'Your browser did not let us copy. Select the link and copy it by hand.' : 'Your browser did not let us copy the code. Please try again.') }
  }
- async function startDownload() {
-  if (download === 'preparing') return
-  const request = new AbortController()
-  downloadRequest.current = request
-  setDownload('preparing'); setDownloadError('')
-  try {
-   await downloadScan(scanId, request.signal)
-   setDownload('started')
-  } catch (reason) {
-   if (request.signal.aborted) return
-   const text = reason instanceof Error ? reason.message : ''
-   // The download service words its errors for operators; keep only the ones a customer can act on.
-   setDownloadError(/session|busy|too long/i.test(text) ? text.replace(/Download again/i, 'again') : 'We could not prepare your copy. Please try again.')
-   setDownload('idle')
-  }
- }
 
  if (loadFailed) return <Panel><InlineError onRetry={retry}>We could not load your sharing options. Check your connection and try again.</InlineError></Panel>
  if (!status) return <SkeletonGroup label="Loading your sharing options">
   <ul className="share-cards">
-   {[0, 1, 2].map(card => <Panel key={card} as="li" padding="lg" className="share-card">
+   {[0, 1].map(card => <Panel key={card} as="li" padding="lg" className="share-card">
     <Skeleton width={44} height={44} radius={14} index={card} />
     <Skeleton width={['58%', '72%', '64%'][card]} height={22} index={card + 1} style={{ marginTop: 16 }} />
     <Skeleton width="92%" height={14} index={card + 2} style={{ marginTop: 10 }} />
@@ -109,12 +88,6 @@ export default function ShareCards({ scanId, name }: { scanId: number; name: str
    <ShareCard icon="code" title="Put it on your website" text="A short piece of code shows the tour on a page of your site. Send this to whoever looks after your website.">
     <Button variant="secondary" icon={copied === 'embed' ? 'check' : 'copy'} disabled={!live} onClick={() => { void copy('embed', url) }}>{copied === 'embed' ? 'Code copied' : 'Copy the code'}</Button>
     {!live && <p className="share-card-note">Turn the link on first. The code uses the same link.</p>}
-   </ShareCard>
-   <ShareCard icon="download" title="Keep your own copy" text="Download the whole tour as one file, to keep or to put on your own web space.">
-    <Button variant="secondary" icon="download" loading={download === 'preparing'} onClick={() => { void startDownload() }}>{download === 'preparing' ? 'Preparing your copy' : download === 'started' ? 'Download again' : 'Download the tour'}</Button>
-    {download === 'preparing' && <p className="share-card-note" role="status">This can take a few minutes for a large tour. Keep this page open.</p>}
-    {download === 'started' && <p className="share-card-note share-card-note--done" role="status"><Icon name="check" size={16} />Your copy is ready and the download has started. Look in your downloads folder.</p>}
-    <InlineError>{downloadError}</InlineError>
    </ShareCard>
   </ul>
   <span className="visually-hidden" role="status">{copied === 'link' ? 'Link copied' : copied === 'embed' ? 'Code copied' : ''}</span>

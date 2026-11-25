@@ -1,5 +1,5 @@
 /* Share cards: three equal plain-word cards, each one sentence and one action. */
-.share-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-5); align-items: stretch; }
+.share-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-5); align-items: stretch; }
 .share-card { display: flex; flex-direction: column; align-items: flex-start; }
 .share-card-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--fill); color: var(--ink); }
 .share-card h2 { margin-top: var(--s-4); }

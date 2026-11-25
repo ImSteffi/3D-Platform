@@ -1,9 +1,0 @@
-{
- "compilerOptions": {
-  "target": "ES2023", "lib": ["ES2023", "DOM", "DOM.Iterable"],
-  "module": "ESNext", "moduleResolution": "bundler",
-  "skipLibCheck": true, "strict": true, "noEmit": true,
-  "types": ["vite/client"]
- },
- "include": ["viewer-export/main.ts"]
-}
