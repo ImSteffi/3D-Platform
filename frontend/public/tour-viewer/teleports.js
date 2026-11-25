@@ -238,13 +238,24 @@ export function attachTeleports(viewer, canvas, { edit = false, onTake, onPick, 
     else take(marker.id);
   });
 
+  /**
+   * Stops a walk people started by clicking or double-tapping a spot. Otherwise, after the jump, the viewer keeps
+   * walking towards that spot (where they came from), often straight back into the ring they took.
+   */
+  const stopWalking = () => viewer.global.events.fire("navigateCancel");
+
   async function take(id) {
     if (taking) return;
     taking = true;
+    stopWalking();
     fade.classList.add("is-on");
     await new Promise((resolve) => setTimeout(resolve, 280));
     try {
       await onTake?.(id);
+    } catch (error) {
+      // Never leave people in the dark: stay where they are.
+      console.warn("Teleport failed", error);
+      reveal();
     } finally {
       taking = false;
     }
@@ -254,6 +265,7 @@ export function attachTeleports(viewer, canvas, { edit = false, onTake, onPick, 
   function setPose(next) {
     const cam = pose();
     if (!cam || !next?.position) return;
+    stopWalking();
     cam.position.set(next.position[0], next.position[1], next.position[2]);
     cam.angles.set(next.pitch || 0, next.yaw || 0, 0);
     viewer.cameraManager.snap();
