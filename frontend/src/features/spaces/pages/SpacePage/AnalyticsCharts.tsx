@@ -56,3 +56,17 @@ export function Sparkline({ values }: { values: number[] }) {
   <path d={line} fill="none" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
  </svg>
 }
+
+/** The last 30 days against the 30 before them. */
+export function Delta({ now, before }: { now: number; before: number }) {
+ if (now === 0 && before === 0) return <span className="analytics-delta">No change</span>
+ if (before === 0) return <span className="analytics-delta is-up">New</span>
+ const change = Math.round((now - before) / before * 100)
+ if (change === 0) return <span className="analytics-delta">No change</span>
+ return <span className={`analytics-delta ${change > 0 ? 'is-up' : 'is-down'}`}>
+  <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true" style={change < 0 ? { transform: 'rotate(180deg)' } : undefined}>
+   <path d="M6 10V2M2.5 5.5 6 2l3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+  <span className="visually-hidden">{change > 0 ? 'up' : 'down'} </span>{Math.abs(change)}%
+ </span>
+}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Icon, InlineError, Panel, Spinner } from '../../../../shared/ui'
 import { analyticsCsvUrl, getTourAnalytics, type AnalyticsTotals, type TourAnalytics as Stats, type TourDetail } from '../../../tours/api/tourRequests'
-import { Bars, Sparkline } from './AnalyticsCharts'
+import { Bars, Delta, Sparkline } from './AnalyticsCharts'
 import { duration } from './analyticsFormat'
 
 const deviceNames: Record<string, string> = { phone: 'Phone', tablet: 'Tablet', computer: 'Computer', headset: 'VR headset', unknown: 'Unknown' }
@@ -13,20 +13,6 @@ const metrics: { key: Key; label: string; hint: string }[] = [
  { key: 'averageSeconds', label: 'Average time', hint: 'Time spent in the tour' },
  { key: 'embeds', label: 'Embeds', hint: 'Views through the iframe on other sites' },
 ]
-
-/** The last 30 days against the 30 before them. */
-function Delta({ now, before }: { now: number; before: number }) {
- if (now === 0 && before === 0) return <span className="analytics-delta">No change</span>
- if (before === 0) return <span className="analytics-delta is-up">New</span>
- const change = Math.round((now - before) / before * 100)
- if (change === 0) return <span className="analytics-delta">No change</span>
- return <span className={`analytics-delta ${change > 0 ? 'is-up' : 'is-down'}`}>
-  <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true" style={change < 0 ? { transform: 'rotate(180deg)' } : undefined}>
-   <path d="M6 10V2M2.5 5.5 6 2l3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-  <span className="visually-hidden">{change > 0 ? 'up' : 'down'} </span>{Math.abs(change)}%
- </span>
-}
 
 /** Viewing stats of this space's tours. Views inside the platform itself are not counted. */
 export default function TourAnalytics({ tour }: { tour: TourDetail }) {

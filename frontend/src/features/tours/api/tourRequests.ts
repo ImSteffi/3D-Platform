@@ -386,9 +386,14 @@ export const deleteFloorPhotos = (id: number, areaId: number) =>
 
 /** The team's overview of the whole platform (Analytics page). */
 export type AdminCount = { label: string; count: number }
+export type AdminPeriod = { spaces: number; photos: number; views: number; visitors: number; averageSeconds: number; embeds: number }
 export type AdminAnalytics = {
  totals: { customers: number; organizations: number; spaces: number; floors: number; views: number; visitors: number; averageSeconds: number; embeds: number }
- days: { day: string; spaces: number; photos: number; views: number }[]
+ /** The last 30 days and the 30 days before them. */
+ recent: AdminPeriod; previous: AdminPeriod
+ /** Photos added to floors, all time. */
+ photos: number
+ days: { day: string; spaces: number; photos: number; views: number; visitors: number; averageSeconds: number; embeds: number }[]
  topSpaces: { id: number; name: string; customer: string; views: number; averageSeconds: number }[]
  sources: AdminCount[]; devices: AdminCount[]; regions: AdminCount[]
 }
