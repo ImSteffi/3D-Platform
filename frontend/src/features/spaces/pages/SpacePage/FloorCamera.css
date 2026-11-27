@@ -5,6 +5,23 @@
 .fcam .fcam-done { justify-self: end; min-height: 52px; padding: 0 var(--s-5); border-radius: 26px; font-size: 16px; }
 .fcam-note { position: absolute; left: 50%; bottom: var(--s-4); transform: translateX(-50%); width: max-content; max-width: calc(100% - 2 * var(--s-4));
  padding: 10px var(--s-4); border-radius: 22px; background: var(--amber); color: var(--ink); font-size: 14px; font-weight: 500; line-height: 1.3; text-align: center; }
+/* The viewfinder fills the whole screen; the top bar and the controls float over it on a soft shade. */
+.fcam .cap-main { justify-content: flex-end; }
+.fcam .cap-view { position: absolute; inset: 0; }
+.fcam .cap-view video { object-fit: cover; }
+.fcam .cap-top { position: relative; z-index: 1; background: linear-gradient(rgb(0 0 0 / .5), transparent); }
+.fcam .cap-side { position: relative; z-index: 1; background: none; border: 0; }
+.fcam .cap-bottom { background: linear-gradient(transparent, rgb(0 0 0 / .55)); }
+.fcam .cap-sheet { z-index: 3; }
+
+/* Left of the shutter: the last photo, then the lens toggle right beside the shutter. */
+.fcam-left { justify-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.fcam-lens { display: flex; gap: 2px; padding: 3px; border-radius: var(--r-pill); background: rgb(0 0 0 / .45); }
+.fcam-lens button { min-width: 44px; height: 38px; padding: 0 8px; border: 0; border-radius: var(--r-pill); background: none; color: var(--on-dark);
+ font: 600 14px/1 var(--sans); font-variant-numeric: tabular-nums; cursor: pointer; }
+.fcam-lens button[aria-pressed='true'] { background: var(--on-dark); color: var(--ink); }
+.fcam-lens button:disabled { opacity: .35; cursor: default; }
+
 .fcam-leave { justify-content: center; text-align: center; }
 .fcam-leave > p { color: var(--on-dark-2); }
 .fcam-leave > .fcam-leave-title { font-size: 19px; font-weight: 600; color: var(--on-dark); }
@@ -12,8 +29,10 @@
 
 /* A phone held sideways: shutter, thumbnail and Done stack in a column on the right, under the thumb. */
 @media (orientation: landscape) and (max-height: 520px) {
- .fcam .cap-side { width: auto; min-width: 128px; justify-content: center; }
- .fcam .cap-bottom { height: 100%; display: flex; align-items: center; padding-top: calc(var(--s-2) + env(safe-area-inset-top, 0px)); }
+ .fcam .cap-side { width: auto; min-width: 128px; justify-content: center; border-left: 0; }
+ .fcam .cap-bottom { height: 100%; display: flex; align-items: center; padding-top: calc(var(--s-2) + env(safe-area-inset-top, 0px));
+  background: linear-gradient(to right, transparent, rgb(0 0 0 / .55)); }
+ .fcam .fcam-left { flex-direction: column-reverse; justify-content: center; }
  .fcam .cap-bottom-inner { width: 100%; }
  .fcam .cap-controls { grid-template-columns: auto; grid-template-rows: auto auto auto; justify-items: center; gap: var(--s-3); }
  .fcam .cap-controls .cap-thumb { justify-self: center; }

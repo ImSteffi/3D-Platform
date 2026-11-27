@@ -23,23 +23,38 @@ function cameraProblem(reason: unknown): string {
  return 'The camera could not be opened. Close other apps that use it and try again, or close this and use Add photos.'
 }
 
-/** Rear camera at the highest resolution it gives. Falls back to any camera if the browser refuses the ask. */
-async function openCamera(): Promise<MediaStream> {
+/** 0.5x is the wide lens (sees more of the room); 1x is the main lens (sharper photos). */
+type Lens = '0.5' | '1'
+const LENS_KEY = 'floor-camera-lens'
+function savedLens(): Lens {
+ try { return localStorage.getItem(LENS_KEY) === '1' ? '1' : '0.5' } catch { return '0.5' }
+}
+
+/** The rear camera (or one camera by id) at the highest resolution it gives. Falls back to any camera if the browser refuses the ask. */
+async function openCamera(deviceId?: string): Promise<MediaStream> {
+ const size = { width: { ideal: 4032 }, height: { ideal: 3024 } }
  try {
-  return await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 4032 }, height: { ideal: 3024 } }, audio: false })
+  return await navigator.mediaDevices.getUserMedia({ video: deviceId ? { deviceId: { exact: deviceId }, ...size } : { facingMode: { ideal: 'environment' }, ...size }, audio: false })
  } catch (reason) {
   if (reason instanceof DOMException && reason.name === 'OverconstrainedError') return navigator.mediaDevices.getUserMedia({ video: true, audio: false })
   throw reason
  }
 }
 
-/** Widest view the lens allows (0.5x on phones that have it), only where the browser lets us set zoom. */
-function widestZoom(stream: MediaStream) {
- const track = stream.getVideoTracks()[0]
+/** The zoom range the browser lets us set (Chrome on Android), or null. Below 1 means the wide lens is reached by zooming out. */
+function zoomRange(track: MediaStreamTrack | undefined): { min: number; max: number } | null {
  try {
-  const zoom = (track?.getCapabilities?.() as { zoom?: { min?: number } } | undefined)?.zoom
-  if (track && typeof zoom?.min === 'number') void track.applyConstraints({ advanced: [{ zoom: zoom.min } as MediaTrackConstraintSet] }).catch(() => undefined)
- } catch { /* zoom is a bonus */ }
+  const zoom = (track?.getCapabilities?.() as { zoom?: { min?: number; max?: number } } | undefined)?.zoom
+  return typeof zoom?.min === 'number' && typeof zoom.max === 'number' ? { min: zoom.min, max: zoom.max } : null
+ } catch { return null }
+}
+
+/** A separate wide camera, as Safari on iPhone lists it ("Back Ultra Wide Camera"); labels show once the camera is allowed. */
+async function findWideCamera(): Promise<string | null> {
+ try {
+  const devices = await navigator.mediaDevices.enumerateDevices()
+  return devices.find(device => device.kind === 'videoinput' && /ultra ?wide|0[.,]5/i.test(device.label) && !/front/i.test(device.label))?.deviceId ?? null
+ } catch { return null }
 }
 
 type Props = {
@@ -63,10 +78,14 @@ export default function FloorCamera({ title, room, onDone, onClose }: Props) {
  const [flash, setFlash] = useState(0)
  const [error, setError] = useState('')
  const [leaving, setLeaving] = useState(false)
+ const [lens, setLens] = useState<Lens>(savedLens)
+ // How this phone reaches 0.5x: by zooming out, through its own wide camera, not at all, or not known yet.
+ const [wide, setWide] = useState<{ how: 'zoom' } | { how: 'camera'; id: string } | { how: 'none' } | null>(null)
  const [opener] = useState(() => document.activeElement instanceof HTMLElement ? document.activeElement : null)
 
  const root = useRef<HTMLDivElement>(null)
  const video = useRef<HTMLVideoElement>(null)
+ const track = useRef<MediaStreamTrack | null>(null)
  const alive = useRef(true)
  const lastUrl = useRef<string | null>(null)
 
@@ -74,6 +93,9 @@ export default function FloorCamera({ title, room, onDone, onClose }: Props) {
  const live = floorCameraSupported && !cameraError
  const full = shots.length >= room
  const wantCamera = live && visible && !leaving
+ const wideReady = wide !== null && wide.how !== 'none'
+ // The camera to open: the wide one only when 0.5x is chosen and the phone has it as its own camera.
+ const cameraId = lens === '0.5' && wide?.how === 'camera' ? wide.id : undefined
 
  // Full-viewport layer: lock the page behind it, take focus, and hand focus back on the way out.
  useEffect(() => {
@@ -96,11 +118,19 @@ export default function FloorCamera({ title, room, onDone, onClose }: Props) {
   const element = video.current
   let disposed = false
   let media: MediaStream | null = null
-  openCamera().then(stream => {
-   if (disposed) { stream.getTracks().forEach(track => track.stop()); return }
+  openCamera(cameraId).then(async stream => {
+   if (disposed) { stream.getTracks().forEach(item => item.stop()); return }
    media = stream
-   widestZoom(stream)
-   if (!element) return
+   track.current = stream.getVideoTracks()[0] ?? null
+   // The first time, find out how this phone reaches 0.5x.
+   if (wide === null) {
+    if ((zoomRange(track.current ?? undefined)?.min ?? 1) < 1) setWide({ how: 'zoom' })
+    else {
+     const id = await findWideCamera()
+     if (!disposed) setWide(id ? { how: 'camera', id } : { how: 'none' })
+    }
+   }
+   if (!element || disposed) return
    element.srcObject = stream
    element.play().catch(() => { if (!disposed) setCameraError('The camera preview could not start. Try again, or close this and use Add photos.') })
   }).catch(reason => { if (!disposed) setCameraError(cameraProblem(reason)) })
@@ -109,7 +139,25 @@ export default function FloorCamera({ title, room, onDone, onClose }: Props) {
    media?.getTracks().forEach(track => track.stop())
    if (element) element.srcObject = null
   }
- }, [wantCamera, attempt])
+ // `wide` is read only to learn it once; a change of it alone needs no new stream unless the camera to open changes.
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [wantCamera, attempt, cameraId])
+
+ // Where 0.5x and 1x are zoom levels of one camera, switching only zooms.
+ useEffect(() => {
+  if (wide?.how !== 'zoom' || !ready) return
+  const range = zoomRange(track.current ?? undefined)
+  if (!range || !track.current) return
+  const level = lens === '0.5' ? range.min : Math.min(Math.max(1, range.min), range.max)
+  void track.current.applyConstraints({ advanced: [{ zoom: level } as MediaTrackConstraintSet] }).catch(() => undefined)
+ }, [wide, lens, ready])
+
+ function chooseLens(next: Lens) {
+  setLens(next)
+  try { localStorage.setItem(LENS_KEY, next) } catch { /* only a preference */ }
+ }
+ // What the toggle shows as chosen: 1x where this phone has no 0.5x.
+ const shownLens: Lens = wide?.how === 'none' ? '1' : lens
 
  function finish() {
   if (working) return
@@ -213,9 +261,18 @@ export default function FloorCamera({ title, room, onDone, onClose }: Props) {
     <div className="cap-bottom">
      <div className="cap-bottom-inner cap-bottom-inner--stack">
       <div className="cap-controls">
-       {last
-        ? <span className="cap-thumb"><img src={last} alt={`Last photo taken, ${count} in all`} draggable={false} /></span>
-        : <span className="cap-thumb cap-thumb--empty" aria-hidden="true"><Icon name="image" size={20} /></span>}
+       <div className="fcam-left">
+        {last
+         ? <span className="cap-thumb"><img src={last} alt={`Last photo taken, ${count} in all`} draggable={false} /></span>
+         : <span className="cap-thumb cap-thumb--empty" aria-hidden="true"><Icon name="image" size={20} /></span>}
+        {/* 0.5x sees more of each room; 1x gives sharper photos. Phones without a wide lens only have 1x. */}
+        <div className="fcam-lens" role="group" aria-label="Lens">
+         <button type="button" aria-pressed={shownLens === '0.5'} disabled={!wideReady || leaving}
+          title={wide?.how === 'none' ? 'This phone has no 0.5x lens the browser can use' : 'Wide lens: sees more of the room'}
+          onClick={() => chooseLens('0.5')}>0.5×</button>
+         <button type="button" aria-pressed={shownLens === '1'} disabled={leaving} title="Main lens: sharper photos" onClick={() => chooseLens('1')}>1×</button>
+        </div>
+       </div>
        <button type="button" className="cap-shutter" autoFocus aria-label={full ? 'No more photos fit on this floor' : `Take photo ${count + 1}`}
         disabled={!live || !ready || working || full || leaving} onClick={capture} />
        <Button className="fcam-done" size="lg" icon="check" disabled={working || leaving} onClick={finish}>Done</Button>
