@@ -137,7 +137,9 @@ async function start() {
   await loadTour();
   if (!folder) throw new Error("No tour given");
   // A 3DGS can be shown before its voxels exist: then it opens in fly mode, without walking or teleports.
-  const hasVoxels = await fetch(`${folder}/scene.voxel.json`).then((response) => response.ok).catch(() => false);
+  // ?fly=1 leaves the voxels out on purpose: the camera then moves freely (a recorded flight through the 3DGS).
+  const fly = params.get("fly") === "1";
+  const hasVoxels = !fly && await fetch(`${folder}/scene.voxel.json`).then((response) => response.ok).catch(() => false);
   const config = {
     poster: null,
     skyboxUrl: null,
