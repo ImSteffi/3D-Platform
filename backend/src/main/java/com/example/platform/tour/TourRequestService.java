@@ -31,6 +31,8 @@ import static com.example.platform.tour.TourRequest.Status.*;
 public class TourRequestService {
     // One generation accepts at most this many photos.
     static final int MAX_POINTS_PER_GROUP = 64;
+    // A floor takes more photos than one generation uses: customers shoot freely, the team picks the ones to use.
+    static final int MAX_FLOOR_PHOTOS = 250;
     static final int MAX_AREAS = 20;
     static final int MAX_CAPTURE_GROUP = 50;
     public static final int MAX_PLAN_BYTES = 20 * 1024 * 1024;
@@ -303,8 +305,8 @@ public class TourRequestService {
         var hash = sha256(image);
         fingerprintOlder(areaId);
         if (floorPhotos.existsByArea_IdAndContentHash(areaId, hash)) return detail(tour, user);
-        if (floorPhotos.countByArea_Id(areaId) >= MAX_POINTS_PER_GROUP)
-            throw error(409, "A floor can have at most " + MAX_POINTS_PER_GROUP + " photos.");
+        if (floorPhotos.countByArea_Id(areaId) >= MAX_FLOOR_PHOTOS)
+            throw error(409, "A floor can have at most " + MAX_FLOOR_PHOTOS + " photos.");
         floorPhotos.save(new FloorPhoto(area, store(folder(area) + "photos/floor-", image, MAX_PHOTO_BYTES), hash, viaLink(authentication)));
         if (!user.isPlatformAdmin()) arrived(tour);
         return detail(tour, user);
@@ -333,18 +335,20 @@ public class TourRequestService {
     }
 
     /** A floor's photos, in order, to be packed into one download. */
-    public record PhotoSet(String fileName, String folder, List<String> keys) {}
+    public record PhotoSet(String fileName, List<String> keys) {}
 
     @Transactional(readOnly = true)
     public PhotoSet floorPhotoSet(Long id, Long areaId, Authentication authentication) {
         var area = area(accessible(id, user(authentication)), areaId);
         var keys = floorPhotos.findByArea_IdOrderByIdAsc(areaId).stream().map(FloorPhoto::getObjectKey).toList();
         if (keys.isEmpty()) throw error(404, "This floor has no photos.");
-        var folder = safeName(area.getTourRequest().getName() + " - " + area.getName());
-        return new PhotoSet(folder + ".zip", folder, keys);
+        return new PhotoSet(safeName(area.getTourRequest().getName() + " - " + area.getName()) + ".zip", keys);
     }
 
-    /** Writes a floor's photos into one ZIP, read from storage one at a time. */
+    /**
+     * Writes a floor's photos into one ZIP, read from storage one at a time. They sit at the top of the ZIP: unpacking it
+     * already makes a folder named after it, so a folder inside would only nest them twice.
+     */
     public void writePhotoZip(PhotoSet set, java.io.OutputStream output) throws java.io.IOException {
         try (var zip = new java.util.zip.ZipOutputStream(output)) {
             // Photos are compressed already: storing them as they are is as small and much quicker.
@@ -352,7 +356,7 @@ public class TourRequestService {
             int number = 1;
             for (var key : set.keys()) {
                 try (var object = r2.getObject(b -> b.bucket(bucket).key(key))) {
-                    zip.putNextEntry(new java.util.zip.ZipEntry(set.folder() + "/" + String.format("%02d", number)
+                    zip.putNextEntry(new java.util.zip.ZipEntry(String.format("%02d", number)
                             + extension(object.response().contentType())));
                     object.transferTo(zip);
                     zip.closeEntry();

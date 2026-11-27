@@ -5,7 +5,10 @@ import FileButton from './FileButton'
 import FloorCamera from './FloorCamera'
 import FloorPhotoViewer from './FloorPhotoViewer'
 
-const MAX_PHOTOS = 64
+/** Same as the server's MAX_FLOOR_PHOTOS: room to shoot freely; the team picks the photos one generation uses. */
+const MAX_PHOTOS = 250
+/** One generation uses 64 photos, so a floor needs at least that many. More is better. */
+const MIN_PHOTOS = 64
 /** A live camera in the page (needs HTTPS or localhost): offers Take photos next to Add photos. */
 const floorCameraSupported = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
 
@@ -99,6 +102,9 @@ export default function FloorGallery({ tour, area, busy, uploading, editable, ti
    </div>}
   </div>
   {hint && <p className="floor-gallery-hint">{hint}</p>}
+  {editable && !uploading && photos.length < MIN_PHOTOS && <p className="floor-gallery-hint">
+   {photos.length === 0 ? `Add at least ${MIN_PHOTOS} photos of this floor. More is better.` : `${photos.length} of at least ${MIN_PHOTOS} photos. Add ${MIN_PHOTOS - photos.length} more, or as many as you like.`}
+  </p>}
   {uploading && <p className="floor-gallery-hint" aria-live="polite"><Spinner size={14} /> Uploading photo {Math.min(uploading.done + 1, uploading.total)} of {uploading.total}</p>}
   {photos.length > 0 || uploading ? <ol ref={row} className="frames">
    {uploading && <li className="frame-cell">
