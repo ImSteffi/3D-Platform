@@ -1,8 +1,9 @@
 import { lazy, Suspense, useCallback, useState } from 'react'
 import { Button, ConfirmDialog, Spinner } from '../../../../shared/ui'
-import type { SplatStatus, TourArea, TourDetail } from '../../../tours/api/tourRequests'
+import { splatDownloadUrl, type SplatStatus, type TourArea, type TourDetail } from '../../../tours/api/tourRequests'
 import SpatialContext, { type SpatialState } from '../../../tours/components/SpatialContext/SpatialContext'
 import type { ConvertWhat } from './splatConvert'
+import FloorMenu from './FloorMenu'
 import SharePanel from './SharePanel'
 import './Tour3DPanel.css'
 
@@ -135,6 +136,13 @@ export default function Floor3DCard({ tour, area, photoCount, splat, converting,
     </div>
     {action}
     {scene && showing === '3dgs' && <Button variant="secondary" icon="share" aria-expanded={sharing} onClick={() => setSharing(open => !open)}>Share</Button>}
+    {/* The team only (this card is never shown to customers): the floor's 3DGS as files. */}
+    {splat?.status === 'SUCCEEDED' && showing === '3dgs' && <FloorMenu label={`Download the 3DGS of ${area.name}`} text="Download 3DGS" up>
+     <Button variant="quiet" href={splatDownloadUrl(tour.id, area.id, 'raw')} download>3DGS raw (.spz)</Button>
+     {walkable
+      ? <Button variant="quiet" href={splatDownloadUrl(tour.id, area.id, 'collisions')} download>3DGS with collisions (.zip)</Button>
+      : <Button variant="quiet" disabled title="Generate the voxels first.">3DGS with collisions: no voxels yet</Button>}
+    </FloorMenu>}
     {scene && showing === '3dgs' && sharing && <SharePanel url={new URL(src, window.location.origin).href} name={area.name} />}
    </div>
   </div>

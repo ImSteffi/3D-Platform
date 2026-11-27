@@ -350,6 +350,53 @@ public class SplatService {
         return r2.getObject(b -> b.bucket(bucket).key(made(tourId, areaId).sourceKey()));
     }
 
+    /** A floor's 3DGS for the team to keep: one file as it is, or several in a ZIP. Never offered to customers. */
+    public record Download(String fileName, List<String> keys) {
+        boolean zip() { return keys.size() > 1; }
+    }
+
+    /**
+     * "raw" is Atlas's .spz. "collisions" is what the viewer walks in: scene.sog with the voxel files (and the
+     * start view), so it needs the floor converted first.
+     */
+    public Download download(long tourId, long areaId, String kind, Authentication authentication) {
+        admin(authentication);
+        var run = made(tourId, areaId);
+        var names = db.queryForObject("SELECT t.name || ' - ' || a.name FROM tour_areas a JOIN tour_requests t ON t.id = a.tour_request_id WHERE a.id = ?",
+                String.class, areaId);
+        var base = TourRequestService.safeName(names) + " - 3DGS";
+        return switch (kind) {
+            case "raw" -> new Download(base + " raw.spz", List.of(run.sourceKey()));
+            case "collisions" -> {
+                if (!run.sogReady() || !run.voxelsReady()) throw error(409, "This floor's 3DGS has no collisions yet. Convert it first.");
+                yield new Download(base + " with collisions.zip",
+                        List.of("scene.sog", "scene.voxel.json", "scene.voxel.bin", "settings.json").stream().map(file -> run.folderKey() + file).toList());
+            }
+            default -> throw error(404, "Unknown download.");
+        };
+    }
+
+    /** Streams the download: nothing is held in memory or stored. */
+    public void writeDownload(Download download, java.io.OutputStream output) throws IOException {
+        if (!download.zip()) {
+            try (var object = r2.getObject(b -> b.bucket(bucket).key(download.keys().getFirst()))) { object.transferTo(output); }
+            return;
+        }
+        try (var zip = new java.util.zip.ZipOutputStream(output)) {
+            for (var key : download.keys()) {
+                try (var object = r2.getObject(b -> b.bucket(bucket).key(key))) {
+                    // Files at the top of the ZIP, as with the photos.
+                    zip.putNextEntry(new java.util.zip.ZipEntry(key.substring(key.lastIndexOf('/') + 1)));
+                    object.transferTo(zip);
+                    zip.closeEntry();
+                } catch (software.amazon.awssdk.services.s3.model.NoSuchKeyException missing) {
+                    // The start view is optional: older floors may not have one.
+                    if (!key.endsWith("settings.json")) throw missing;
+                }
+            }
+        }
+    }
+
     /**
      * A converted file from the team's browser. scene.sog makes the 3DGS visible; the voxel files are uploaded
      * .bin first, then .json, and the .json completes walking.

@@ -452,6 +452,8 @@ export const getSplats = (id: number) => get<SplatStatus[]>(`${adminRoot}/${id}/
 export const startSplats = (id: number, areaId: number) => send<SplatStatus>('POST', `${adminRoot}/${id}/areas/${areaId}/splats`)
 /** Atlas's .spz of a floor's made 3DGS, which the browser converts into the viewer's files. */
 export const splatSourceUrl = (id: number, areaId: number) => `${adminRoot}/${id}/areas/${areaId}/splats/source.spz`
+/** The team keeps a floor's 3DGS: Atlas's raw .spz, or the walkable viewer files (with collisions) as a ZIP. */
+export const splatDownloadUrl = (id: number, areaId: number, kind: 'raw' | 'collisions') => `${adminRoot}/${id}/areas/${areaId}/splats/download/${kind}`
 /** Uploads one converted file: scene.sog, or scene.voxel.bin then scene.voxel.json. */
 export const uploadSplatFile = (id: number, areaId: number, name: string, bytes: Uint8Array) =>
  send<SplatStatus>('PUT', `${adminRoot}/${id}/areas/${areaId}/splats/files/${encodeURIComponent(name)}`, undefined,

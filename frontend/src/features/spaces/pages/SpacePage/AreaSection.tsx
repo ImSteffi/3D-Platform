@@ -6,6 +6,7 @@ import { onGalleryLink, planUrl, type TourArea, type TourDetail } from '../../..
 import FileButton from './FileButton'
 import { planPickerAccept } from '../../../tours/api/prepareImage'
 import FloorGallery, { type FloorUpload } from './FloorGallery'
+import FloorMenu from './FloorMenu'
 import SharePanel from './SharePanel'
 import { floorState, pad, plural, type Entry } from './spaceModel'
 
@@ -51,26 +52,6 @@ type Props = {
  floorPhotos?: { uploading: FloorUpload | null; onAdd: (files: File[]) => void; onDelete: (photoId: number) => void; onDeleteAll: () => Promise<boolean> }
  /** Team only: this floor's 3D (the 3DGS or its spatial context), shown next to the plan. */
  stage?: ReactNode
-}
-
-/** A floor's less used actions (plan and floor changes) behind one quiet button, so the card's head stays calm. */
-function FloorMenu({ label, children }: { label: string; children: ReactNode }) {
- const [open, setOpen] = useState(false)
- const root = useRef<HTMLDivElement>(null)
- useEffect(() => {
-  if (!open) return
-  const close = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false) }
-  const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setOpen(false); root.current?.querySelector<HTMLElement>('.area-menu-toggle')?.focus() } }
-  document.addEventListener('pointerdown', close)
-  document.addEventListener('keydown', escape)
-  return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', escape) }
- }, [open])
- return <div className="area-menu" ref={root}>
-  <Button variant="quiet" icon="more" className="area-menu-toggle" aria-label={label} title={label} aria-expanded={open} onClick={() => setOpen(current => !current)} />
-  {/* A click on an item runs it, then the list closes. The list stays in the page while closed, so a file picker
-      opened from it still delivers its file. */}
-  <div className="area-menu-list" role="group" aria-label={label} hidden={!open} onClick={() => setOpen(false)}>{children}</div>
- </div>
 }
 
 const stateWords = { retake: 'needs a retake', taken: 'photo taken', next: 'next', todo: 'to do' }

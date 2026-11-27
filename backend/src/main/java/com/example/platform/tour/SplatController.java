@@ -41,6 +41,17 @@ public class SplatController {
         return response.body(new InputStreamResource(object));
     }
 
+    /** The floor's 3DGS for the team to keep: "raw" (Atlas's .spz) or "collisions" (the walkable viewer files, as a ZIP). */
+    @GetMapping("/api/admin/tour-requests/{id}/areas/{areaId}/splats/download/{kind}")
+    public ResponseEntity<org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody> download(@PathVariable long id,
+            @PathVariable long areaId, @PathVariable String kind, Authentication authentication) {
+        var download = splats.download(id, areaId, kind, authentication);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .header("Content-Type", download.zip() ? "application/zip" : "application/octet-stream")
+                .header("Content-Disposition", TourRequestService.attachment(download.fileName()))
+                .body(output -> splats.writeDownload(download, output));
+    }
+
     /** A file the team's browser converted: scene.sog, then scene.voxel.bin and scene.voxel.json. */
     @PutMapping("/api/admin/tour-requests/{id}/areas/{areaId}/splats/files/{file:.+}")
     public SplatService.Status upload(@PathVariable long id, @PathVariable long areaId, @PathVariable String file,
