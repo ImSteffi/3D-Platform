@@ -209,12 +209,12 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
      <Segmented aria-label="Kind of area" options={kinds} value={kind} onChange={setKind} />
      <div className="add-form-btns">
       <Button variant="quiet" disabled={saving} onClick={() => { setAdding(false); setName(''); setAddError('') }}>Cancel</Button>
-      <Button type="submit" variant="secondary" icon="plus" loading={saving} disabled={!name.trim()}>Add plan</Button>
+      <Button type="submit" variant="secondary" icon="plus" loading={saving} disabled={!name.trim()}>Add floor</Button>
      </div>
     </div>
     <InlineError>{addError}</InlineError>
    </Panel> : <div className="add-plan">
-    {plans && <Button variant="secondary" icon="plus" disabled={full} onClick={() => setAdding(true)}>Add plan</Button>}
+    {plans && <Button variant="secondary" icon="plus" disabled={full} onClick={() => setAdding(true)}>Add floor</Button>}
     {!gallery && <Button variant={plans ? 'secondary' : 'primary'} icon={plans ? 'chart' : 'back'} aria-pressed={!plans}
      onClick={() => setView(plans ? 'analytics' : 'plans')}>{plans ? 'Analytics' : 'Back to floors'}</Button>}
     {onShare && !gallery && <Button variant="secondary" icon="share" onClick={onShare}>Share</Button>}
@@ -235,7 +235,7 @@ export default function SpaceSections({ tour, version, busy, run, fail, apply, s
    onPlan={plan} onSketch={area => guarded(area, 'draw', () => setSketching(area))} onRemove={removePlan} onRename={(area, name) => run(() => rename(area.id, name))} onStepPlan={(area, forward) => guarded(area, 'replace', () => { void run(() => stepPlan(tour.id, area.id, forward), true) })} onRemovePlan={area => guarded(area, 'unplan', () => { void run(() => dropPlan(tour.id, area.id), true).then(done => { if (done) forgetSketch(sketchKey(area.id)) }) })} removable={!gallery && (draft || tour.areas.length > 1)}
    floorPhotos={{ uploading: floorUploads[area.id] ?? null, onAdd: files => { void addFloorPhotos(area, files) }, onDelete: photoId => { void run(() => deleteFloorPhoto(tour.id, photoId)) }, onDeleteAll: () => run(() => deleteFloorPhotos(tour.id, area.id)) }} admin={admin ? { markTo: `/review/${tour.id}` } : undefined} stage={three.stage(area)} />)}
   {plans && tour.areas.length === 0 && <Panel><p className="sections-none">{sectionsOnly ? 'This space has no floor plans.'
-   : 'No floors yet. Click Add plan for each floor or building, then upload a photo of its floor plan or draw it by hand.'}</p></Panel>}
+   : 'No floors yet. Click Add floor for each floor or building, then upload a photo of its floor plan or draw it by hand.'}</p></Panel>}
 
   {pendingChange && <ConfirmDialog title={pendingChange.what === 'remove' ? 'Remove this floor?' : 'Change this floor plan?'}
    confirmLabel={pendingChange.what === 'remove' ? 'Remove floor' : 'Change plan'} busyLabel="Working…"

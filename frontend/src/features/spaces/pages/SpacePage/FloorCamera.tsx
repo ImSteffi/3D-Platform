@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Button, Icon, Spinner } from '../../../../shared/ui'
+import PhotoTutorial from '../../../learn/components/PhotoTutorial/PhotoTutorial'
 // The same dark camera layer as the capture camera (Lens): bars, viewfinder, shutter, thumbnail, flash.
 import '../../../capture/components/CaptureSession/CaptureSession.css'
 import './FloorCamera.css'
@@ -79,6 +80,7 @@ export default function FloorCamera({ title, room, onDone, onClose }: Props) {
  const [error, setError] = useState('')
  const [leaving, setLeaving] = useState(false)
  const [lens, setLens] = useState<Lens>(savedLens)
+ const [tutorial, setTutorial] = useState(false)
  // How this phone reaches 0.5x: by zooming out, through its own wide camera, not at all, or not known yet.
  const [wide, setWide] = useState<{ how: 'zoom' } | { how: 'camera'; id: string } | { how: 'none' } | null>(null)
  const [opener] = useState(() => document.activeElement instanceof HTMLElement ? document.activeElement : null)
@@ -175,17 +177,20 @@ export default function FloorCamera({ title, room, onDone, onClose }: Props) {
   function onKey(event: globalThis.KeyboardEvent) {
    if (event.key !== 'Escape') return
    event.preventDefault()
-   if (leaving) setLeaving(false)
+   if (tutorial) setTutorial(false)
+   else if (leaving) setLeaving(false)
    else if (shots.length) setLeaving(true)
    else onClose()
   }
   document.addEventListener('keydown', onKey)
   return () => document.removeEventListener('keydown', onKey)
- }, [leaving, shots.length, onClose])
+ }, [tutorial, leaving, shots.length, onClose])
 
  function trapFocus(event: KeyboardEvent<HTMLDivElement>) {
   if (event.key !== 'Tab' || !root.current) return
-  const items = [...root.current.querySelectorAll<HTMLElement>('button:not(:disabled)')].filter(item => item.getClientRects().length > 0)
+  // With the tutorial open, Tab stays inside it.
+  const scope = root.current.querySelector<HTMLElement>('.fcam-tutorial') ?? root.current
+  const items = [...scope.querySelectorAll<HTMLElement>('button:not(:disabled), video[controls]')].filter(item => item.getClientRects().length > 0)
   if (!items.length) { event.preventDefault(); return }
   const first = items[0]
   const end = items[items.length - 1]
@@ -227,12 +232,13 @@ export default function FloorCamera({ title, room, onDone, onClose }: Props) {
 
  const count = shots.length
  return createPortal(<div ref={root} className="cap on-dark fcam" role="dialog" aria-modal="true" aria-label={`Take photos: ${title}`} tabIndex={-1} onKeyDown={trapFocus}>
-  <header className="cap-top">
+  <header className="cap-top" inert={tutorial}>
    <button type="button" className="cap-close" aria-label="Close the camera" onClick={close}><Icon name="close" size={22} /></button>
    <p className="cap-title">{title}</p>
+   <button type="button" className="fcam-tutorial-open" aria-haspopup="dialog" onClick={() => setTutorial(true)}><Icon name="learn" size={16} />Tutorial</button>
    <p className="fcam-count" aria-live="polite"><span className="num">{count}</span> taken</p>
   </header>
-  <div className="cap-main">
+  <div className="cap-main" inert={tutorial}>
    <div className="cap-view">
     <video ref={video} className={ready && live ? '' : 'is-hidden'} autoPlay muted playsInline disablePictureInPicture
      onLoadedData={() => setReady(true)} onEmptied={() => setReady(false)} />
@@ -281,5 +287,17 @@ export default function FloorCamera({ title, room, onDone, onClose }: Props) {
     </div>
    </div>
   </div>
+  {/* How to take the photos, over the camera. Only the tutorial scrolls; the camera stays as it was underneath. */}
+  {tutorial && <div className="fcam-tutorial" role="dialog" aria-modal="true" aria-label="How to take the photos">
+   <div className="fcam-tutorial-card">
+    <header className="fcam-tutorial-head">
+     <h2>How to take the photos</h2>
+     <button type="button" className="fcam-tutorial-close" aria-label="Close the tutorial" autoFocus onClick={() => setTutorial(false)}><Icon name="close" size={20} /></button>
+    </header>
+    <div className="fcam-tutorial-body">
+     <PhotoTutorial />
+    </div>
+   </div>
+  </div>}
  </div>, document.body)
 }

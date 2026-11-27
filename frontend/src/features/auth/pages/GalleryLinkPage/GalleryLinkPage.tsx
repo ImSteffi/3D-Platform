@@ -1,11 +1,12 @@
 import { PLATFORM_NAME } from '../../../../shared/brand'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useState } from 'react'
 import { useParams } from 'react-router'
 import { Icon, InlineError, Panel, Spinner } from '../../../../shared/ui'
 import { getTourRequest, setGalleryToken, type TourDetail } from '../../../tours/api/tourRequests'
 import { useLiveTour } from '../../../tours/api/useLiveTour'
 import SpaceSections from '../../../spaces/pages/SpacePage/SpaceSections'
 import { message, plural, type Run, type SpaceProps } from '../../../spaces/pages/SpacePage/spaceModel'
+import PhotoTutorial from '../../../learn/components/PhotoTutorial/PhotoTutorial'
 import '../../../spaces/pages/SpacePage/SpacePage.css'
 import '../../../organizations/styles/customers.css'
 import './GalleryLinkPage.css'
@@ -21,6 +22,8 @@ export default function GalleryLinkPage() {
  const [error, setError] = useState('')
  const [busy, setBusy] = useState(false)
  const [version, setVersion] = useState(0)
+ const [tutorial, setTutorial] = useState(false)
+ const tutorialId = useId()
 
  // Every space call on this page goes through the link.
  useState(() => setGalleryToken(token))
@@ -71,6 +74,14 @@ export default function GalleryLinkPage() {
  const props: SpaceProps = { tour, version, busy, run, fail: setError, apply }
  return <main className="gallery-page page space">
   <div className="gallery-brand"><span className="gallery-brand-mark"><Icon name="cube" size={16} /></span>{PLATFORM_NAME}</div>
+  {/* How to take the photos, opened in place: it pushes the page down, everything else stays where it is. */}
+  <button type="button" className="gallery-tutorial-toggle" aria-expanded={tutorial} aria-controls={tutorialId} onClick={() => setTutorial(open => !open)}>
+   <Icon name="learn" size={17} />Tutorial<Icon name="chevron" size={15} className="gallery-tutorial-chevron" />
+  </button>
+  {tutorial && <Panel as="section" id={tutorialId} className="gallery-tutorial" aria-label="How to take the photos">
+   <h2>How to take the photos</h2>
+   <PhotoTutorial />
+  </Panel>}
   <header className="page-header space-head">
    <div className="space-head-title">
     <h1>{tour.name}</h1>

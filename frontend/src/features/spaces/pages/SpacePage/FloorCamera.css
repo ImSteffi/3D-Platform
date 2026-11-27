@@ -14,6 +14,20 @@
 .fcam .cap-bottom { background: linear-gradient(transparent, rgb(0 0 0 / .55)); }
 .fcam .cap-sheet { z-index: 3; }
 
+/* Tutorial: a pill in the top bar between the floor name and the counter; it opens over the camera, and only its card scrolls. */
+.fcam-tutorial-open { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 0; border-radius: var(--r-pill);
+ background: var(--cap-fill); color: var(--on-dark); font: 500 14px/1 var(--sans); cursor: pointer; }
+.fcam-tutorial-open:hover { background: rgba(246, 245, 242, .2); }
+.fcam-tutorial { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center;
+ padding: calc(var(--s-3) + env(safe-area-inset-top, 0px)) var(--s-3) calc(var(--s-3) + env(safe-area-inset-bottom, 0px));
+ background: rgb(0 0 0 / .6); animation: fade-in var(--t-fast) var(--ease) both; }
+.fcam-tutorial-card { display: flex; flex-direction: column; width: 100%; max-width: 560px; max-height: 100%; border-radius: var(--r-card); background: var(--solid); color: var(--ink); overflow: hidden; }
+.fcam-tutorial-head { flex: none; display: flex; align-items: center; gap: var(--s-2); padding: var(--s-3) var(--s-3) var(--s-3) var(--s-5); border-bottom: 1px solid var(--hair); }
+.fcam-tutorial-head h2 { flex: 1; min-width: 0; margin: 0; font-size: 18px; color: var(--ink); }
+.fcam-tutorial-close { flex: none; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--ink); cursor: pointer; }
+.fcam-tutorial-close:hover { background: var(--control-hover); }
+.fcam-tutorial-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: var(--s-5); }
+
 /* Left of the shutter: the last photo, then the lens toggle right beside the shutter. */
 .fcam-left { justify-self: stretch; display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
 .fcam-lens { display: flex; gap: 2px; padding: 3px; border-radius: var(--r-pill); background: rgb(0 0 0 / .45); }

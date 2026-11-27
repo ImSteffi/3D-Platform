@@ -16,7 +16,7 @@ import '../../../organizations/styles/customers.css'
 
 /** The space page's shape while it loads: the header, then two floors with their plan on the left and photo frames on the right. */
 function SpaceSkeleton() {
- // The same shapes as the loaded page, so nothing jumps when it arrives: back link, title, Add plan, then one floor card.
+ // The same shapes as the loaded page, so nothing jumps when it arrives: back link, title, Add floor, then one floor card.
  return <SkeletonGroup label="Loading your space" className="space-skel">
   <header className="page-header space-head">
    <div className="space-head-title">

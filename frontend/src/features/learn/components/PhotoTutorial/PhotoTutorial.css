@@ -1,0 +1,35 @@
+/* The photo tutorial: the five rules over the example plan, and a video. Shared by the Learn page, the gallery link page and the floor camera. */
+
+.learn-side { display: grid; gap: var(--s-6); min-width: 0; }
+.learn-video { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--r-card); background: #0d0e0f; }
+.learn-figure { display: grid; place-items: center; padding: var(--s-4); border-radius: var(--r-card); background: var(--solid); border: 1px solid var(--hair); }
+
+.learn-n { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--solid); font-size: 13px; font-weight: 500; }
+.learn-rules { display: grid; gap: var(--s-5); margin: 0; padding: 0; list-style: none; }
+.learn-rules li { display: flex; align-items: center; gap: var(--s-4); font-size: 19px; font-weight: 500; line-height: 1.35; letter-spacing: -.01em; color: var(--ink); text-wrap: pretty; }
+/* The number takes the colour of its photos on the plan. */
+.learn-n--room { background: var(--amber); color: var(--ink); }
+.learn-n--door { background: var(--learn-door); color: #fff; }
+
+/* Diagram: ink line drawing, amber for the photos. */
+.dg { width: 100%; max-width: 460px; height: auto; fill: none; }
+.dg-ink { stroke: var(--ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.dg-wall { stroke: var(--ink); stroke-width: 3; stroke-linecap: square; }
+.dg-faint { stroke: var(--ink-3); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.dg-dash { stroke-dasharray: 3 4; }
+.dg-floor { fill: var(--control-hover); }
+.dg-fill-amber { fill: var(--amber); fill-opacity: .45; }
+.dg-amber-line { stroke: var(--amber); stroke-width: 2.5; stroke-linecap: round; }
+/* Doorway photos in their own colour, so rule 3 can be told apart from rule 2. */
+.learn-side, .photo-tutorial { --learn-door: #2f6bd8; }
+.dg-photo--door .dg-fill-amber { fill: var(--learn-door); fill-opacity: .4; }
+.dg-photo--door .dg-amber-line { stroke: var(--learn-door); }
+
+
+/* One column: rules, plan, video. */
+.photo-tutorial { display: grid; gap: var(--s-5); min-width: 0; }
+
+@media (max-width: 900px) {
+ .learn-figure { padding: var(--s-2); border-radius: 16px; }
+ .learn-rules li { font-size: 17px; }
+}

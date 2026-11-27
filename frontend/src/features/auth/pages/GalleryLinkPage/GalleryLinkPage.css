@@ -5,3 +5,17 @@
 .gallery-brand-mark { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--ink); color: var(--bg, #fff); }
 .gallery-gone { max-width: 420px; text-align: center; }
 .gallery-gone h1 { font-size: 22px; margin: 0 0 8px; }
+
+/* Tutorial: a small pill above the space name; open, the tutorial sits right under it and the page carries on below. */
+.gallery-tutorial-toggle { display: inline-flex; justify-self: start; align-self: start; width: fit-content; align-items: center; gap: 8px; min-height: 40px; margin-bottom: var(--s-4); padding: 0 14px 0 12px;
+ border: 1px solid var(--hair); border-radius: var(--r-pill); background: var(--solid); color: var(--ink); font: 500 14px/1 var(--sans); cursor: pointer;
+ transition: background var(--t-fast) var(--ease); }
+.gallery-tutorial-toggle:hover { background: var(--control-hover); }
+.gallery-tutorial-chevron { transform: rotate(90deg); transition: transform var(--t-fast) var(--ease); }
+.gallery-tutorial-toggle[aria-expanded='true'] .gallery-tutorial-chevron { transform: rotate(-90deg); }
+.gallery-tutorial { margin-bottom: var(--s-6); animation: arrive var(--t-panel) var(--ease) both; }
+.gallery-tutorial h2 { margin: 0 0 var(--s-5); font-size: 20px; }
+/* On a wide screen the same two columns as the Learn page: rules over the plan on the left, the video on the right. */
+@media (min-width: 901px) {
+ .gallery-tutorial .photo-tutorial { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-7); align-items: center; }
+}
